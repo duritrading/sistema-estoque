@@ -1,0 +1,18 @@
+{
+  "name": "sistema-estoque",
+  "version": "1.0.0",
+  "description": "Sistema de Estoque para Distribuidora",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "sqlite3": "^5.1.0",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
