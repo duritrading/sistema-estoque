@@ -1780,32 +1780,31 @@ app.get('/gerenciar/produtos', (req, res) => {
                   <th>Ações</th>
                 </tr>
               </thead>
-              <tbody>
-                ${produtosSeguros.map(p => \
-                  <tr>
-                    <td><strong>${p.codigo}</strong></td>
-                    <td>${p.descricao}</td>
-                    <td style="text-align: center;">${p.saldo_atual}</td>
-                    <td style="text-align: center;">${p.total_movimentacoes}</td>
-                    <td>
-                      ${p.total_movimentacoes > 0 ? `
-                        <button onclick="deletarProduto(${p.id}, '${p.codigo}', true)" class="btn-delete">
-                          🗑️ Forçar Exclusão
-                        </button>
-                      ` : `
-                        <button onclick="deletarProduto(${p.id}, '${p.codigo}', false)" class="btn-delete">
-                          🗑️ Deletar
-                        </button>
-                      `}
-                    </td>
-                  </tr>
-                `).join('')}
+                <tbody>
+                ${produtosSeguros.map(p => 
+                  '<tr>' +
+                    '<td><strong>' + p.codigo + '</strong></td>' +
+                    '<td>' + p.descricao + '</td>' +
+                    '<td style="text-align: center;">' + p.saldo_atual + '</td>' +
+                    '<td style="text-align: center;">' + p.total_movimentacoes + '</td>' +
+                    '<td>' +
+                      (p.total_movimentacoes > 0 ? 
+                        '<button onclick="deletarProduto(' + p.id + ', \'' + p.codigo + '\', true)" class="btn-delete">' +
+                          '🗑️ Forçar Exclusão' +
+                        '</button>' :
+                        '<button onclick="deletarProduto(' + p.id + ', \'' + p.codigo + '\', false)" class="btn-delete">' +
+                          '🗑️ Deletar' +
+                        '</button>'
+                      ) +
+                    '</td>' +
+                  '</tr>'
+                ).join('')}
               </tbody>
             </table>
             
             ${produtosSeguros.length === 0 ? '<div class="no-results">Nenhum produto cadastrado</div>' : ''}
           </div>
-        </div>
+        
 
         <script>
           function deletarProduto(id, codigo, forcar) {
