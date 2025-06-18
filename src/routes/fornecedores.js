@@ -16,21 +16,38 @@ router.get('/', (req, res) => {
   });
 });
 
-// ... (o código de router.get e router.post que já existe continua aqui em cima) ...
+// POST /fornecedores - Processa o cadastro de um novo fornecedor (ESTAVA FALTANDO)
+router.post('/', (req, res) => {
+  const { codigo, nome, contato, telefone, email, endereco, cnpj, observacao } = req.body;
+  const query = `
+    INSERT INTO fornecedores (codigo, nome, contato, telefone, email, endereco, cnpj, observacao)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+  `;
+  const params = [codigo, nome, contato, telefone, email, endereco, cnpj, observacao];
 
-// NOVA ROTA PARA DELETAR UM FORNECEDOR
+  db.run(query, params, function(err) {
+    if (err) {
+      console.error('Erro criar fornecedor:', err);
+      return res.status(500).send('Erro: ' + err.message);
+    }
+    return res.redirect('/fornecedores');
+  });
+});
+
+
+// POST /delete/:id - Deleta um fornecedor (COM QUERY CORRIGIDA)
 router.post('/delete/:id', (req, res) => {
   const { id } = req.params;
 
-  // Primeiro, verifica se o fornecedor tem movimentações associadas
-  db.get('SELECT COUNT(*) as count FROM movimentacoes WHERE fornecedor_id = ?', [id], (err, row) => {
+  // Query corrigida para usar $1 em vez de ?
+  db.get('SELECT COUNT(*) as count FROM movimentacoes WHERE fornecedor_id = $1', [id], (err, row) => {
     if (err) {
       console.error("Erro ao verificar fornecedor:", err);
+      // Mensagem de erro que você viu
       return res.status(500).send('Erro ao verificar uso do fornecedor.');
     }
 
     if (row.count > 0) {
-      // Se estiver em uso, mostra uma página de erro amigável
       return res.render('error', {
           user: res.locals.user,
           titulo: 'Ação Bloqueada',
@@ -39,16 +56,15 @@ router.post('/delete/:id', (req, res) => {
       });
     }
 
-    // Se não estiver em uso, pode excluir
-    db.run('DELETE FROM fornecedores WHERE id = ?', [id], (err) => {
+    // Query corrigida para usar $1 em vez de ?
+    db.run('DELETE FROM fornecedores WHERE id = $1', [id], (err) => {
       if (err) {
         console.error("Erro ao deletar fornecedor:", err);
         return res.status(500).send('Erro ao excluir fornecedor.');
       }
-      // Redireciona de volta para a lista de fornecedores após excluir
       res.redirect('/fornecedores');
     });
   });
 });
 
-module.exports = router; // Esta linha já deve existir, o código novo vai acima dela
+module.exports = router;
