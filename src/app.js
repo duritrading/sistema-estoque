@@ -148,7 +148,7 @@ const categorias = [...new Set(produtosSeguros.map(p => p.categoria).filter(c =>
                 </tr>
               </thead>
               <tbody>
-                ${produtosSeguros.map(p => \
+                ${produtosSeguros.map(p => `
                   <tr>
                     <td><strong>${p.codigo}</strong></td>
                     <td>${p.descricao}</td>
@@ -169,8 +169,6 @@ const categorias = [...new Set(produtosSeguros.map(p => p.categoria).filter(c =>
             </table>
             
             ${produtosSeguros.length === 0 ? '<div class="no-results">Nenhum produto cadastrado</div>' : ''}
-          </div>
-
           <div style="text-align: center; margin: 40px 0; color: #7f8c8d; font-size: 14px;">
             <p>💡 <strong>Atalhos:</strong> Ctrl+K (Buscar) | Ctrl+N (Novo Produto) | Ctrl+M (Movimentações)</p>
           </div>
