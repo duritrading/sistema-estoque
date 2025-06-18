@@ -95,4 +95,62 @@ router.get('/faturamento', (req, res) => {
   });
 });
 
+// NOVA ROTA PARA O RELATÓRIO DRE
+router.get('/dre', (req, res) => {
+  // Usamos o ano atual como padrão
+  const ano = new Date().getFullYear();
+
+  // Query para buscar e agrupar todos os lançamentos pagos do ano
+  const query = `
+    SELECT
+      strftime('%Y-%m', data_operacao) as mes,
+      cf.nome as categoria_nome,
+      cf.tipo as categoria_tipo,
+      SUM(fc.valor) as total
+    FROM fluxo_caixa fc
+    JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
+    WHERE strftime('%Y', data_operacao) = ? AND fc.status = 'PAGO'
+    GROUP BY mes, cf.nome, cf.tipo
+    ORDER BY mes, cf.tipo
+  `;
+
+  db.all(query, [String(ano)], (err, rows) => {
+    if (err) {
+      console.error('Erro ao gerar relatório DRE:', err);
+      return res.status(500).send('Erro ao gerar relatório DRE.');
+    }
+
+    // Processar os dados para o formato que a view precisa (formato de matriz)
+    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const dreData = {};
+    const totaisMensais = Array(12).fill(0).map(() => ({ receitas: 0, despesas: 0 }));
+
+    rows.forEach(row => {
+      const mesIndex = parseInt(row.mes.split('-')[1]) - 1;
+
+      if (!dreData[row.categoria_nome]) {
+        dreData[row.categoria_nome] = {
+          tipo: row.categoria_tipo,
+          valores: Array(12).fill(0)
+        };
+      }
+      dreData[row.categoria_nome].valores[mesIndex] = row.total;
+
+      if (row.categoria_tipo === 'RECEITA') {
+        totaisMensais[mesIndex].receitas += row.total;
+      } else if (row.categoria_tipo === 'DESPESA') {
+        totaisMensais[mesIndex].despesas += row.total;
+      }
+    });
+
+    res.render('dre', {
+      user: res.locals.user,
+      ano,
+      meses,
+      dreData,
+      totaisMensais
+    });
+  });
+});
+
 module.exports = router;
