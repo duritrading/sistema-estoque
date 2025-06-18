@@ -23,29 +23,58 @@ function getSaldoProduto(produtoId) {
   });
 }
 
-router.get('/', (req, res) => {
-  db.all('SELECT * FROM produtos ORDER BY codigo', [], (err, produtos) => {
-    if (err) return res.status(500).send('Erro: ' + err.message);
-    db.all('SELECT * FROM fornecedores ORDER BY nome', [], (err2, fornecedores) => {
-      if (err2) return res.status(500).send('Erro: ' + err2.message);
-      db.all(`
-        SELECT m.*, p.codigo, p.descricao, f.nome as fornecedor_nome
-        FROM movimentacoes m
-        JOIN produtos p ON m.produto_id = p.id
-        LEFT JOIN fornecedores f ON m.fornecedor_id = f.id
-        ORDER BY m.created_at DESC LIMIT 20
-      `, [], (err3, movimentacoes) => {
-        if (err3) return res.status(500).send('Erro: ' + err3.message);
+// Dentro de src/routes/movimentacoes.js, substitua o router.get('/',...) antigo
 
-        res.render('movimentacoes', {
-          user: res.locals.user,
-          produtos: Array.isArray(produtos) ? produtos : [],
-          fornecedores: Array.isArray(fornecedores) ? fornecedores : [],
-          movimentacoes: Array.isArray(movimentacoes) ? movimentacoes : []
-        });
+router.get('/', async (req, res) => {
+  // Criamos uma função auxiliar para transformar nosso db.all em uma Promise
+  const queryPromise = (query, params = []) => {
+    return new Promise((resolve, reject) => {
+      db.all(query, params, (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
       });
     });
-  });
+  };
+
+  try {
+    const queryProdutos = 'SELECT * FROM produtos ORDER BY codigo';
+    const queryFornecedores = 'SELECT * FROM fornecedores ORDER BY nome';
+    const queryMovimentacoes = `
+      SELECT 
+        m.*,
+        p.codigo,
+        p.descricao,
+        f.nome as fornecedor_nome,
+        (SELECT MAX(cr.total_parcelas) FROM contas_a_receber cr WHERE cr.movimentacao_id = m.id) as total_parcelas
+      FROM movimentacoes m
+      JOIN produtos p ON m.produto_id = p.id
+      LEFT JOIN fornecedores f ON m.fornecedor_id = f.id
+      ORDER BY m.created_at DESC
+      LIMIT 20
+    `;
+
+    // Executa todas as buscas ao banco de dados em paralelo
+    const [produtos, fornecedores, movimentacoes] = await Promise.all([
+      queryPromise(queryProdutos),
+      queryPromise(queryFornecedores),
+      queryPromise(queryMovimentacoes)
+    ]);
+
+    // Renderiza a página somente após ter todos os dados
+    res.render('movimentacoes', {
+      user: res.locals.user,
+      produtos: produtos || [],
+      fornecedores: fornecedores || [],
+      movimentacoes: movimentacoes || []
+    });
+
+  } catch (error) {
+    console.error('Erro ao carregar página de movimentações:', error);
+    res.status(500).send('Erro ao carregar a página.');
+  }
 });
 
 // Dentro de src/routes/movimentacoes.js

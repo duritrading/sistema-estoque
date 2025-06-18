@@ -67,8 +67,9 @@ router.post('/lancamento', (req, res) => {
 
 router.get('/faturamento', (req, res) => {
   let { data_inicio, data_fim } = req.query;
+  const isProduction = !!process.env.DATABASE_URL;
 
-  // Datas padrão, caso não sejam informadas
+  // Define datas padrão se não forem fornecidas
   if (!data_inicio) {
     const hoje = new Date();
     const primeiroDiaDoMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -80,20 +81,20 @@ router.get('/faturamento', (req, res) => {
     data_fim = ultimoDiaDoMes.toISOString().split('T')[0];
   }
 
-  // Query base
   let query = `
     SELECT id, movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, data_pagamento, status
     FROM contas_a_receber
   `;
   const params = [];
   let whereClauses = [];
+  let paramCount = 1;
 
   if (data_inicio) {
-    whereClauses.push('data_vencimento >= ?');
+    whereClauses.push(`data_vencimento >= <span class="math-inline">\{isProduction ? '</span>' + paramCount++ : '?'}`);
     params.push(data_inicio);
   }
   if (data_fim) {
-    whereClauses.push('data_vencimento <= ?');
+    whereClauses.push(`data_vencimento <= <span class="math-inline">\{isProduction ? '</span>' + paramCount++ : '?'}`);
     params.push(data_fim);
   }
 
