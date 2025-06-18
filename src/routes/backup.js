@@ -1,12 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../config/database-postgres'); // Necessário para usar o pool do PostgreSQL
+const db = require('../config/database');
 
 // GET /backup - Gera e faz o download do backup completo
-router.get('/', async (req, res) => {
-  // Verifica se o usuário está logado (vem do res.locals)
+router.get('/', (req, res) => {
   if (!res.locals.user || !res.locals.user.username) {
-      return res.status(403).send('Acesso negado. Faça login para gerar o backup.');
+      return res.status(403).send('Acesso negado.');
   }
 
   try {
@@ -19,26 +18,34 @@ router.get('/', async (req, res) => {
       dados: {}
     };
 
-    // Backup das tabelas principais
-    const tabelas = ['produtos', 'fornecedores', 'movimentacoes', 'fluxo_caixa'];
+    const tabelas = ['produtos', 'fornecedores', 'movimentacoes', 'fluxo_caixa', 'usuarios'];
+    let tabelasProcessadas = 0;
 
-    for (const tabela of tabelas) {
-      const result = await pool.query(`SELECT * FROM ${tabela} ORDER BY id`);
-      backup.dados[tabela] = result.rows;
-    }
+    tabelas.forEach(tabela => {
+      // Usuários não tem senha, então a query é diferente
+      const query = tabela === 'usuarios'
+        ? 'SELECT id, username, email, nome_completo, ativo FROM usuarios ORDER BY id'
+        : `SELECT * FROM ${tabela} ORDER BY id`;
 
-    // Backup dos usuários (sem as senhas)
-    const usuarios = await pool.query('SELECT id, username, email, nome_completo, ativo FROM usuarios ORDER BY id');
-    backup.dados.usuarios = usuarios.rows;
+      db.all(query, [], (err, rows) => {
+        if (err) {
+          throw new Error(`Erro ao fazer backup da tabela ${tabela}: ${err.message}`);
+        }
+        backup.dados[tabela] = rows;
+        tabelasProcessadas++;
 
-    const total = Object.values(backup.dados).reduce((sum, t) => sum + t.length, 0);
-    console.log(`✅ Backup gerado: ${total} registros`);
+        // Quando todas as tabelas forem processadas, envia o arquivo
+        if (tabelasProcessadas === tabelas.length) {
+          const total = Object.values(backup.dados).reduce((sum, t) => sum + t.length, 0);
+          console.log(`✅ Backup gerado: ${total} registros`);
 
-    // Download do arquivo
-    const arquivo = `backup_${new Date().toISOString().split('T')[0]}.json`;
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${arquivo}"`);
-    res.json(backup);
+          const arquivoNome = `backup_${new Date().toISOString().split('T')[0]}.json`;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Content-Disposition', `attachment; filename="${arquivoNome}"`);
+          res.json(backup);
+        }
+      });
+    });
 
   } catch (error) {
     console.error('❌ Erro no backup:', error);
