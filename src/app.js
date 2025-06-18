@@ -52,15 +52,20 @@ app.get('/', (req, res) => {
       return;
     }
 
-    const produtosSeguros = Array.isArray(produtos) ? produtos : [];
-    const filtrados = produtosSeguros.filter(produto => ...);
-    const totalProdutos = produtos.length;
-    const totalEmEstoque = produtos.reduce((sum, p) => sum + p.saldo_atual, 0);
-    const valorEstoque = produtos.reduce((sum, p) => sum + (p.saldo_atual * (p.preco_custo || 0)), 0);
-    
-    // Obter categorias únicas para filtro
-    const categorias = [...new Set(produtos.map(p => p.categoria).filter(c => c))];
+    // Garantir que produtos é sempre um array
+const produtosSeguros = Array.isArray(produtos) ? produtos : [];
 
+// Calcular estatísticas usando array seguro
+const totalProdutos = produtosSeguros.length;
+const totalEmEstoque = produtosSeguros.reduce((sum, p) => sum + (p.saldo_atual || 0), 0);
+const valorEstoque = produtosSeguros.reduce((sum, p) => sum + ((p.saldo_atual || 0) * (p.preco_custo || 0)), 0);
+
+// Alertas de estoque baixo
+const alertas = produtosSeguros.filter(p => (p.saldo_atual || 0) <= (p.estoque_minimo || 0));
+
+// Obter categorias únicas para filtro
+const categorias = [...new Set(produtosSeguros.map(p => p.categoria).filter(c => c))];
+    
     res.send(`
       <!DOCTYPE html>
       <html lang="pt-BR">
