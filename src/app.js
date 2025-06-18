@@ -7,7 +7,7 @@ const { createBackup, listBackups, restoreBackup } = require('../scripts/backup'
 const reports = require('./reports');
 const importCSV = require('./import');
 const deleteManager = require('./delete');
-const financeiro = require('./financeiro');  // ← Esta linha
+const financeiro = require('./financeiro');
 
 const app = express();
 app.use(express.json());
@@ -53,18 +53,18 @@ app.get('/', (req, res) => {
     }
 
     // Garantir que produtos é sempre um array
-const produtosSeguros = Array.isArray(produtos) ? produtos : [];
+    const produtosSeguros = Array.isArray(produtos) ? produtos : [];
 
-// Calcular estatísticas usando array seguro
-const totalProdutos = produtosSeguros.length;
-const totalEmEstoque = produtosSeguros.reduce((sum, p) => sum + (p.saldo_atual || 0), 0);
-const valorEstoque = produtosSeguros.reduce((sum, p) => sum + ((p.saldo_atual || 0) * (p.preco_custo || 0)), 0);
+    // Calcular estatísticas usando array seguro
+    const totalProdutos = produtosSeguros.length;
+    const totalEmEstoque = produtosSeguros.reduce((sum, p) => sum + (p.saldo_atual || 0), 0);
+    const valorEstoque = produtosSeguros.reduce((sum, p) => sum + ((p.saldo_atual || 0) * (p.preco_custo || 0)), 0);
 
-// Alertas de estoque baixo
-const alertas = produtosSeguros.filter(p => (p.saldo_atual || 0) <= (p.estoque_minimo || 0));
+    // Alertas de estoque baixo
+    const alertas = produtosSeguros.filter(p => (p.saldo_atual || 0) <= (p.estoque_minimo || 0));
 
-// Obter categorias únicas para filtro
-const categorias = [...new Set(produtosSeguros.map(p => p.categoria).filter(c => c))];
+    // Obter categorias únicas para filtro
+    const categorias = [...new Set(produtosSeguros.map(p => p.categoria).filter(c => c))];
     
     res.send(`
       <!DOCTYPE html>
@@ -169,6 +169,8 @@ const categorias = [...new Set(produtosSeguros.map(p => p.categoria).filter(c =>
             </table>
             
             ${produtosSeguros.length === 0 ? '<div class="no-results">Nenhum produto cadastrado</div>' : ''}
+          </div>
+
           <div style="text-align: center; margin: 40px 0; color: #7f8c8d; font-size: 14px;">
             <p>💡 <strong>Atalhos:</strong> Ctrl+K (Buscar) | Ctrl+N (Novo Produto) | Ctrl+M (Movimentações)</p>
           </div>
@@ -197,9 +199,8 @@ app.get('/produtos', (req, res) => {
     if (err) {
       res.status(500).json({ erro: err.message });
       return;
-    } else {
-      res.json(rows);
     }
+    res.json(rows);
   });
 });
 
@@ -277,10 +278,9 @@ app.post('/produtos', (req, res) => {
   function(err) {
     if (err) {
       res.status(500).send('Erro: ' + err.message);
-            return; // ← ADICIONAR ESTA LINHA!
-    } else {
-      res.redirect('/');
+      return;
     }
+    res.redirect('/');
   });
 });
 
@@ -293,12 +293,18 @@ app.get('/movimentacoes', (req, res) => {
       return;
     }
 
+    // Garantir que produtos é sempre um array
+    const produtosSeguros = Array.isArray(produtos) ? produtos : [];
+
     // Buscar fornecedores para dropdown
     db.all('SELECT * FROM fornecedores ORDER BY nome', (err2, fornecedores) => {
       if (err2) {
         res.status(500).send('Erro: ' + err2.message);
         return;
       }
+
+      // Garantir que fornecedores é sempre um array
+      const fornecedoresSeguros = Array.isArray(fornecedores) ? fornecedores : [];
 
       // Buscar últimas movimentações
       db.all(`
@@ -317,6 +323,9 @@ app.get('/movimentacoes', (req, res) => {
           res.status(500).send('Erro: ' + err3.message);
           return;
         }
+
+        // Garantir que movimentacoes é sempre um array
+        const movimentacoesSeguros = Array.isArray(movimentacoes) ? movimentacoes : [];
 
         res.send(`
           <!DOCTYPE html>
@@ -357,7 +366,7 @@ app.get('/movimentacoes', (req, res) => {
                     
                     <div class="form-group">
                       <label>Produto *</label>
-                     <select name="produto_id" class="form-control" required>
+                      <select name="produto_id" class="form-control" required>
                         <option value="">Selecione um produto...</option>
                         ${produtosSeguros.map(p => 
                           `<option value="${p.id}">${p.codigo} - ${p.descricao}</option>`
@@ -369,7 +378,7 @@ app.get('/movimentacoes', (req, res) => {
                       <label>Fornecedor</label>
                       <select name="fornecedor_id" class="form-control">
                         <option value="">Selecione um fornecedor...</option>
-                        ${fornecedores.map(f => '<option value="' + f.id + '">' + f.nome + '</option>').join('')}
+                        ${fornecedoresSeguros.map(f => `<option value="${f.id}">${f.nome}</option>`).join('')}
                       </select>
                     </div>
                     
@@ -418,7 +427,7 @@ app.get('/movimentacoes', (req, res) => {
                       <label>Produto *</label>
                       <select name="produto_id" class="form-control" required>
                         <option value="">Selecione um produto...</option>
-                        ${produtosSeguros.map(p => '<option value="' + p.id + '">' + p.codigo + ' - ' + p.descricao + '</option>').join('')}
+                        ${produtosSeguros.map(p => `<option value="${p.id}">${p.codigo} - ${p.descricao}</option>`).join('')}
                       </select>
                     </div>
 
@@ -484,7 +493,7 @@ app.get('/movimentacoes', (req, res) => {
                     </tr>
                   </thead>
                   <tbody>
-                    ${movimentacoes.map(m => `
+                    ${movimentacoesSeguros.map(m => `
                       <tr>
                         <td>${new Date(m.created_at).toLocaleString('pt-BR')}</td>
                         <td><strong>${m.codigo}</strong> - ${m.descricao}</td>
@@ -512,7 +521,7 @@ app.get('/movimentacoes', (req, res) => {
                   </tbody>
                 </table>
                 
-                ${movimentacoes.length === 0 ? '<div class="no-results">Nenhuma movimentação encontrada</div>' : ''}
+                ${movimentacoesSeguros.length === 0 ? '<div class="no-results">Nenhuma movimentação encontrada</div>' : ''}
               </div>
             </div>
           </body>
@@ -583,9 +592,9 @@ app.post('/movimentacoes', async (req, res) => {
     function(err) {
       if (err) {
         res.status(500).send('Erro: ' + err.message);
-      } else {
-        res.redirect('/movimentacoes');
+        return;
       }
+      res.redirect('/movimentacoes');
     });
   } catch (error) {
     res.status(500).send('Erro: ' + error.message);
@@ -706,7 +715,6 @@ app.post('/backup/create', (req, res) => {
     `);
   } else {
     res.status(500).send(`
-          return; // ← ADICIONAR ESTA LINHA!
       <!DOCTYPE html>
       <html lang="pt-BR">
       <head>
@@ -738,7 +746,6 @@ app.get('/backup/download/:filename', (req, res) => {
     res.download(filePath, filename);
   } else {
     res.status(404).send('Arquivo não encontrado');
-          return; // ← ADICIONAR ESTA LINHA!
   }
 });
 
@@ -775,8 +782,6 @@ app.post('/backup/restore', (req, res) => {
     `);
   } else {
     res.status(500).send(`
-          return; // ← ADICIONAR ESTA LINHA!
-
       <!DOCTYPE html>
       <html lang="pt-BR">
       <head>
@@ -808,6 +813,9 @@ app.get('/fornecedores', (req, res) => {
       res.status(500).send('Erro: ' + err.message);
       return;
     }
+
+    // Garantir que fornecedores é sempre um array
+    const fornecedoresSeguros = Array.isArray(fornecedores) ? fornecedores : [];
 
     res.send(`
       <!DOCTYPE html>
@@ -848,7 +856,7 @@ app.get('/fornecedores', (req, res) => {
                 </tr>
               </thead>
               <tbody>
-                ${fornecedores.map(f => `
+                ${fornecedoresSeguros.map(f => `
                   <tr>
                     <td><strong>${f.codigo}</strong></td>
                     <td>${f.nome}</td>
@@ -863,7 +871,7 @@ app.get('/fornecedores', (req, res) => {
               </tbody>
             </table>
             
-            ${fornecedores.length === 0 ? '<div class="no-results">Nenhum fornecedor cadastrado</div>' : ''}
+            ${fornecedoresSeguros.length === 0 ? '<div class="no-results">Nenhum fornecedor cadastrado</div>' : ''}
           </div>
         </div>
       </body>
@@ -957,11 +965,9 @@ app.post('/fornecedores', (req, res) => {
   function(err) {
     if (err) {
       res.status(500).send('Erro: ' + err.message);
-            return; // ← ADICIONAR ESTA LINHA!
-
-    } else {
-      res.redirect('/fornecedores');
+      return;
     }
+    res.redirect('/fornecedores');
   });
 });
 
@@ -1045,8 +1051,6 @@ app.get('/relatorios', async (req, res) => {
     `);
   } catch (error) {
     res.status(500).send('Erro: ' + error.message);
-          return; // ← ADICIONAR ESTA LINHA!
-
   }
 });
 
@@ -1120,8 +1124,6 @@ app.get('/relatorios/posicao-estoque', async (req, res) => {
     `);
   } catch (error) {
     res.status(500).send('Erro: ' + error.message);
-          return; // ← ADICIONAR ESTA LINHA!
-
   }
 });
 
@@ -1199,8 +1201,6 @@ app.get('/relatorios/analise-abc', async (req, res) => {
     `);
   } catch (error) {
     res.status(500).send('Erro: ' + error.message);
-          return; // ← ADICIONAR ESTA LINHA!
-
   }
 });
 
@@ -1451,7 +1451,7 @@ app.get('/financeiro/setup', (req, res) => {
   `);
 });
 
-// Processar setup financeiro (VERSÃO CORRIGIDA)
+// Processar setup financeiro
 app.post('/financeiro/setup', (req, res) => {
   console.log('🔧 Iniciando setup financeiro...');
   
@@ -1484,7 +1484,7 @@ app.post('/financeiro/setup', (req, res) => {
       else console.log('✅ Tabela formas_pagamento criada');
     });
 
-    // Criar fluxo_caixa SEM constraint NOT NULL
+    // Criar fluxo_caixa
     db.run(`
       CREATE TABLE fluxo_caixa (
         id INTEGER PRIMARY KEY,
@@ -1546,10 +1546,12 @@ app.get('/financeiro/completo', async (req, res) => {
         LIMIT 20
       `, (err, fluxoCaixa) => {
         if (err) {
-          return res.status(500).send('Erro fluxo: ' + err.message);
-                return; // ← ADICIONAR ESTA LINHA!
-
+          res.status(500).send('Erro fluxo: ' + err.message);
+          return;
         }
+
+        // Garantir que fluxoCaixa é sempre um array
+        const fluxoCaixaSeguro = Array.isArray(fluxoCaixa) ? fluxoCaixa : [];
 
         // Calcular saldo total
         db.get(`
@@ -1657,7 +1659,7 @@ app.get('/financeiro/completo', async (req, res) => {
 
                 <div class="card">
                   <h2>📋 Últimos Lançamentos</h2>
-                  ${fluxoCaixa.length > 0 ? `
+                  ${fluxoCaixaSeguro.length > 0 ? `
                     <table>
                       <thead>
                         <tr>
@@ -1668,7 +1670,7 @@ app.get('/financeiro/completo', async (req, res) => {
                         </tr>
                       </thead>
                       <tbody>
-                        ${fluxoCaixa.map(f => `
+                        ${fluxoCaixaSeguro.map(f => `
                           <tr>
                             <td>${new Date(f.data_operacao).toLocaleDateString('pt-BR')}</td>
                             <td>
@@ -1693,12 +1695,10 @@ app.get('/financeiro/completo', async (req, res) => {
     });
   } catch (error) {
     res.status(500).send('Erro: ' + error.message);
-          return; // ← ADICIONAR ESTA LINHA!
-
   }
 });
 
-// Processar lançamento simples (COM categoria_id padrão)
+// Processar lançamento simples
 app.post('/financeiro/lancamento', (req, res) => {
   const { data_operacao, tipo, valor, descricao } = req.body;
   
@@ -1711,11 +1711,9 @@ app.post('/financeiro/lancamento', (req, res) => {
   `, [data_operacao, tipo, parseFloat(valor), descricao, categoriaId], (err) => {
     if (err) {
       res.status(500).send('Erro: ' + err.message);
-            return; // ← ADICIONAR ESTA LINHA!
-
-    } else {
-      res.redirect('/financeiro/completo');
+      return;
     }
+    res.redirect('/financeiro/completo');
   });
 });
 
@@ -1741,6 +1739,9 @@ app.get('/gerenciar/produtos', (req, res) => {
       res.status(500).send('Erro: ' + err.message);
       return;
     }
+
+    // Garantir que produtos é sempre um array
+    const produtosSeguros = Array.isArray(produtos) ? produtos : [];
 
     res.send(`
       <!DOCTYPE html>
@@ -1800,31 +1801,27 @@ app.get('/gerenciar/produtos', (req, res) => {
                   <th>Ações</th>
                 </tr>
               </thead>
-                <tbody>
-                ${produtosSeguros.map(p => 
-                  '<tr>' +
-                    '<td><strong>' + p.codigo + '</strong></td>' +
-                    '<td>' + p.descricao + '</td>' +
-                    '<td style="text-align: center;">' + p.saldo_atual + '</td>' +
-                    '<td style="text-align: center;">' + p.total_movimentacoes + '</td>' +
-                    '<td>' +
-                      (p.total_movimentacoes > 0 ? 
-                        '<button onclick="deletarProduto(' + p.id + ', \'' + p.codigo + '\', true)" class="btn-delete">' +
-                          '🗑️ Forçar Exclusão' +
-                        '</button>' :
-                        '<button onclick="deletarProduto(' + p.id + ', \'' + p.codigo + '\', false)" class="btn-delete">' +
-                          '🗑️ Deletar' +
-                        '</button>'
-                      ) +
-                    '</td>' +
-                  '</tr>'
-                ).join('')}
+              <tbody>
+                ${produtosSeguros.map(p => `
+                  <tr>
+                    <td><strong>${p.codigo}</strong></td>
+                    <td>${p.descricao}</td>
+                    <td style="text-align: center;">${p.saldo_atual}</td>
+                    <td style="text-align: center;">${p.total_movimentacoes}</td>
+                    <td>
+                      ${p.total_movimentacoes > 0 ? 
+                        `<button onclick="deletarProduto(${p.id}, '${p.codigo}', true)" class="btn-delete">🗑️ Forçar Exclusão</button>` :
+                        `<button onclick="deletarProduto(${p.id}, '${p.codigo}', false)" class="btn-delete">🗑️ Deletar</button>`
+                      }
+                    </td>
+                  </tr>
+                `).join('')}
               </tbody>
             </table>
             
             ${produtosSeguros.length === 0 ? '<div class="no-results">Nenhum produto cadastrado</div>' : ''}
           </div>
-        
+        </div>
 
         <script>
           function deletarProduto(id, codigo, forcar) {
@@ -1897,6 +1894,9 @@ app.get('/gerenciar/movimentacoes', (req, res) => {
       return;
     }
 
+    // Garantir que movimentacoes é sempre um array
+    const movimentacoesSeguros = Array.isArray(movimentacoes) ? movimentacoes : [];
+
     res.send(`
       <!DOCTYPE html>
       <html lang="pt-BR">
@@ -1956,7 +1956,7 @@ app.get('/gerenciar/movimentacoes', (req, res) => {
                 </tr>
               </thead>
               <tbody>
-                ${movimentacoes.map(m => `
+                ${movimentacoesSeguros.map(m => `
                   <tr>
                     <td>${new Date(m.created_at).toLocaleDateString('pt-BR')}</td>
                     <td><strong>${m.codigo}</strong> - ${m.descricao}</td>
@@ -1978,7 +1978,7 @@ app.get('/gerenciar/movimentacoes', (req, res) => {
               </tbody>
             </table>
             
-            ${movimentacoes.length === 0 ? '<div class="no-results">Nenhuma movimentação encontrada</div>' : ''}
+            ${movimentacoesSeguros.length === 0 ? '<div class="no-results">Nenhuma movimentação encontrada</div>' : ''}
           </div>
         </div>
 
