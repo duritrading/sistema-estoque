@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
+const { pool } = require('../config/database');
 
 // GET /backup - Gera e faz o download do backup completo
 router.get('/', (req, res) => {
