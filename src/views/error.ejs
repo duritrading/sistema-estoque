@@ -1,0 +1,16 @@
+<%- include('partials/header', {
+  titulo: locals.titulo || 'Ocorreu um Erro',
+  subtitulo: '',
+  user: locals.user
+}) %>
+
+<div class="card text-center">
+    <h2>❌ <%= locals.titulo || 'Erro' %></h2>
+    <div class="alert alert-danger">
+        <p><%= locals.mensagem || 'Houve um problema ao processar sua solicitação.' %></p>
+    </div>
+    <br>
+    <a href="<%= locals.voltar_url || '/' %>" class="btn">Voltar</a>
+</div>
+
+<%- include('partials/footer') %>
