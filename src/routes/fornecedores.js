@@ -32,4 +32,16 @@ router.post('/', (req, res) => {
   });
 });
 
+// Dentro de src/routes/fornecedores.js, antes do module.exports
+
+router.post('/delete/:id', (req, res) => {
+  const { id } = req.params;
+  db.run('DELETE FROM fornecedores WHERE id = ?', [id], (err) => {
+    if (err) {
+      return res.status(500).send('Erro ao excluir fornecedor.');
+    }
+    res.redirect('/fornecedores');
+  });
+});
+
 module.exports = router;

@@ -69,10 +69,15 @@
           <td><%= f.contato || '-' %></td>
           <td><%= f.telefone || '-' %></td>
           <td><%= f.email || '-' %></td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
+          <td> <form action="/fornecedores/delete/<%= f.id %>" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este fornecedor?');">
+            <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
 </div>
 
 <%- include('partials/footer') %>

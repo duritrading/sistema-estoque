@@ -8,6 +8,22 @@
   <h2>📊 Relatório de Contas a Receber</h2>
   <p>Abaixo estão todas as parcelas de vendas registradas no sistema.</p>
 
+  <form method="GET" action="/financeiro/faturamento" class="filter-section">
+  <div class="form-row">
+    <div class="form-group">
+      <label for="data_inicio">De:</label>
+      <input type="date" name="data_inicio" id="data_inicio" class="form-control" value="<%= locals.filtros ? filtros.data_inicio : '' %>">
+    </div>
+    <div class="form-group">
+      <label for="data_fim">Até:</label>
+      <input type="date" name="data_fim" id="data_fim" class="form-control" value="<%= locals.filtros ? filtros.data_fim : '' %>">
+    </div>
+    <div class="form-group" style="align-self: flex-end;">
+      <button type="submit" class="btn">Filtrar</button>
+    </div>
+  </div>
+</form>
+
   <table class="table mt-2">
     <thead>
       <tr>

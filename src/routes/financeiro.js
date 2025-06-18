@@ -63,53 +63,71 @@ router.post('/lancamento', (req, res) => {
   });
 });
 
-// NOVA ROTA PARA O RELATÓRIO DE FATURAMENTO
+// Dentro de src/routes/financeiro.js
 router.get('/faturamento', (req, res) => {
-  // Query para buscar todas as contas a receber, ordenadas por vencimento
-  const query = `
-    SELECT 
-      id,
-      movimentacao_id,
-      cliente_nome,
-      numero_parcela,
-      total_parcelas,
-      valor,
-      data_vencimento,
-      data_pagamento,
-      status
-    FROM contas_a_receber
-    ORDER BY data_vencimento ASC
-  `;
+  // Pega as datas da query string (URL)
+  let { data_inicio, data_fim } = req.query;
 
-  db.all(query, [], (err, contas) => {
-    if (err) {
-      console.error('Erro ao buscar contas a receber:', err);
-      return res.status(500).send('Erro ao buscar dados de faturamento.');
-    }
+  // Define datas padrão se não forem fornecidas
+  if (!data_inicio) {
+    const hoje = new Date();
+    data_inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+  }
+  if (!data_fim) {
+    data_fim = new Date().toISOString().split('T')[0];
+  }
 
-    // Simplesmente renderizamos a nova view com os dados
+  let query = `...`; // Sua query SELECT
+  const params = [];
+  let whereClauses = [];
+
+  if (data_inicio) {
+    whereClauses.push('data_vencimento >= ?');
+    params.push(data_inicio);
+  }
+  if (data_fim) {
+    whereClauses.push('data_vencimento <= ?');
+    params.push(data_fim);
+  }
+
+  if (whereClauses.length > 0) {
+    query += ' WHERE ' + whereClauses.join(' AND ');
+  }
+  query += ' ORDER BY data_vencimento ASC';
+
+  db.all(query, params, (err, contas) => {
+    // ...
     res.render('faturamento', {
-      user: res.locals.user,
-      contas: Array.isArray(contas) ? contas : []
+      // ...
+      filtros: { data_inicio, data_fim } // Passa os filtros de volta para a view
     });
   });
 });
 
-// NOVA ROTA PARA O RELATÓRIO DRE
+// DRE
+
 router.get('/dre', (req, res) => {
-  // Usamos o ano atual como padrão
   const ano = new Date().getFullYear();
 
-  // Query para buscar e agrupar todos os lançamentos pagos do ano
+  // Lógica para usar a função de data correta para cada banco
+  const isProduction = !!process.env.DATABASE_URL;
+  const dateGroupFunction = isProduction 
+    ? `TO_CHAR(data_operacao, 'YYYY-MM')` // PostgreSQL
+    : `strftime('%Y-%m', data_operacao)`; // SQLite
+
+  const yearFilterFunction = isProduction
+    ? `EXTRACT(YEAR FROM data_operacao) = $1` // PostgreSQL
+    : `strftime('%Y', data_operacao) = ?`; // SQLite
+
   const query = `
     SELECT
-      strftime('%Y-%m', data_operacao) as mes,
+      ${dateGroupFunction} as mes,
       cf.nome as categoria_nome,
       cf.tipo as categoria_tipo,
       SUM(fc.valor) as total
     FROM fluxo_caixa fc
     JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
-    WHERE strftime('%Y', data_operacao) = ? AND fc.status = 'PAGO'
+    WHERE ${yearFilterFunction} AND fc.status = 'PAGO'
     GROUP BY mes, cf.nome, cf.tipo
     ORDER BY mes, cf.tipo
   `;
@@ -120,7 +138,7 @@ router.get('/dre', (req, res) => {
       return res.status(500).send('Erro ao gerar relatório DRE.');
     }
 
-    // Processar os dados para o formato que a view precisa (formato de matriz)
+    // ... (o restante da lógica para processar os dados continua o mesmo) ...
     const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     const dreData = {};
     const totaisMensais = Array(12).fill(0).map(() => ({ receitas: 0, despesas: 0 }));
@@ -129,10 +147,7 @@ router.get('/dre', (req, res) => {
       const mesIndex = parseInt(row.mes.split('-')[1]) - 1;
 
       if (!dreData[row.categoria_nome]) {
-        dreData[row.categoria_nome] = {
-          tipo: row.categoria_tipo,
-          valores: Array(12).fill(0)
-        };
+        dreData[row.categoria_nome] = { tipo: row.categoria_tipo, valores: Array(12).fill(0) };
       }
       dreData[row.categoria_nome].valores[mesIndex] = row.total;
 
