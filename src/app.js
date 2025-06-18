@@ -220,17 +220,27 @@ app.use((req, res, next) => {
   next();
 });
 
-// Aplicar autenticação em todas as rotas principais
-app.use('/', (req, res, next) => {
-  // Rotas públicas (não precisam de login)
-  const publicRoutes = ['/login', '/health'];
+// Middleware de autenticação (CORRIGIDO)
+app.use((req, res, next) => {
+  console.log('🛡️ Middleware auth - URL:', req.path, 'Method:', req.method);
   
-  if (publicRoutes.includes(req.path) || req.path.startsWith('/login')) {
+  // Rotas públicas (não precisam de login)
+  const publicRoutes = ['/login', '/health', '/debug/usuarios', '/debug/test-login'];
+  
+  // Verificar se é rota pública
+  if (publicRoutes.includes(req.path)) {
+    console.log('✅ Rota pública permitida:', req.path);
     return next();
   }
   
-  // Todas as outras rotas precisam de autenticação
-  return requireAuth(req, res, next);
+  // Verificar se tem sessão para outras rotas
+  if (req.session && req.session.userId) {
+    console.log('✅ Usuário autenticado:', req.session.username);
+    return next();
+  } else {
+    console.log('❌ Acesso negado, redirecionando para login');
+    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+  }
 });
 
 // Processar Login (COM DEBUG)
