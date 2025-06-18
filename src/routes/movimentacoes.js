@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database'); // Verifique se o caminho para o seu database wrapper está correto
+// Esta linha pode precisar de ajuste dependendo de onde você exporta o 'db'
+// Se o seu 'db' está em /src/config/database.js, este caminho está correto.
+const db = require('../config/database'); 
 
-// Função que você já tinha no app.js, vamos movê-la para cá
 function getSaldoProduto(produtoId) {
   return new Promise((resolve, reject) => {
     db.get(
@@ -22,10 +23,7 @@ function getSaldoProduto(produtoId) {
   });
 }
 
-
-// GET /movimentacoes - Exibir a página de movimentações
 router.get('/', (req, res) => {
-  // Esta é a lógica que já refatoramos para usar res.render
   db.all('SELECT * FROM produtos ORDER BY codigo', [], (err, produtos) => {
     if (err) return res.status(500).send('Erro: ' + err.message);
     db.all('SELECT * FROM fornecedores ORDER BY nome', [], (err2, fornecedores) => {
@@ -38,7 +36,7 @@ router.get('/', (req, res) => {
         ORDER BY m.created_at DESC LIMIT 20
       `, [], (err3, movimentacoes) => {
         if (err3) return res.status(500).send('Erro: ' + err3.message);
-        
+
         res.render('movimentacoes', {
           user: res.locals.user,
           produtos: Array.isArray(produtos) ? produtos : [],
@@ -50,16 +48,13 @@ router.get('/', (req, res) => {
   });
 });
 
-// POST /movimentacoes - Processar o formulário de nova movimentação
 router.post('/', async (req, res) => {
   const { produto_id, fornecedor_id, cliente_nome, rca, tipo, quantidade, preco_unitario, valor_total, documento, observacao } = req.body;
-  
   try {
     if (tipo === 'SAIDA') {
       const saldo = await getSaldoProduto(produto_id);
       if (saldo < quantidade) {
-        // AQUI ESTÁ A MUDANÇA: Em vez de enviar HTML, renderizamos uma página de erro
-        return res.render('error', { // Vamos criar essa view error.ejs
+        return res.render('error', {
             user: res.locals.user,
             titulo: 'Estoque Insuficiente',
             mensagem: `Não foi possível registrar a saída. Saldo atual: ${saldo}, Quantidade solicitada: ${quantidade}.`,
@@ -67,22 +62,10 @@ router.post('/', async (req, res) => {
         });
       }
     }
-
-    if (tipo === 'SAIDA' && !cliente_nome) {
-      return res.status(400).send('Cliente é obrigatório para saídas');
-    }
-
     db.run(`
-      INSERT INTO movimentacoes (
-        produto_id, fornecedor_id, cliente_nome, rca, tipo, quantidade, 
-        preco_unitario, valor_total, documento, observacao
-      )
+      INSERT INTO movimentacoes (produto_id, fornecedor_id, cliente_nome, rca, tipo, quantidade, preco_unitario, valor_total, documento, observacao)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-    `, [
-      produto_id, fornecedor_id || null, cliente_nome || null, rca || null, 
-      tipo, quantidade, preco_unitario || null, valor_total || null, 
-      documento || null, observacao || null
-    ], 
+    `, [produto_id, fornecedor_id || null, cliente_nome || null, rca || null, tipo, quantidade, preco_unitario || null, valor_total || null, documento || null, observacao || null], 
     function(err) {
       if (err) return res.status(500).send('Erro: ' + err.message);
       return res.redirect('/movimentacoes');
