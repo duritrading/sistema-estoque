@@ -367,7 +367,7 @@ app.get('/movimentacoes', (req, res) => {
                       <label>Fornecedor</label>
                       <select name="fornecedor_id" class="form-control">
                         <option value="">Selecione um fornecedor...</option>
-                        ${fornecedores.map(f => `<option value="${f.id}">${f.nome}</option>`).join('')}
+                        ${fornecedores.map(f => '<option value="' + f.id + '">' + f.nome + '</option>').join('')}
                       </select>
                     </div>
                     
@@ -416,7 +416,7 @@ app.get('/movimentacoes', (req, res) => {
                       <label>Produto *</label>
                       <select name="produto_id" class="form-control" required>
                         <option value="">Selecione um produto...</option>
-                        ${produtosSeguros.map(p => \`<option value="${p.id}">${p.codigo} - ${p.descricao}</option>`).join('')}
+                        ${produtosSeguros.map(p => '<option value="' + p.id + '">' + p.codigo + ' - ' + p.descricao + '</option>').join('')}
                       </select>
                     </div>
 
