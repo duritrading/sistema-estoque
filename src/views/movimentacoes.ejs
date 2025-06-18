@@ -102,6 +102,8 @@
             <th>Quantidade</th>
             <th>Cliente/Fornecedor</th>
             <th>Documento</th>
+            <th>Parcelas</th> </tr>
+
         </tr>
     </thead>
     <tbody>
@@ -113,7 +115,7 @@
                 <td><%= m.quantidade %></td>
                 <td><%= m.tipo === 'ENTRADA' ? (m.fornecedor_nome || '-') : (m.cliente_nome || '-') %></td>
                 <td><%= m.documento || '-' %></td>
-            </tr>
+                <td><%= m.total_parcelas || '-' %></td> </tr>
         <% }) %>
     </tbody>
   </table>
