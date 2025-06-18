@@ -64,20 +64,27 @@ router.post('/lancamento', (req, res) => {
 });
 
 // Dentro de src/routes/financeiro.js
+
 router.get('/faturamento', (req, res) => {
-  // Pega as datas da query string (URL)
   let { data_inicio, data_fim } = req.query;
 
-  // Define datas padrão se não forem fornecidas
+  // Datas padrão, caso não sejam informadas
   if (!data_inicio) {
     const hoje = new Date();
-    data_inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+    const primeiroDiaDoMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    data_inicio = primeiroDiaDoMes.toISOString().split('T')[0];
   }
   if (!data_fim) {
-    data_fim = new Date().toISOString().split('T')[0];
+    const hoje = new Date();
+    const ultimoDiaDoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    data_fim = ultimoDiaDoMes.toISOString().split('T')[0];
   }
 
-  let query = `...`; // Sua query SELECT
+  // Query base
+  let query = `
+    SELECT id, movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, data_pagamento, status
+    FROM contas_a_receber
+  `;
   const params = [];
   let whereClauses = [];
 
@@ -96,10 +103,15 @@ router.get('/faturamento', (req, res) => {
   query += ' ORDER BY data_vencimento ASC';
 
   db.all(query, params, (err, contas) => {
-    // ...
+    if (err) {
+      console.error('Erro ao buscar contas a receber:', err);
+      return res.status(500).send('Erro ao buscar dados de faturamento.');
+    }
+
     res.render('faturamento', {
-      // ...
-      filtros: { data_inicio, data_fim } // Passa os filtros de volta para a view
+      user: res.locals.user,
+      contas: Array.isArray(contas) ? contas : [],
+      filtros: { data_inicio, data_fim }
     });
   });
 });

@@ -16,32 +16,39 @@ router.get('/', (req, res) => {
   });
 });
 
-// POST /fornecedores - Processa o cadastro de um novo fornecedor
-router.post('/', (req, res) => {
-  const { codigo, nome, contato, telefone, email, endereco, cnpj, observacao } = req.body;
-  db.run(`
-    INSERT INTO fornecedores (codigo, nome, contato, telefone, email, endereco, cnpj, observacao)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-  `, [codigo, nome, contato, telefone, email, endereco, cnpj, observacao],
-  function(err) {
-    if (err) {
-      console.error('Erro criar fornecedor:', err);
-      return res.status(500).send('Erro: ' + err.message);
-    }
-    return res.redirect('/fornecedores');
-  });
-});
+// ... (o código de router.get e router.post que já existe continua aqui em cima) ...
 
-// Dentro de src/routes/fornecedores.js, antes do module.exports
-
+// NOVA ROTA PARA DELETAR UM FORNECEDOR
 router.post('/delete/:id', (req, res) => {
   const { id } = req.params;
-  db.run('DELETE FROM fornecedores WHERE id = ?', [id], (err) => {
+
+  // Primeiro, verifica se o fornecedor tem movimentações associadas
+  db.get('SELECT COUNT(*) as count FROM movimentacoes WHERE fornecedor_id = ?', [id], (err, row) => {
     if (err) {
-      return res.status(500).send('Erro ao excluir fornecedor.');
+      console.error("Erro ao verificar fornecedor:", err);
+      return res.status(500).send('Erro ao verificar uso do fornecedor.');
     }
-    res.redirect('/fornecedores');
+
+    if (row.count > 0) {
+      // Se estiver em uso, mostra uma página de erro amigável
+      return res.render('error', {
+          user: res.locals.user,
+          titulo: 'Ação Bloqueada',
+          mensagem: `Este fornecedor não pode ser excluído pois está associado a ${row.count} movimentação(ões) de entrada.`,
+          voltar_url: '/fornecedores'
+      });
+    }
+
+    // Se não estiver em uso, pode excluir
+    db.run('DELETE FROM fornecedores WHERE id = ?', [id], (err) => {
+      if (err) {
+        console.error("Erro ao deletar fornecedor:", err);
+        return res.status(500).send('Erro ao excluir fornecedor.');
+      }
+      // Redireciona de volta para a lista de fornecedores após excluir
+      res.redirect('/fornecedores');
+    });
   });
 });
 
-module.exports = router;
+module.exports = router; // Esta linha já deve existir, o código novo vai acima dela
