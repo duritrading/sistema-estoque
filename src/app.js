@@ -163,14 +163,31 @@ const loginStyles = `
 </style>
 `;
 
-// Middleware de Autenticação
-function requireAuth(req, res, next) {
+// Middleware de autenticação (CORRIGIDO)
+app.use((req, res, next) => {
+  console.log('🛡️ Middleware auth - URL:', req.path, 'Method:', req.method);
+  console.log('🎫 Session ID:', req.sessionID);
+  console.log('👤 User ID na sessão:', req.session?.userId);
+  
+  // Rotas públicas (não precisam de login)
+  const publicRoutes = ['/login', '/health', '/debug/usuarios', '/debug/test-login', '/debug/recriar-admin'];
+  
+  // Verificar se é rota pública
+  if (publicRoutes.includes(req.path)) {
+    console.log('✅ Rota pública permitida:', req.path);
+    return next();
+  }
+  
+  // Verificar se tem sessão para outras rotas
   if (req.session && req.session.userId) {
+    console.log('✅ Usuário autenticado:', req.session.username, 'ID:', req.session.userId);
     return next();
   } else {
+    console.log('❌ Acesso negado - Session:', !!req.session, 'UserID:', req.session?.userId);
+    console.log('❌ Redirecionando para login');
     return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
   }
-}
+});
 
 // Função para criar tabela de usuários
 async function createUsersTable() {
