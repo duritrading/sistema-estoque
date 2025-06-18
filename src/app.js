@@ -34,6 +34,9 @@ const getSaldoProduto = (produtoId) => {
 
 // Página principal - Dashboard
 app.get('/', (req, res) => {
+  // Prevenir dupla resposta
+  let responded = false;
+  
   db.all(`
     SELECT 
       p.*,
@@ -47,9 +50,11 @@ app.get('/', (req, res) => {
     GROUP BY p.id
     ORDER BY p.codigo
   `, (err, produtos) => {
+    if (responded) return; // Prevenir dupla resposta
+    
     if (err) {
-      res.status(500).send('Erro: ' + err.message);
-      return;
+      responded = true;
+      return res.status(500).send('Erro: ' + err.message);
     }
 
     // Garantir que produtos é sempre um array
@@ -66,7 +71,10 @@ app.get('/', (req, res) => {
     // Obter categorias únicas para filtro
     const categorias = [...new Set(produtosSeguros.map(p => p.categoria).filter(c => c))];
     
-    res.send(`
+    // Enviar resposta apenas uma vez
+    if (!responded) {
+      responded = true;
+      res.send(`
       <!DOCTYPE html>
       <html lang="pt-BR">
       <head>
@@ -178,11 +186,15 @@ app.get('/', (req, res) => {
       </body>
       </html>
     `);
+    }
   });
 });
 
 // Produtos JSON
 app.get('/produtos', (req, res) => {
+  // Prevenir dupla resposta
+  let responded = false;
+  
   db.all(`
     SELECT 
       p.*,
@@ -196,11 +208,17 @@ app.get('/produtos', (req, res) => {
     GROUP BY p.id
     ORDER BY p.codigo
   `, (err, rows) => {
+    if (responded) return; // Prevenir dupla resposta
+    
     if (err) {
-      res.status(500).json({ erro: err.message });
-      return;
+      responded = true;
+      return res.status(500).json({ erro: err.message });
     }
-    res.json(rows);
+    
+    if (!responded) {
+      responded = true;
+      res.json(rows);
+    }
   });
 });
 
@@ -271,26 +289,40 @@ app.get('/novo-produto', (req, res) => {
 app.post('/produtos', (req, res) => {
   const { codigo, descricao, unidade, categoria, estoque_minimo, preco_custo } = req.body;
   
+  // Prevenir dupla resposta
+  let responded = false;
+  
   db.run(`
     INSERT INTO produtos (codigo, descricao, unidade, categoria, estoque_minimo, preco_custo)
     VALUES (?, ?, ?, ?, ?, ?)
   `, [codigo, descricao, unidade, categoria, estoque_minimo || 0, preco_custo], 
   function(err) {
+    if (responded) return; // Prevenir dupla resposta
+    
     if (err) {
-      res.status(500).send('Erro: ' + err.message);
-      return;
+      responded = true;
+      return res.status(500).send('Erro: ' + err.message);
     }
-    res.redirect('/');
+    
+    if (!responded) {
+      responded = true;
+      res.redirect('/');
+    }
   });
 });
 
 // Página de movimentações
 app.get('/movimentacoes', (req, res) => {
+  // Prevenir dupla resposta
+  let responded = false;
+  
   // Buscar produtos para dropdown
   db.all('SELECT * FROM produtos ORDER BY codigo', (err, produtos) => {
+    if (responded) return; // Prevenir dupla resposta
+    
     if (err) {
-      res.status(500).send('Erro: ' + err.message);
-      return;
+      responded = true;
+      return res.status(500).send('Erro: ' + err.message);
     }
 
     // Garantir que produtos é sempre um array
@@ -298,9 +330,11 @@ app.get('/movimentacoes', (req, res) => {
 
     // Buscar fornecedores para dropdown
     db.all('SELECT * FROM fornecedores ORDER BY nome', (err2, fornecedores) => {
+      if (responded) return; // Prevenir dupla resposta
+      
       if (err2) {
-        res.status(500).send('Erro: ' + err2.message);
-        return;
+        responded = true;
+        return res.status(500).send('Erro: ' + err2.message);
       }
 
       // Garantir que fornecedores é sempre um array
@@ -319,13 +353,19 @@ app.get('/movimentacoes', (req, res) => {
         ORDER BY m.created_at DESC
         LIMIT 20
       `, (err3, movimentacoes) => {
+        if (responded) return; // Prevenir dupla resposta
+        
         if (err3) {
-          res.status(500).send('Erro: ' + err3.message);
-          return;
+          responded = true;
+          return res.status(500).send('Erro: ' + err3.message);
         }
 
         // Garantir que movimentacoes é sempre um array
         const movimentacoesSeguros = Array.isArray(movimentacoes) ? movimentacoes : [];
+
+        // Enviar resposta apenas uma vez
+        if (!responded) {
+          responded = true;
 
         res.send(`
           <!DOCTYPE html>
@@ -527,6 +567,7 @@ app.get('/movimentacoes', (req, res) => {
           </body>
           </html>
         `);
+        }
       });
     });
   });
@@ -536,38 +577,49 @@ app.get('/movimentacoes', (req, res) => {
 app.post('/movimentacoes', async (req, res) => {
   const { produto_id, fornecedor_id, cliente_nome, rca, tipo, quantidade, preco_unitario, valor_total, documento, observacao } = req.body;
   
+  // Prevenir dupla resposta
+  let responded = false;
+  
   try {
     // Para saídas, verificar estoque
     if (tipo === 'SAIDA') {
       const saldo = await getSaldoProduto(produto_id);
       if (saldo < quantidade) {
-        return res.send(`
-          <!DOCTYPE html>
-          <html lang="pt-BR">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Erro - Sistema de Estoque</title>
-            ${styles}
-          </head>
-          <body>
-            <div class="container">
-              <div class="alert alert-warning">
-                <h1>❌ Estoque Insuficiente</h1>
-                <p><strong>Saldo atual:</strong> ${saldo} unidades</p>
-                <p><strong>Quantidade solicitada:</strong> ${quantidade} unidades</p>
+        if (!responded) {
+          responded = true;
+          return res.send(`
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Erro - Sistema de Estoque</title>
+              ${styles}
+            </head>
+            <body>
+              <div class="container">
+                <div class="alert alert-warning">
+                  <h1>❌ Estoque Insuficiente</h1>
+                  <p><strong>Saldo atual:</strong> ${saldo} unidades</p>
+                  <p><strong>Quantidade solicitada:</strong> ${quantidade} unidades</p>
+                </div>
+                <a href="/movimentacoes" class="btn btn-primary">← Voltar às Movimentações</a>
               </div>
-              <a href="/movimentacoes" class="btn btn-primary">← Voltar às Movimentações</a>
-            </div>
-          </body>
-          </html>
-        `);
+            </body>
+            </html>
+          `);
+        }
+        return;
       }
     }
 
     // Validar campos obrigatórios para saída
     if (tipo === 'SAIDA' && !cliente_nome) {
-      return res.status(400).send('Cliente é obrigatório para saídas');
+      if (!responded) {
+        responded = true;
+        return res.status(400).send('Cliente é obrigatório para saídas');
+      }
+      return;
     }
 
     // Inserir movimentação
@@ -590,14 +642,23 @@ app.post('/movimentacoes', async (req, res) => {
       observacao || null
     ], 
     function(err) {
+      if (responded) return; // Prevenir dupla resposta
+      
       if (err) {
-        res.status(500).send('Erro: ' + err.message);
-        return;
+        responded = true;
+        return res.status(500).send('Erro: ' + err.message);
       }
-      res.redirect('/movimentacoes');
+      
+      if (!responded) {
+        responded = true;
+        res.redirect('/movimentacoes');
+      }
     });
   } catch (error) {
-    res.status(500).send('Erro: ' + error.message);
+    if (!responded) {
+      responded = true;
+      res.status(500).send('Erro: ' + error.message);
+    }
   }
 });
 
@@ -808,14 +869,22 @@ app.post('/backup/restore', (req, res) => {
 
 // Página de fornecedores
 app.get('/fornecedores', (req, res) => {
+  // Prevenir dupla resposta
+  let responded = false;
+  
   db.all('SELECT * FROM fornecedores ORDER BY nome', (err, fornecedores) => {
+    if (responded) return; // Prevenir dupla resposta
+    
     if (err) {
-      res.status(500).send('Erro: ' + err.message);
-      return;
+      responded = true;
+      return res.status(500).send('Erro: ' + err.message);
     }
 
     // Garantir que fornecedores é sempre um array
     const fornecedoresSeguros = Array.isArray(fornecedores) ? fornecedores : [];
+
+    if (!responded) {
+      responded = true;
 
     res.send(`
       <!DOCTYPE html>
@@ -877,6 +946,7 @@ app.get('/fornecedores', (req, res) => {
       </body>
       </html>
     `);
+    }
   });
 });
 
@@ -958,16 +1028,25 @@ app.get('/fornecedores/novo', (req, res) => {
 app.post('/fornecedores', (req, res) => {
   const { codigo, nome, contato, telefone, email, endereco, cnpj, observacao } = req.body;
   
+  // Prevenir dupla resposta
+  let responded = false;
+  
   db.run(`
     INSERT INTO fornecedores (codigo, nome, contato, telefone, email, endereco, cnpj, observacao)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `, [codigo, nome, contato, telefone, email, endereco, cnpj, observacao], 
   function(err) {
+    if (responded) return; // Prevenir dupla resposta
+    
     if (err) {
-      res.status(500).send('Erro: ' + err.message);
-      return;
+      responded = true;
+      return res.status(500).send('Erro: ' + err.message);
     }
-    res.redirect('/fornecedores');
+    
+    if (!responded) {
+      responded = true;
+      res.redirect('/fornecedores');
+    }
   });
 });
 
@@ -1530,13 +1609,22 @@ app.post('/financeiro/setup', (req, res) => {
 
 // Financeiro completo (após setup)
 app.get('/financeiro/completo', async (req, res) => {
+  // Prevenir dupla resposta
+  let responded = false;
+  
   try {
     const hoje = new Date().toISOString().split('T')[0];
     
     // Verificar se tabelas existem
     db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='fluxo_caixa'", async (err, row) => {
+      if (responded) return; // Prevenir dupla resposta
+      
       if (!row) {
-        return res.redirect('/financeiro/setup');
+        if (!responded) {
+          responded = true;
+          return res.redirect('/financeiro/setup');
+        }
+        return;
       }
 
       // Buscar lançamentos
@@ -1545,9 +1633,11 @@ app.get('/financeiro/completo', async (req, res) => {
         ORDER BY data_operacao DESC, created_at DESC 
         LIMIT 20
       `, (err, fluxoCaixa) => {
+        if (responded) return; // Prevenir dupla resposta
+        
         if (err) {
-          res.status(500).send('Erro fluxo: ' + err.message);
-          return;
+          responded = true;
+          return res.status(500).send('Erro fluxo: ' + err.message);
         }
 
         // Garantir que fluxoCaixa é sempre um array
@@ -1560,7 +1650,12 @@ app.get('/financeiro/completo', async (req, res) => {
             COALESCE(SUM(CASE WHEN tipo = 'DEBITO' THEN valor ELSE 0 END), 0) as total_debito
           FROM fluxo_caixa
         `, (err2, totais) => {
+          if (responded) return; // Prevenir dupla resposta
+          
           const saldoAtual = totais ? (totais.total_credito - totais.total_debito) : 0;
+
+          if (!responded) {
+            responded = true;
 
           res.send(`
             <!DOCTYPE html>
@@ -1690,17 +1785,24 @@ app.get('/financeiro/completo', async (req, res) => {
             </body>
             </html>
           `);
+          }
         });
       });
     });
   } catch (error) {
-    res.status(500).send('Erro: ' + error.message);
+    if (!responded) {
+      responded = true;
+      res.status(500).send('Erro: ' + error.message);
+    }
   }
 });
 
 // Processar lançamento simples
 app.post('/financeiro/lancamento', (req, res) => {
   const { data_operacao, tipo, valor, descricao } = req.body;
+  
+  // Prevenir dupla resposta
+  let responded = false;
   
   // INSERT com categoria_id padrão (1 para entrada, 3 para saída)
   const categoriaId = tipo === 'CREDITO' ? 1 : 3;
@@ -1709,11 +1811,17 @@ app.post('/financeiro/lancamento', (req, res) => {
     INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id)
     VALUES (?, ?, ?, ?, ?)
   `, [data_operacao, tipo, parseFloat(valor), descricao, categoriaId], (err) => {
+    if (responded) return; // Prevenir dupla resposta
+    
     if (err) {
-      res.status(500).send('Erro: ' + err.message);
-      return;
+      responded = true;
+      return res.status(500).send('Erro: ' + err.message);
     }
-    res.redirect('/financeiro/completo');
+    
+    if (!responded) {
+      responded = true;
+      res.redirect('/financeiro/completo');
+    }
   });
 });
 
@@ -1721,6 +1829,9 @@ app.post('/financeiro/lancamento', (req, res) => {
 
 // Página de gerenciamento de produtos
 app.get('/gerenciar/produtos', (req, res) => {
+  // Prevenir dupla resposta
+  let responded = false;
+  
   db.all(`
     SELECT 
       p.*,
@@ -1735,13 +1846,18 @@ app.get('/gerenciar/produtos', (req, res) => {
     GROUP BY p.id
     ORDER BY p.codigo
   `, (err, produtos) => {
+    if (responded) return; // Prevenir dupla resposta
+    
     if (err) {
-      res.status(500).send('Erro: ' + err.message);
-      return;
+      responded = true;
+      return res.status(500).send('Erro: ' + err.message);
     }
 
     // Garantir que produtos é sempre um array
     const produtosSeguros = Array.isArray(produtos) ? produtos : [];
+
+    if (!responded) {
+      responded = true;
 
     res.send(`
       <!DOCTYPE html>
@@ -1858,6 +1974,7 @@ app.get('/gerenciar/produtos', (req, res) => {
       </body>
       </html>
     `);
+    }
   });
 });
 
@@ -1879,6 +1996,9 @@ app.post('/gerenciar/produtos/deletar', async (req, res) => {
 
 // Página de gerenciamento de movimentações
 app.get('/gerenciar/movimentacoes', (req, res) => {
+  // Prevenir dupla resposta
+  let responded = false;
+  
   db.all(`
     SELECT 
       m.*,
@@ -1889,13 +2009,18 @@ app.get('/gerenciar/movimentacoes', (req, res) => {
     ORDER BY m.created_at DESC
     LIMIT 200
   `, (err, movimentacoes) => {
+    if (responded) return; // Prevenir dupla resposta
+    
     if (err) {
-      res.status(500).send('Erro: ' + err.message);
-      return;
+      responded = true;
+      return res.status(500).send('Erro: ' + err.message);
     }
 
     // Garantir que movimentacoes é sempre um array
     const movimentacoesSeguros = Array.isArray(movimentacoes) ? movimentacoes : [];
+
+    if (!responded) {
+      responded = true;
 
     res.send(`
       <!DOCTYPE html>
@@ -2012,6 +2137,7 @@ app.get('/gerenciar/movimentacoes', (req, res) => {
       </body>
       </html>
     `);
+    }
   });
 });
 
