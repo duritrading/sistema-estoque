@@ -52,7 +52,8 @@ app.get('/', (req, res) => {
       return;
     }
 
-    const alertas = produtos.filter(p => p.saldo_atual <= p.estoque_minimo);
+    const produtosSeguros = Array.isArray(produtos) ? produtos : [];
+    const filtrados = produtosSeguros.filter(produto => ...);
     const totalProdutos = produtos.length;
     const totalEmEstoque = produtos.reduce((sum, p) => sum + p.saldo_atual, 0);
     const valorEstoque = produtos.reduce((sum, p) => sum + (p.saldo_atual * (p.preco_custo || 0)), 0);
