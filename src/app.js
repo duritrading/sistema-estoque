@@ -579,10 +579,14 @@ app.post('/produtos', (req, res) => {
 // ... outras importações de rotas
 const movimentacoesRoutes = require('./routes/movimentacoes');
 const fornecedoresRoutes = require('./routes/fornecedores'); // ADICIONE ESTA LINHA
+const usuariosRoutes = require('./routes/usuarios'); // ADICIONE ESTA LINHA
+
 
 // ...
 app.use('/movimentacoes', movimentacoesRoutes);
 app.use('/fornecedores', fornecedoresRoutes); // ADICIONE ESTA LINHA
+app.use('/usuarios', usuariosRoutes); // ADICIONE ESTA LINHA
+
 
 // Página financeiro simples
 app.get('/financeiro', (req, res) => {
@@ -983,119 +987,7 @@ app.get('/gerenciar/movimentacoes', (req, res) => {
   });
 });
 
-// ========================================
-// NOVA FUNCIONALIDADE: GERENCIAMENTO DE USUÁRIOS
-// ========================================
 
-// Página de usuários
-app.get('/usuarios', async (req, res) => {
-  try {
-    const usuarios = await pool.query(`
-      SELECT id, username, email, nome_completo, ativo, ultimo_login, created_at 
-      FROM usuarios 
-      ORDER BY created_at DESC
-    `);
-
-    res.send(`
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Usuários - Sistema da OF Distribuidora</title>
-        ${styles}
-      </head>
-      <body>
-        <div class="header">
-          <div class="header-content">
-            <div>
-              <h1>👥 Gerenciar Usuários</h1>
-              <p>Controle de acesso ao sistema</p>
-            </div>
-            <div class="user-info">
-              <div class="user-name">👤 ${res.locals.user.nomeCompleto || res.locals.user.username}</div>
-              <a href="/logout" class="btn-logout">Sair</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="container">
-          <div class="nav">
-            <a href="/">📊 Dashboard</a>
-            <a href="/movimentacoes">📦 Movimentações</a>
-            <a href="/fornecedores">🏭 Fornecedores</a>
-            <a href="/financeiro">💰 Financeiro</a>
-            <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
-            <a href="/usuarios">👥 Usuários</a>
-          </div>
-
-          <div class="card">
-            <h2>➕ Criar Novo Usuário</h2>
-            <form action="/usuarios" method="POST">
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="username">Nome de Usuário *</label>
-                  <input type="text" id="username" name="username" required>
-                </div>
-                <div class="form-group">
-                  <label for="email">E-mail *</label>
-                  <input type="email" id="email" name="email" required>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="nome_completo">Nome Completo</label>
-                  <input type="text" id="nome_completo" name="nome_completo">
-                </div>
-                <div class="form-group">
-                  <label for="password">Senha *</label>
-                  <input type="password" id="password" name="password" required minlength="6">
-                </div>
-              </div>
-              <button type="submit" class="btn">Criar Usuário</button>
-            </form>
-          </div>
-
-          <div class="card">
-            <h2>📋 Usuários Cadastrados</h2>
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Usuário</th>
-                  <th>Nome Completo</th>
-                  <th>E-mail</th>
-                  <th>Status</th>
-                  <th>Último Login</th>
-                  <th>Cadastro</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${usuarios.rows.map(user => `
-                  <tr>
-                    <td><strong>${user.username}</strong></td>
-                    <td>${user.nome_completo || '-'}</td>
-                    <td>${user.email}</td>
-                    <td>
-                      <span class="badge ${user.ativo ? 'badge-success' : 'badge-danger'}">
-                        ${user.ativo ? 'Ativo' : 'Inativo'}
-                      </span>
-                    </td>
-                    <td>${user.ultimo_login ? new Date(user.ultimo_login).toLocaleDateString('pt-BR') : 'Nunca'}</td>
-                    <td>${new Date(user.created_at).toLocaleDateString('pt-BR')}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </body>
-      </html>
-    `);
-  } catch (error) {
-    console.error('Erro buscar usuários:', error);
-    res.status(500).send('Erro interno');
-  }
-});
 
 // Inicializar servidor
 // ========================================

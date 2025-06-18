@@ -1,0 +1,66 @@
+<%- include('partials/header', {
+  titulo: 'Gerenciar Usuários',
+  subtitulo: 'Controle de acesso ao sistema',
+  user: locals.user
+}) %>
+
+<div class="card">
+  <h2>➕ Criar Novo Usuário</h2>
+  <form action="/usuarios" method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="username">Nome de Usuário *</label>
+        <input type="text" id="username" name="username" required>
+      </div>
+      <div class="form-group">
+        <label for="email">E-mail *</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="nome_completo">Nome Completo</label>
+        <input type="text" id="nome_completo" name="nome_completo">
+      </div>
+      <div class="form-group">
+        <label for="password">Senha *</label>
+        <input type="password" id="password" name="password" required minlength="6">
+      </div>
+    </div>
+    <button type="submit" class="btn">Criar Usuário</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>📋 Usuários Cadastrados</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Usuário</th>
+        <th>Nome Completo</th>
+        <th>E-mail</th>
+        <th>Status</th>
+        <th>Último Login</th>
+        <th>Cadastro</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% usuarios.forEach(user => { %>
+        <tr>
+          <td><strong><%= user.username %></strong></td>
+          <td><%= user.nome_completo || '-' %></td>
+          <td><%= user.email %></td>
+          <td>
+            <span class="badge <%= user.ativo ? 'badge-success' : 'badge-danger' %>">
+              <%= user.ativo ? 'Ativo' : 'Inativo' %>
+            </span>
+          </td>
+          <td><%= user.ultimo_login ? new Date(user.ultimo_login).toLocaleDateString('pt-BR') : 'Nunca' %></td>
+          <td><%= new Date(user.created_at).toLocaleDateString('pt-BR') %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/footer') %>
