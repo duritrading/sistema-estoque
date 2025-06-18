@@ -1,15 +1,9 @@
-// Auto-detectar qual banco usar
 if (process.env.DATABASE_URL) {
-  // PostgreSQL em produção
+  // Produção: Exporta a pool do PostgreSQL
   console.log('🐘 Usando PostgreSQL (produção)');
-  // O require agora retorna um objeto com 'db' e 'pool'
-  const { db, pool } = require('./database-postgres');
-  // Exportamos um objeto que contém ambos para o resto da aplicação
-  module.exports = { db, pool };
+  module.exports = require('./database-postgres');
 } else {
-  // SQLite em desenvolvimento
+  // Desenvolvimento: Exporta a conexão do SQLite
   console.log('🗄️ Usando SQLite (desenvolvimento)');
-  const db = require('./database-sqlite');
-  // Para manter a compatibilidade, exportamos o mesmo formato de objeto
-  module.exports = { db: db, pool: null }; // pool é nulo em dev
+  module.exports = require('./database-sqlite');
 }

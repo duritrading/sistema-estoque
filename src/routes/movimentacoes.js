@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 // Esta linha pode precisar de ajuste dependendo de onde você exporta o 'db'
 // Se o seu 'db' está em /src/config/database.js, este caminho está correto.
-const { db } = require('../config/database');
+const pool = require('../config/database');
+
 
 function getSaldoProduto(produtoId) {
   return new Promise((resolve, reject) => {
