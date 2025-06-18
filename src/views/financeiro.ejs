@@ -1,0 +1,83 @@
+<%- include('partials/header', {
+  titulo: 'Controle Financeiro',
+  subtitulo: 'Fluxo de caixa e controle financeiro',
+  user: locals.user
+}) %>
+
+<div class="stats">
+  <div class="stat-card">
+    <h3>R$ <%= (totais.total_credito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></h3>
+    <p>Total de Entradas</p>
+  </div>
+  <div class="stat-card">
+    <h3>R$ <%= (totais.total_debito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></h3>
+    <p>Total de Saídas</p>
+  </div>
+  <div class="stat-card <%= saldoAtual >= 0 ? '' : 'badge-danger' %>">
+    <h3>R$ <%= saldoAtual.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></h3>
+    <p>Saldo Atual</p>
+  </div>
+  <div class="stat-card">
+    <h3><%= lancamentos.length %></h3>
+    <p>Últimos Lançamentos</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>➕ Novo Lançamento</h2>
+  <form action="/financeiro/lancamento" method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="data_operacao">Data *</label>
+        <input type="date" id="data_operacao" name="data_operacao" value="<%= hoje %>" required>
+      </div>
+      <div class="form-group">
+        <label for="tipo">Tipo *</label>
+        <select id="tipo" name="tipo" required>
+          <option value="">Selecione</option>
+          <option value="CREDITO">💰 Entrada (Crédito)</option>
+          <option value="DEBITO">💸 Saída (Débito)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="valor">Valor (R$) *</label>
+        <input type="number" id="valor" name="valor" step="0.01" min="0.01" required>
+      </div>
+      <div class="form-group">
+        <label for="descricao">Descrição *</label>
+        <input type="text" id="descricao" name="descricao" required>
+      </div>
+    </div>
+    <button type="submit" class="btn">Registrar Lançamento</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>📋 Últimos Lançamentos</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Tipo</th>
+        <th>Descrição</th>
+        <th>Valor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% lancamentos.forEach(item => { %>
+        <tr>
+          <td><%= new Date(item.data_operacao).toLocaleDateString('pt-BR') %></td>
+          <td><span class="badge <%= item.tipo === 'CREDITO' ? 'badge-success' : 'badge-danger' %>"><%= item.tipo %></span></td>
+          <td><%= item.descricao %></td>
+          <td class="<%= item.tipo === 'CREDITO' ? 'saldo-positivo' : 'saldo-negativo' %>">
+            <%= item.tipo === 'CREDITO' ? '+' : '-' %> R$ <%= parseFloat(item.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/footer') %>

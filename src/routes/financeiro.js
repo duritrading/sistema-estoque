@@ -1,0 +1,66 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../config/database');
+
+// Rota principal /financeiro redireciona para a completa
+router.get('/', (req, res) => {
+  return res.redirect('/financeiro/completo');
+});
+
+// Página principal do financeiro
+router.get('/completo', (req, res) => {
+  try {
+    const hoje = new Date().toISOString().split('T')[0];
+
+    db.all(`
+      SELECT * FROM fluxo_caixa 
+      ORDER BY data_operacao DESC, created_at DESC 
+      LIMIT 20
+    `, [], (err, lancamentos) => {
+      if (err) {
+        return res.status(500).send('Erro buscando lançamentos: ' + err.message);
+      }
+
+      db.get(`
+        SELECT 
+          COALESCE(SUM(CASE WHEN tipo = 'CREDITO' THEN valor ELSE 0 END), 0) as total_credito,
+          COALESCE(SUM(CASE WHEN tipo = 'DEBITO' THEN valor ELSE 0 END), 0) as total_debito
+        FROM fluxo_caixa
+      `, [], (err2, totais) => {
+        if (err2) {
+          return res.status(500).send('Erro buscando totais: ' + err2.message);
+        }
+        const saldoAtual = totais ? (totais.total_credito - totais.total_debito) : 0;
+
+        res.render('financeiro', {
+          user: res.locals.user,
+          lancamentos: Array.isArray(lancamentos) ? lancamentos : [],
+          totais: totais || { total_credito: 0, total_debito: 0 },
+          saldoAtual,
+          hoje
+        });
+      });
+    });
+  } catch (error) {
+    return res.status(500).send('Erro geral financeiro: ' + error.message);
+  }
+});
+
+// Processar novo lançamento
+router.post('/lancamento', (req, res) => {
+  const { data_operacao, tipo, valor, descricao } = req.body;
+  const categoriaId = tipo === 'CREDITO' ? 1 : 3;
+
+  db.run(`
+    INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id)
+    VALUES ($1, $2, $3, $4, $5)
+  `, [data_operacao, tipo, parseFloat(valor), descricao, categoriaId], (err) => {
+    if (err) {
+      console.error('Erro lançamento financeiro:', err);
+      return res.status(500).send('Erro: ' + err.message);
+    }
+    return res.redirect('/financeiro/completo');
+  });
+});
+
+module.exports = router;
