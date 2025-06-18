@@ -243,7 +243,63 @@ app.use((req, res, next) => {
   }
 });
 
-// Processar Login (COM DEBUG)
+// ========================================
+// ROTAS DE LOGIN (CORRIGIDAS)
+// ========================================
+
+// Página de Login
+app.get('/login', (req, res) => {
+  const redirectUrl = req.query.redirect || '/';
+  const error = req.query.error;
+  const success = req.query.success;
+  
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Login - Sistema de Estoque</title>
+      ${loginStyles}
+    </head>
+    <body>
+      <div class="login-container">
+        <div class="login-header">
+          <h1>🏪 Sistema de Estoque</h1>
+          <p>Faça login para acessar o sistema</p>
+        </div>
+
+        ${error ? `<div class="alert alert-danger">${error}</div>` : ''}
+        ${success ? `<div class="alert alert-success">${success}</div>` : ''}
+
+        <form action="/login" method="POST">
+          <input type="hidden" name="redirect" value="${redirectUrl}">
+          
+          <div class="form-group">
+            <label for="username">Usuário</label>
+            <input type="text" id="username" name="username" required autocomplete="username">
+          </div>
+
+          <div class="form-group">
+            <label for="password">Senha</label>
+            <input type="password" id="password" name="password" required autocomplete="current-password">
+          </div>
+
+          <button type="submit" class="btn-login">Entrar no Sistema</button>
+        </form>
+
+        <div class="footer-info">
+          <p><strong>Usuário padrão:</strong> admin</p>
+          <p><strong>Senha padrão:</strong> admin123</p>
+          <small>Altere a senha após o primeiro login</small>
+        </div>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+// Processar Login (VERSÃO ÚNICA)
 app.post('/login', async (req, res) => {
   const { username, password, redirect } = req.body;
   
@@ -274,8 +330,7 @@ app.post('/login', async (req, res) => {
       id: user.id,
       username: user.username,
       ativo: user.ativo,
-      temSenha: user.password_hash ? 'SIM' : 'NÃO',
-      hashInicio: user.password_hash ? user.password_hash.substring(0, 10) : 'NENHUMA'
+      temSenha: user.password_hash ? 'SIM' : 'NÃO'
     });
 
     console.log('🔒 Verificando senha...');
@@ -334,69 +389,6 @@ app.post('/login', async (req, res) => {
     console.error('Stack:', error.stack);
     res.redirect('/login?error=' + encodeURIComponent('Erro interno do servidor'));
   }
-});
-// Processar Login
-app.post('/login', async (req, res) => {
-  const { username, password, redirect } = req.body;
-  
-  try {
-    // Buscar usuário
-    const userResult = await pool.query(
-      'SELECT * FROM usuarios WHERE username = $1 AND ativo = true',
-      [username]
-    );
-
-    if (userResult.rows.length === 0) {
-      return res.redirect('/login?error=' + encodeURIComponent('Usuário não encontrado ou inativo'));
-    }
-
-    const user = userResult.rows[0];
-
-    // Verificar senha
-    const passwordMatch = await bcrypt.compare(password, user.password_hash);
-
-    if (!passwordMatch) {
-      return res.redirect('/login?error=' + encodeURIComponent('Senha incorreta'));
-    }
-
-    // Atualizar último login
-    await pool.query(
-      'UPDATE usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = $1',
-      [user.id]
-    );
-
-    // Criar sessão
-    req.session.userId = user.id;
-    req.session.username = user.username;
-    req.session.nomeCompleto = user.nome_completo;
-
-    // Redirecionar
-    const redirectUrl = redirect && redirect !== '/' ? redirect : '/';
-    res.redirect(redirectUrl);
-
-  } catch (error) {
-    console.error('Erro no login:', error);
-    res.redirect('/login?error=' + encodeURIComponent('Erro interno do servidor'));
-  }
-});
-
-// Logout
-app.get('/logout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('Erro no logout:', err);
-    }
-    res.redirect('/login?success=' + encodeURIComponent('Logout realizado com sucesso'));
-  });
-});
-
-// Health check (público)
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime() 
-  });
 });
 
 // ========================================
@@ -1713,25 +1705,6 @@ app.get('/usuarios', async (req, res) => {
   } catch (error) {
     console.error('Erro buscar usuários:', error);
     res.status(500).send('Erro interno');
-  }
-});
-
-// Criar usuário
-app.post('/usuarios', async (req, res) => {
-  const { username, email, nome_completo, password } = req.body;
-  
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    await pool.query(`
-      INSERT INTO usuarios (username, email, nome_completo, password_hash)
-      VALUES ($1, $2, $3, $4)
-    `, [username, email, nome_completo, hashedPassword]);
-    
-    res.redirect('/usuarios?success=Usuário criado com sucesso');
-  } catch (error) {
-    console.error('Erro criar usuário:', error);
-    res.redirect('/usuarios?error=Erro ao criar usuário: ' + error.message);
   }
 });
 
