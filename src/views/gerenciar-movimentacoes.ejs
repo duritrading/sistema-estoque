@@ -1,0 +1,39 @@
+<%- include('partials/header', {
+  titulo: 'Gerenciar Movimentações',
+  subtitulo: 'Histórico completo de movimentações',
+  user: locals.user
+}) %>
+
+<div class="card">
+  <h2>📋 Histórico de Movimentações (<%= movimentacoes.length %>)</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Produto</th>
+        <th>Tipo</th>
+        <th>Quantidade</th>
+        <th>Preço Unit.</th>
+        <th>Valor Total</th>
+        <th>Cliente/Fornecedor</th>
+        <th>Documento</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% movimentacoes.forEach(m => { %>
+        <tr>
+          <td><%= new Date(m.created_at).toLocaleDateString('pt-BR') %></td>
+          <td><strong><%= m.codigo %></strong><br><small><%= m.descricao %></small></td>
+          <td><span class="badge <%= m.tipo === 'ENTRADA' ? 'badge-success' : 'badge-danger' %>"><%= m.tipo %></span></td>
+          <td><%= m.quantidade %></td>
+          <td><%= m.preco_unitario ? 'R$ ' + parseFloat(m.preco_unitario).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-' %></td>
+          <td><%= m.valor_total ? 'R$ ' + parseFloat(m.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-' %></td>
+          <td><%= m.cliente_nome || m.fornecedor_nome || '-' %></td>
+          <td><%= m.documento || '-' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/footer') %>

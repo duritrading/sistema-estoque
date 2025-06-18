@@ -581,104 +581,15 @@ const movimentacoesRoutes = require('./routes/movimentacoes');
 const fornecedoresRoutes = require('./routes/fornecedores'); // ADICIONE ESTA LINHA
 const usuariosRoutes = require('./routes/usuarios'); // ADICIONE ESTA LINHA
 const financeiroRoutes = require('./routes/financeiro'); // ADICIONE ESTA LINHA
+const gerenciarRoutes = require('./routes/gerenciar'); // ADICIONE ESTA LINHA
+
 
 // ...
 app.use('/movimentacoes', movimentacoesRoutes);
 app.use('/fornecedores', fornecedoresRoutes); // ADICIONE ESTA LINHA
 app.use('/usuarios', usuariosRoutes); // ADICIONE ESTA LINHA
 app.use('/financeiro', financeiroRoutes); // ADICIONE ESTA LINHA
-
-// Página de gerenciamento de movimentações (COM HEADER DE USUÁRIO)
-app.get('/gerenciar/movimentacoes', (req, res) => {
-  db.all(`
-    SELECT 
-      m.*,
-      p.codigo,
-      p.descricao
-    FROM movimentacoes m
-    JOIN produtos p ON m.produto_id = p.id
-    ORDER BY m.created_at DESC
-    LIMIT 200
-  `, [], (err, movimentacoes) => {
-    if (err) {
-      console.error('Erro gerenciar movimentações:', err);
-      return res.status(500).send('Erro: ' + err.message);
-    }
-
-    const movimentacoesSeguros = Array.isArray(movimentacoes) ? movimentacoes : [];
-
-    return res.send(`
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Gerenciar Movimentações - Sistema da OF Distribuidora</title>
-        ${styles}
-      </head>
-      <body>
-        <div class="header">
-          <div class="header-content">
-            <div>
-              <h1>📦 Gerenciar Movimentações</h1>
-              <p>Histórico completo de movimentações</p>
-            </div>
-            <div class="user-info">
-              <div class="user-name">👤 ${res.locals.user.nomeCompleto || res.locals.user.username}</div>
-              <a href="/logout" class="btn-logout">Sair</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="container">
-          <div class="nav">
-            <a href="/">📊 Dashboard</a>
-            <a href="/movimentacoes">📦 Movimentações</a>
-            <a href="/fornecedores">🏭 Fornecedores</a>
-            <a href="/financeiro">💰 Financeiro</a>
-            <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
-            <a href="/usuarios">👥 Usuários</a>
-          </div>
-
-          <div class="card">
-            <h2>📋 Histórico de Movimentações (${movimentacoesSeguros.length})</h2>
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Produto</th>
-                  <th>Tipo</th>
-                  <th>Quantidade</th>
-                  <th>Preço Unit.</th>
-                  <th>Valor Total</th>
-                  <th>Cliente/Fornecedor</th>
-                  <th>Documento</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${movimentacoesSeguros.map(m => `
-                  <tr>
-                    <td>${new Date(m.created_at).toLocaleDateString('pt-BR')}</td>
-                    <td><strong>${m.codigo}</strong><br><small>${m.descricao}</small></td>
-                    <td><span class="badge ${m.tipo === 'ENTRADA' ? 'badge-success' : 'badge-danger'}">${m.tipo}</span></td>
-                    <td>${m.quantidade}</td>
-                    <td>${m.preco_unitario ? 'R$ ' + parseFloat(m.preco_unitario).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
-                    <td>${m.valor_total ? 'R$ ' + parseFloat(m.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
-                    <td>${m.cliente_nome || m.fornecedor_nome || '-'}</td>
-                    <td>${m.documento || '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </body>
-      </html>
-    `);
-  });
-});
-
-
+app.use('/gerenciar', gerenciarRoutes); // ADICIONE ESTA LINHA
 
 // Inicializar servidor
 // ========================================
