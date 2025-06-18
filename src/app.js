@@ -168,6 +168,17 @@ const loginStyles = `
 </style>
 `;
 
+// ...
+app.use(express.static('public'));
+app.use(session({ /* ... */ }));
+
+// ========================================
+// ROTA DE HEALTH CHECK PARA O RENDER
+// ========================================
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // Middleware de autenticação (CORRIGIDO)
 app.use((req, res, next) => {
   console.log('🛡️ Middleware auth - URL:', req.path, 'Method:', req.method);
