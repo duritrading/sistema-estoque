@@ -359,7 +359,7 @@ app.get('/movimentacoes', (req, res) => {
                       <label>Produto *</label>
                       <select name="produto_id" class="form-control" required>
                         <option value="">Selecione um produto...</option>
-                        ${produtos.map(p => `<option value="${p.id}">${p.codigo} - ${p.descricao}</option>`).join('')}
+                        ${produtosSeguros.map(p => \`<option value="${p.id}">${p.codigo} - ${p.descricao}</option>`).join('')}
                       </select>
                     </div>
 
@@ -416,7 +416,7 @@ app.get('/movimentacoes', (req, res) => {
                       <label>Produto *</label>
                       <select name="produto_id" class="form-control" required>
                         <option value="">Selecione um produto...</option>
-                        ${produtos.map(p => `<option value="${p.id}">${p.codigo} - ${p.descricao}</option>`).join('')}
+                        ${produtosSeguros.map(p => \`<option value="${p.id}">${p.codigo} - ${p.descricao}</option>`).join('')}
                       </select>
                     </div>
 
@@ -1781,7 +1781,7 @@ app.get('/gerenciar/produtos', (req, res) => {
                 </tr>
               </thead>
               <tbody>
-                ${produtos.map(p => `
+                ${produtosSeguros.map(p => \
                   <tr>
                     <td><strong>${p.codigo}</strong></td>
                     <td>${p.descricao}</td>
@@ -1803,7 +1803,7 @@ app.get('/gerenciar/produtos', (req, res) => {
               </tbody>
             </table>
             
-            ${produtos.length === 0 ? '<div class="no-results">Nenhum produto cadastrado</div>' : ''}
+            ${produtosSeguros.length === 0 ? '<div class="no-results">Nenhum produto cadastrado</div>' : ''}
           </div>
         </div>
 
