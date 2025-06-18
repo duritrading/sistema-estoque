@@ -25,72 +25,66 @@ router.get('/dre', (req, res) => {
     // ...
 });
 
+// Em src/routes/financeiro.js
 
-// ROTA DE FATURAMENTO ATUALIZADA
-router.get('/faturamento', (req, res) => {
-  let { data_inicio, data_fim } = req.query;
-  const isProduction = !!process.env.DATABASE_URL;
-
-  if (!data_inicio) {
-    const hoje = new Date();
-    data_inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-  }
-  if (!data_fim) {
-    const hoje = new Date();
-    data_fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
-  }
-  
-  // 1. QUERY ATUALIZADA PARA INCLUIR O NOME DO PRODUTO
-  let query = `
-    SELECT 
-      cr.id, 
-      cr.movimentacao_id, 
-      cr.cliente_nome, 
-      cr.numero_parcela, 
-      cr.total_parcelas, 
-      cr.valor, 
-      cr.data_vencimento, 
-      cr.data_pagamento, 
-      cr.status,
-      p.descricao as produto_descricao
-    FROM contas_a_receber cr
-    JOIN movimentacoes m ON cr.movimentacao_id = m.id
-    JOIN produtos p ON m.produto_id = p.id
-  `;
-  const params = [];
-  const whereClauses = [];
-  let paramCount = 1;
-
-  if (data_inicio) {
-    whereClauses.push(`cr.data_vencimento >= ${isProduction ? '$' + paramCount++ : '?'}`);
-    params.push(data_inicio);
-  }
-  if (data_fim) {
-    whereClauses.push(`cr.data_vencimento <= ${isProduction ? '$' + paramCount++ : '?'}`);
-    params.push(data_fim);
-  }
-  
-  if (whereClauses.length > 0) {
-    query += ' WHERE ' + whereClauses.join(' AND ');
-  }
-  query += ' ORDER BY cr.data_vencimento ASC';
-
-  db.all(query, params, (err, contas) => {
-    if (err) {
-      console.error('Erro ao buscar contas a receber:', err);
-      return res.status(500).send('Erro ao buscar dados de faturamento.');
-    }
-
-    // 2. CÁLCULO DA SOMA TOTAL
-    const totalValor = (contas || []).reduce((sum, conta) => sum + parseFloat(conta.valor), 0);
-
-    res.render('faturamento', {
-      user: res.locals.user,
-      contas: Array.isArray(contas) ? contas : [],
-      filtros: { data_inicio, data_fim },
-      totalValor: totalValor // Enviando o total para a view
+router.get('/completo', async (req, res) => {
+  // Função auxiliar para "promisificar" o db.all
+  const queryPromise = (query, params = []) => {
+    return new Promise((resolve, reject) => {
+      db.all(query, params, (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
     });
-  });
+  };
+
+  // Função auxiliar para "promisificar" o db.get
+   const getPromise = (query, params = []) => {
+    return new Promise((resolve, reject) => {
+      db.get(query, params, (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      });
+    });
+  };
+
+  try {
+    const hoje = new Date().toISOString().split('T')[0];
+
+    const queryLancamentos = `SELECT * FROM fluxo_caixa ORDER BY data_operacao DESC, created_at DESC LIMIT 20`;
+    const queryTotais = `
+      SELECT 
+        COALESCE(SUM(CASE WHEN tipo = 'CREDITO' THEN valor ELSE 0 END), 0) as total_credito,
+        COALESCE(SUM(CASE WHEN tipo = 'DEBITO' THEN valor ELSE 0 END), 0) as total_debito
+      FROM fluxo_caixa
+    `;
+
+    // Executa as duas buscas em paralelo
+    const [lancamentos, totais] = await Promise.all([
+        queryPromise(queryLancamentos),
+        getPromise(queryTotais)
+    ]);
+
+    const saldoAtual = totais ? (totais.total_credito - totais.total_debito) : 0;
+
+    res.render('financeiro', {
+      user: res.locals.user,
+      lancamentos: lancamentos || [],
+      totais: totais || { total_credito: 0, total_debito: 0 },
+      saldoAtual,
+      hoje
+    });
+
+  } catch (error) {
+    console.error('Erro geral financeiro:', error);
+    return res.status(500).send('Erro ao carregar página financeira: ' + error.message);
+  }
 });
 
 // 3. NOVA ROTA PARA REGISTRAR O PAGAMENTO
