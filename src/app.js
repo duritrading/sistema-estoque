@@ -196,6 +196,7 @@ app.get('/produtos', (req, res) => {
   `, (err, rows) => {
     if (err) {
       res.status(500).json({ erro: err.message });
+      return;
     } else {
       res.json(rows);
     }
@@ -276,6 +277,7 @@ app.post('/produtos', (req, res) => {
   function(err) {
     if (err) {
       res.status(500).send('Erro: ' + err.message);
+            return; // ← ADICIONAR ESTA LINHA!
     } else {
       res.redirect('/');
     }
@@ -704,6 +706,7 @@ app.post('/backup/create', (req, res) => {
     `);
   } else {
     res.status(500).send(`
+          return; // ← ADICIONAR ESTA LINHA!
       <!DOCTYPE html>
       <html lang="pt-BR">
       <head>
@@ -735,6 +738,7 @@ app.get('/backup/download/:filename', (req, res) => {
     res.download(filePath, filename);
   } else {
     res.status(404).send('Arquivo não encontrado');
+          return; // ← ADICIONAR ESTA LINHA!
   }
 });
 
@@ -771,6 +775,8 @@ app.post('/backup/restore', (req, res) => {
     `);
   } else {
     res.status(500).send(`
+          return; // ← ADICIONAR ESTA LINHA!
+
       <!DOCTYPE html>
       <html lang="pt-BR">
       <head>
@@ -951,6 +957,8 @@ app.post('/fornecedores', (req, res) => {
   function(err) {
     if (err) {
       res.status(500).send('Erro: ' + err.message);
+            return; // ← ADICIONAR ESTA LINHA!
+
     } else {
       res.redirect('/fornecedores');
     }
@@ -1037,6 +1045,8 @@ app.get('/relatorios', async (req, res) => {
     `);
   } catch (error) {
     res.status(500).send('Erro: ' + error.message);
+          return; // ← ADICIONAR ESTA LINHA!
+
   }
 });
 
@@ -1110,6 +1120,8 @@ app.get('/relatorios/posicao-estoque', async (req, res) => {
     `);
   } catch (error) {
     res.status(500).send('Erro: ' + error.message);
+          return; // ← ADICIONAR ESTA LINHA!
+
   }
 });
 
@@ -1187,6 +1199,8 @@ app.get('/relatorios/analise-abc', async (req, res) => {
     `);
   } catch (error) {
     res.status(500).send('Erro: ' + error.message);
+          return; // ← ADICIONAR ESTA LINHA!
+
   }
 });
 
@@ -1533,6 +1547,8 @@ app.get('/financeiro/completo', async (req, res) => {
       `, (err, fluxoCaixa) => {
         if (err) {
           return res.status(500).send('Erro fluxo: ' + err.message);
+                return; // ← ADICIONAR ESTA LINHA!
+
         }
 
         // Calcular saldo total
@@ -1677,6 +1693,8 @@ app.get('/financeiro/completo', async (req, res) => {
     });
   } catch (error) {
     res.status(500).send('Erro: ' + error.message);
+          return; // ← ADICIONAR ESTA LINHA!
+
   }
 });
 
@@ -1693,6 +1711,8 @@ app.post('/financeiro/lancamento', (req, res) => {
   `, [data_operacao, tipo, parseFloat(valor), descricao, categoriaId], (err) => {
     if (err) {
       res.status(500).send('Erro: ' + err.message);
+            return; // ← ADICIONAR ESTA LINHA!
+
     } else {
       res.redirect('/financeiro/completo');
     }
