@@ -1,17 +1,24 @@
 const express = require('express');
 const router = express.Router();
-// Importação correta que pega o 'pool'
-const { pool } = require('../config/database');
+// Usamos a importação que nos dá acesso tanto ao 'db' quanto ao 'pool'
+const { db, pool } = require('../config/database');
 
-// ... (as outras rotas de financeiro, como /faturamento e /dre, continuam aqui) ...
-// A rota /completo é a que estava travando:
+// ==========================================================
+// ROTA INICIAL QUE ESTAVA FALTANDO
+// ==========================================================
+router.get('/', (req, res) => {
+  // A função desta rota é simplesmente redirecionar para a página principal do financeiro
+  res.redirect('/financeiro/completo');
+});
+// ==========================================================
+
+// Rota para a página de FLUXO DE CAIXA
 router.get('/completo', async (req, res) => {
   if (!pool) {
     return res.status(500).send('Erro de configuração: Pool do banco de dados não disponível.');
   }
   try {
     const hoje = new Date().toISOString().split('T')[0];
-
     const queryLancamentos = `SELECT * FROM fluxo_caixa ORDER BY data_operacao DESC, created_at DESC LIMIT 20`;
     const lancamentosResult = await pool.query(queryLancamentos);
 
@@ -38,6 +45,26 @@ router.get('/completo', async (req, res) => {
     return res.status(500).send('Erro ao carregar a página financeira.');
   }
 });
-// ... (o resto do arquivo, incluindo a rota /faturamento e /dre, continua aqui) ...
+
+// Rota para a página de FATURAMENTO
+router.get('/faturamento', (req, res) => {
+    // ... (código da rota /faturamento que já corrigimos)
+});
+
+// Rota para a página de DRE
+router.get('/dre', (req, res) => {
+    // ... (código da rota /dre que já corrigimos)
+});
+
+// Rota para registrar PAGAMENTO
+router.post('/faturamento/registrar-pagamento/:id', (req, res) => {
+    // ... (código da rota para registrar pagamento que já implementamos)
+});
+
+// Rota para criar LANÇAMENTO no fluxo de caixa
+router.post('/lancamento', (req, res) => {
+    // ... (código da rota para criar lançamento)
+});
+
 
 module.exports = router;
