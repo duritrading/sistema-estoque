@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
+const { db, pool } = require('../config/database');
 
 // Rota principal /financeiro redireciona para a completa
 router.get('/', (req, res) => {
@@ -26,42 +26,35 @@ router.get('/dre', (req, res) => {
 });
 
 // Em src/routes/financeiro.js
-
 router.get('/completo', async (req, res) => {
-  // Função auxiliar para transformar nossas chamadas de banco em Promises
-  const queryPromise = (query, params = [], method = 'all') => {
-    return new Promise((resolve, reject) => {
-      db[method](query, params, (err, result) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(result);
-      });
-    });
-  };
+  // Verifica se estamos em produção e se o pool existe
+  if (!pool) {
+    return res.status(500).send('Erro de configuração: Pool do banco de dados não disponível.');
+  }
 
   try {
     const hoje = new Date().toISOString().split('T')[0];
 
-    console.log('FINANCEIRO: Buscando últimos lançamentos...');
+    console.log('FINANCEIRO (direto): Buscando últimos lançamentos...');
     const queryLancamentos = `SELECT * FROM fluxo_caixa ORDER BY data_operacao DESC, created_at DESC LIMIT 20`;
-    const lancamentos = await queryPromise(queryLancamentos, [], 'all'); // Usando o método 'all'
-    console.log(`FINANCEIRO: Lançamentos encontrados: ${lancamentos ? lancamentos.length : 0}`);
+    const lancamentosResult = await pool.query(queryLancamentos);
+    const lancamentos = lancamentosResult.rows;
+    console.log(`FINANCEIRO (direto): Lançamentos encontrados: ${lancamentos.length}`);
 
-    console.log('FINANCEIRO: Buscando totais...');
+    console.log('FINANCEIRO (direto): Buscando totais...');
     const queryTotais = `
       SELECT 
         COALESCE(SUM(CASE WHEN tipo = 'CREDITO' THEN valor ELSE 0 END), 0) as total_credito,
         COALESCE(SUM(CASE WHEN tipo = 'DEBITO' THEN valor ELSE 0 END), 0) as total_debito
       FROM fluxo_caixa
     `;
-    // Usando o método 'get' para esta query, pois ela retorna apenas uma linha
-    const totais = await queryPromise(queryTotais, [], 'get');
-    console.log('FINANCEIRO: Totais calculados.', totais);
+    const totaisResult = await pool.query(queryTotais);
+    const totais = totaisResult.rows[0];
+    console.log('FINANCEIRO (direto): Totais calculados.', totais);
 
-    const saldoAtual = totais ? (totais.total_credito - totais.total_debito) : 0;
+    const saldoAtual = totais ? (parseFloat(totais.total_credito) - parseFloat(totais.total_debito)) : 0;
 
-    console.log('FINANCEIRO: Renderizando a página...');
+    console.log('FINANCEIRO (direto): Renderizando a página...');
     res.render('financeiro', {
       user: res.locals.user,
       lancamentos: lancamentos || [],
@@ -71,7 +64,7 @@ router.get('/completo', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro fatal ao carregar página financeira:', error);
+    console.error('Erro fatal ao carregar página financeira (direto):', error);
     return res.status(500).send('Erro ao carregar a página financeira.');
   }
 });

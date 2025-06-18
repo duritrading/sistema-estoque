@@ -257,4 +257,4 @@ if (process.env.DATABASE_URL) {
   console.log('⚠️ DATABASE_URL não encontrada');
 }
 
-module.exports = db;
+module.exports = { db, pool };
