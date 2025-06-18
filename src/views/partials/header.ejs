@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= locals.titulo || 'Sistema de Estoque' %> - OF Distribuidora</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div>
+        <h1><a href="/" style="color:white; text-decoration: none;">🏪 Sistema da OF Distribuidora</a></h1>
+        <% if (locals.subtitulo) { %>
+          <p><%= subtitulo %></p>
+        <% } else { %>
+          <p>Gestão completa de estoque e finanças</p>
+        <% } %>
+      </div>
+      <% if (locals.user) { %>
+        <div class="user-info">
+          <div class="user-name">👤 <%= user.nomeCompleto || user.username %></div>
+          <a href="/logout" class="btn-logout">Sair</a>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="container">
+    <% if (locals.user) { %>
+      <div class="nav">
+        <a href="/">📊 Dashboard</a>
+        <a href="/movimentacoes">📦 Movimentações</a>
+        <a href="/fornecedores">🏭 Fornecedores</a>
+        <a href="/financeiro">💰 Financeiro</a>
+        <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
+        <a href="/usuarios">👥 Usuários</a>
+        <a href="/backup">📦 Backup</a>
+      </div>
+    <% } %>

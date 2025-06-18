@@ -1,0 +1,36 @@
+<%- include('partials/header', {
+  titulo: 'Login',
+  subtitulo: 'Faça login para acessar o sistema',
+  user: null
+}) %>
+
+<div class="login-container">
+
+  <% if (locals.error) { %>
+    <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+  <% if (locals.success) { %>
+    <div class="alert alert-success"><%= success %></div>
+  <% } %>
+
+  <form action="/login" method="POST">
+    <input type="hidden" name="redirect" value="<%= redirectUrl %>">
+
+    <div class="form-group">
+      <label for="username">Usuário</label>
+      <input type="text" id="username" name="username" required autocomplete="username">
+    </div>
+
+    <div class="form-group">
+      <label for="password">Senha</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password">
+    </div>
+
+    <button type="submit" class="btn btn-login">Entrar no Sistema</button>
+  </form>
+
+  <div class="footer-info">
+  </div>
+</div>
+
+<%- include('partials/footer') %>

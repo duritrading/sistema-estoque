@@ -265,54 +265,18 @@ app.use((req, res, next) => {
 // ========================================
 // ROTAS DE LOGIN (CORRIGIDAS)
 // ========================================
-
 // Página de Login
 app.get('/login', (req, res) => {
   const redirectUrl = req.query.redirect || '/';
   const error = req.query.error;
   const success = req.query.success;
-  
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Login - Sistema da OF Distribuidora</title>
-      ${loginStyles}
-    </head>
-    <body>
-      <div class="login-container">
-        <div class="login-header">
-          <h1>🏪 Sistema da OF Distribuidora</h1>
-          <p>Faça login para acessar o sistema</p>
-        </div>
 
-        ${error ? `<div class="alert alert-danger">${error}</div>` : ''}
-        ${success ? `<div class="alert alert-success">${success}</div>` : ''}
-
-        <form action="/login" method="POST">
-          <input type="hidden" name="redirect" value="${redirectUrl}">
-          
-          <div class="form-group">
-            <label for="username">Usuário</label>
-            <input type="text" id="username" name="username" required autocomplete="username">
-          </div>
-
-          <div class="form-group">
-            <label for="password">Senha</label>
-            <input type="password" id="password" name="password" required autocomplete="current-password">
-          </div>
-
-          <button type="submit" class="btn-login">Entrar no Sistema</button>
-        </form>
-
-        <div class="footer-info">
-        </div>
-      </div>
-    </body>
-    </html>
-  `);
+  // A mágica acontece aqui!
+  res.render('login', {
+    error,
+    success,
+    redirectUrl
+  });
 });
 
 // Processar Login (VERSÃO ÚNICA)
@@ -410,75 +374,6 @@ app.post('/login', async (req, res) => {
 // ========================================
 // SEU SISTEMA ATUAL (COM LOGIN INTEGRADO)
 // ========================================
-
-// CSS styles (atualizado com header de usuário)
-const styles = `
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #2d3748; line-height: 1.6; }
-  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-  .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem 0; margin-bottom: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-  .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
-  .header h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
-  .header p { font-size: 1.1rem; opacity: 0.9; }
-  .user-info { text-align: right; }
-  .user-info .user-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
-  .btn-logout { background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 0.9rem; transition: all 0.2s; }
-  .btn-logout:hover { background: rgba(255,255,255,0.3); transform: translateY(-1px); }
-  .nav { display: flex; justify-content: center; gap: 1rem; margin: 2rem 0; flex-wrap: wrap; }
-  .nav a { background: white; color: #4a5568; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s; border: 2px solid transparent; }
-  .nav a:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); color: #667eea; border-color: #667eea; }
-  .card { background: white; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
-  .card h2 { color: #2d3748; margin-bottom: 1.5rem; font-size: 1.8rem; font-weight: 600; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-  .stat-card { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 1.5rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3); }
-  .stat-card h3 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
-  .stat-card p { font-size: 1rem; opacity: 0.9; }
-  .form-group { margin-bottom: 1.5rem; }
-  .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568; }
-  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; transition: border-color 0.2s; }
-  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
-  .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; text-align: center; }
-  .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
-  .btn-success { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); }
-  .btn-danger { background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); }
-  .btn-warning { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
-  .alert { padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-weight: 500; }
-  .alert-success { background: #f0fff4; color: #22543d; border: 1px solid #9ae6b4; }
-  .alert-warning { background: #fffaf0; color: #744210; border: 1px solid #fbd38d; }
-  .alert-danger { background: #fed7d7; color: #742a2a; border: 1px solid #feb2b2; }
-  .table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-  .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-  .table th { background: #f7fafc; font-weight: 600; color: #4a5568; }
-  .table tbody tr:hover { background: #f7fafc; }
-  .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-  .badge-success { background: #c6f6d5; color: #22543d; }
-  .badge-warning { background: #fef5e7; color: #744210; }
-  .badge-danger { background: #fed7d7; color: #742a2a; }
-  .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-  .text-center { text-align: center; }
-  .text-right { text-align: right; }
-  .mt-2 { margin-top: 1rem; }
-  .mb-2 { margin-bottom: 1rem; }
-  .filter-section { background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
-  .produtos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
-  .produto-card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #667eea; }
-  .produto-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
-  .produto-codigo { font-size: 1.2rem; font-weight: 700; color: #2d3748; }
-  .produto-saldo { font-size: 1.5rem; font-weight: 700; }
-  .saldo-positivo { color: #38a169; }
-  .saldo-zero { color: #ed8936; }
-  .saldo-negativo { color: #e53e3e; }
-  @media (max-width: 768px) { 
-    .container { padding: 10px; } 
-    .header-content { flex-direction: column; text-align: center; gap: 1rem; }
-    .nav { flex-direction: column; align-items: center; } 
-    .form-row { grid-template-columns: 1fr; } 
-    .stats { grid-template-columns: 1fr; } 
-  }
-</style>
-`;
-
 // Função auxiliar para obter saldo de produto (SUA FUNÇÃO ATUAL)
 function getSaldoProduto(produtoId) {
   return new Promise((resolve, reject) => {
@@ -1869,5 +1764,3 @@ app.get('/backup', async (req, res) => {
     res.status(500).send('Erro no backup: ' + error.message);
   }
 });
-
-// Adicionar link na navegação (ATUALIZAR suas páginas HTML):
