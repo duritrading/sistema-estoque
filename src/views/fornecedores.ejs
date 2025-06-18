@@ -1,0 +1,78 @@
+<%- include('partials/header', {
+  titulo: 'Fornecedores',
+  subtitulo: 'Gestão de fornecedores e parceiros',
+  user: locals.user
+}) %>
+
+<div class="card">
+  <h2>➕ Cadastrar Fornecedor</h2>
+  <form action="/fornecedores" method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="codigo">Código</label>
+        <input type="text" id="codigo" name="codigo">
+      </div>
+      <div class="form-group">
+        <label for="nome">Nome/Razão Social *</label>
+        <input type="text" id="nome" name="nome" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="contato">Contato</label>
+        <input type="text" id="contato" name="contato">
+      </div>
+      <div class="form-group">
+        <label for="telefone">Telefone</label>
+        <input type="text" id="telefone" name="telefone">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" name="email">
+      </div>
+      <div class="form-group">
+        <label for="cnpj">CNPJ</label>
+        <input type="text" id="cnpj" name="cnpj">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="endereco">Endereço</label>
+      <input type="text" id="endereco" name="endereco">
+    </div>
+    <div class="form-group">
+      <label for="observacao">Observações</label>
+      <textarea id="observacao" name="observacao" rows="3"></textarea>
+    </div>
+    <button type="submit" class="btn">Cadastrar Fornecedor</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>📋 Fornecedores Cadastrados</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nome</th>
+        <th>Contato</th>
+        <th>Telefone</th>
+        <th>E-mail</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% fornecedores.forEach(f => { %>
+        <tr>
+          <td><%= f.codigo || '-' %></td>
+          <td><strong><%= f.nome %></strong></td>
+          <td><%= f.contato || '-' %></td>
+          <td><%= f.telefone || '-' %></td>
+          <td><%= f.email || '-' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/footer') %>
