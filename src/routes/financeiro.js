@@ -35,7 +35,7 @@ router.get('/completo', async (req, res) => {
 
     res.render('financeiro', {
       user: res.locals.user,
-      lancamentos: lancamentosResult.rows || [],
+      contas: lancamentosResult.rows || [],
       totais: totais || { total_credito: 0, total_debito: 0 },
       saldoAtual,
       hoje
