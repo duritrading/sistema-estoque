@@ -63,13 +63,13 @@ router.post('/lancamento', (req, res) => {
   });
 });
 
-// Dentro de src/routes/financeiro.js
+// Em src/routes/financeiro.js
 
 router.get('/faturamento', (req, res) => {
   let { data_inicio, data_fim } = req.query;
   const isProduction = !!process.env.DATABASE_URL;
 
-  // Define datas padrão se não forem fornecidas
+  // Define datas padrão
   if (!data_inicio) {
     const hoje = new Date();
     const primeiroDiaDoMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -81,32 +81,32 @@ router.get('/faturamento', (req, res) => {
     data_fim = ultimoDiaDoMes.toISOString().split('T')[0];
   }
 
-  // Query SQL base
   let query = `
     SELECT id, movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, data_pagamento, status
     FROM contas_a_receber
   `;
   const params = [];
-  let whereClauses = [];
+  const whereClauses = [];
   let paramCount = 1;
 
-  // Monta a cláusula WHERE dinamicamente com os placeholders corretos
+  // Monta a cláusula WHERE dinamicamente - VERSÃO CORRIGIDA
   if (data_inicio) {
-    whereClauses.push(`data_vencimento >= <span class="math-inline">\{isProduction ? '</span>' + paramCount++ : '?'}`);
+    const placeholder = isProduction ? `$${paramCount++}` : '?';
+    whereClauses.push(`data_vencimento >= ${placeholder}`);
     params.push(data_inicio);
   }
   if (data_fim) {
-    whereClauses.push(`data_vencimento <= <span class="math-inline">\{isProduction ? '</span>' + paramCount++ : '?'}`);
+    const placeholder = isProduction ? `$${paramCount++}` : '?';
+    whereClauses.push(`data_vencimento <= ${placeholder}`);
     params.push(data_fim);
   }
 
   if (whereClauses.length > 0) {
-    // Garante o espaço antes do WHERE
     query += ' WHERE ' + whereClauses.join(' AND ');
   }
   query += ' ORDER BY data_vencimento ASC';
 
-  // Log para depuração. Se o erro continuar, isso nos ajudará.
+  // Logs de depuração
   console.log('Executando query de faturamento:', query);
   console.log('Com parâmetros:', params);
 
