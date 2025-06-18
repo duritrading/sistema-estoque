@@ -233,62 +233,98 @@ app.use('/', (req, res, next) => {
   return requireAuth(req, res, next);
 });
 
-// ========================================
-// ROTAS DE LOGIN
-// ========================================
-
-// Página de Login
-app.get('/login', (req, res) => {
-  const redirectUrl = req.query.redirect || '/';
-  const error = req.query.error;
-  const success = req.query.success;
+// Processar Login (COM DEBUG)
+app.post('/login', async (req, res) => {
+  const { username, password, redirect } = req.body;
   
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Login - Sistema de Estoque</title>
-      ${loginStyles}
-    </head>
-    <body>
-      <div class="login-container">
-        <div class="login-header">
-          <h1>🏪 Sistema de Estoque</h1>
-          <p>Faça login para acessar o sistema</p>
-        </div>
+  console.log('🔐 === INÍCIO DO LOGIN ===');
+  console.log('  - Username:', username);
+  console.log('  - Password length:', password ? password.length : 0);
+  console.log('  - Redirect:', redirect);
+  console.log('  - Session exists:', !!req.session);
+  
+  try {
+    console.log('🔍 Buscando usuário no banco...');
+    
+    // Buscar usuário
+    const userResult = await pool.query(
+      'SELECT * FROM usuarios WHERE username = $1 AND ativo = true',
+      [username]
+    );
 
-        ${error ? `<div class="alert alert-danger">${error}</div>` : ''}
-        ${success ? `<div class="alert alert-success">${success}</div>` : ''}
+    console.log('👥 Usuários encontrados:', userResult.rows.length);
 
-        <form action="/login" method="POST">
-          <input type="hidden" name="redirect" value="${redirectUrl}">
-          
-          <div class="form-group">
-            <label for="username">Usuário</label>
-            <input type="text" id="username" name="username" required autocomplete="username">
-          </div>
+    if (userResult.rows.length === 0) {
+      console.log('❌ Usuário não encontrado ou inativo');
+      return res.redirect('/login?error=' + encodeURIComponent('Usuário não encontrado ou inativo'));
+    }
 
-          <div class="form-group">
-            <label for="password">Senha</label>
-            <input type="password" id="password" name="password" required autocomplete="current-password">
-          </div>
+    const user = userResult.rows[0];
+    console.log('👤 Usuário encontrado:', {
+      id: user.id,
+      username: user.username,
+      ativo: user.ativo,
+      temSenha: user.password_hash ? 'SIM' : 'NÃO',
+      hashInicio: user.password_hash ? user.password_hash.substring(0, 10) : 'NENHUMA'
+    });
 
-          <button type="submit" class="btn-login">Entrar no Sistema</button>
-        </form>
+    console.log('🔒 Verificando senha...');
+    
+    // Verificar senha
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+    
+    console.log('🔑 Senha correta:', passwordMatch);
 
-        <div class="footer-info">
-          <p><strong>Usuário padrão:</strong> admin</p>
-          <p><strong>Senha padrão:</strong> admin123</p>
-          <small>Altere a senha após o primeiro login</small>
-        </div>
-      </div>
-    </body>
-    </html>
-  `);
+    if (!passwordMatch) {
+      console.log('❌ Senha incorreta para usuário:', username);
+      return res.redirect('/login?error=' + encodeURIComponent('Senha incorreta'));
+    }
+
+    console.log('✅ Login bem-sucedido! Criando sessão...');
+
+    // Atualizar último login
+    await pool.query(
+      'UPDATE usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = $1',
+      [user.id]
+    );
+
+    console.log('📝 Último login atualizado');
+
+    // Criar sessão
+    req.session.userId = user.id;
+    req.session.username = user.username;
+    req.session.nomeCompleto = user.nome_completo;
+
+    console.log('🎫 Sessão criada:', {
+      userId: req.session.userId,
+      username: req.session.username,
+      sessionId: req.sessionID
+    });
+
+    // Salvar sessão explicitamente
+    req.session.save((err) => {
+      if (err) {
+        console.error('❌ Erro ao salvar sessão:', err);
+        return res.redirect('/login?error=' + encodeURIComponent('Erro ao criar sessão'));
+      }
+      
+      console.log('💾 Sessão salva com sucesso');
+      
+      // Redirecionar
+      const redirectUrl = redirect && redirect !== '/' ? redirect : '/';
+      
+      console.log('🔄 Redirecionando para:', redirectUrl);
+      console.log('=== FIM DO LOGIN ===');
+      
+      res.redirect(redirectUrl);
+    });
+
+  } catch (error) {
+    console.error('💥 Erro no login:', error);
+    console.error('Stack:', error.stack);
+    res.redirect('/login?error=' + encodeURIComponent('Erro interno do servidor'));
+  }
 });
-
 // Processar Login
 app.post('/login', async (req, res) => {
   const { username, password, redirect } = req.body;
@@ -1690,6 +1726,94 @@ app.post('/usuarios', async (req, res) => {
 });
 
 // Inicializar servidor
+// ========================================
+// ENDPOINTS DE DEBUG (TEMPORÁRIOS)
+// ========================================
+
+// Debug - verificar usuários
+app.get('/debug/usuarios', async (req, res) => {
+  try {
+    console.log('🔍 Verificando tabela usuarios...');
+    
+    // Verificar se a tabela existe
+    const tableCheck = await pool.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name = 'usuarios'
+    `);
+    
+    console.log('📋 Tabela usuarios existe:', tableCheck.rows.length > 0);
+    
+    if (tableCheck.rows.length === 0) {
+      return res.json({
+        erro: 'Tabela usuarios não existe',
+        solucao: 'Reiniciar servidor para criar tabela'
+      });
+    }
+    
+    // Buscar usuários
+    const usuarios = await pool.query('SELECT id, username, email, ativo, created_at FROM usuarios');
+    console.log('👥 Usuários encontrados:', usuarios.rows.length);
+    
+    // Verificar usuário admin especificamente
+    const adminUser = await pool.query('SELECT * FROM usuarios WHERE username = $1', ['admin']);
+    console.log('👑 Admin existe:', adminUser.rows.length > 0);
+    
+    if (adminUser.rows.length > 0) {
+      console.log('👑 Admin detalhes:', {
+        id: adminUser.rows[0].id,
+        username: adminUser.rows[0].username,
+        email: adminUser.rows[0].email,
+        ativo: adminUser.rows[0].ativo,
+        tem_senha: adminUser.rows[0].password_hash ? 'SIM' : 'NÃO'
+      });
+    }
+    
+    return res.json({
+      tabelaExiste: tableCheck.rows.length > 0,
+      totalUsuarios: usuarios.rows.length,
+      adminExiste: adminUser.rows.length > 0,
+      usuarios: usuarios.rows,
+      adminDetalhes: adminUser.rows[0] || null
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro no debug:', error);
+    return res.status(500).json({ 
+      erro: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
+// Debug - testar login direto
+app.get('/debug/test-login', async (req, res) => {
+  try {
+    // Buscar admin
+    const adminUser = await pool.query('SELECT * FROM usuarios WHERE username = $1', ['admin']);
+    
+    if (adminUser.rows.length === 0) {
+      return res.json({ erro: 'Usuário admin não encontrado' });
+    }
+    
+    const user = adminUser.rows[0];
+    
+    // Testar senha
+    const senhaCorreta = await bcrypt.compare('admin123', user.password_hash);
+    
+    return res.json({
+      usuarioEncontrado: true,
+      senhaCorreta: senhaCorreta,
+      hashSenha: user.password_hash.substring(0, 20) + '...',
+      ativo: user.ativo,
+      userId: user.id,
+      username: user.username
+    });
+    
+  } catch (error) {
+    return res.json({ erro: error.message });
+  }
+});
+
 async function startServer() {
   await initializeDatabase();
   
