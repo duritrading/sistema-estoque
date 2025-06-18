@@ -1,0 +1,57 @@
+<%- include('partials/header', {
+  titulo: 'Controle de Faturamento',
+  subtitulo: 'Acompanhamento de contas a receber e inadimplência',
+  user: locals.user
+}) %>
+
+<div class="card">
+  <h2>📊 Relatório de Contas a Receber</h2>
+  <p>Abaixo estão todas as parcelas de vendas registradas no sistema.</p>
+
+  <table class="table mt-2">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Vencimento</th>
+        <th>Parcela</th>
+        <th>Valor</th>
+        <th>Status</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (contas.length === 0) { %>
+        <tr>
+          <td colspan="6" class="text-center">Nenhuma conta a receber encontrada.</td>
+        </tr>
+      <% } else { %>
+        <% contas.forEach(conta => { %>
+          <tr>
+            <td><%= conta.cliente_nome %></td>
+            <td><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
+            <td><%= conta.numero_parcela %> / <%= conta.total_parcelas %></td>
+            <td>R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></td>
+            <td>
+              <% if (conta.status === 'Pago') { %>
+                <span class="badge badge-success">Pago</span>
+              <% } else if (new Date(conta.data_vencimento) < new Date() && conta.status !== 'Pago') { %>
+                <span class="badge badge-danger">Atrasado</span>
+              <% } else { %>
+                <span class="badge badge-warning">Pendente</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (conta.status === 'Pendente') { %>
+                <a href="#" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Registrar Pagamento</a>
+              <% } else { %>
+                -
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/footer') %>

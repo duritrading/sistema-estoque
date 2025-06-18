@@ -63,4 +63,36 @@ router.post('/lancamento', (req, res) => {
   });
 });
 
+// NOVA ROTA PARA O RELATÓRIO DE FATURAMENTO
+router.get('/faturamento', (req, res) => {
+  // Query para buscar todas as contas a receber, ordenadas por vencimento
+  const query = `
+    SELECT 
+      id,
+      movimentacao_id,
+      cliente_nome,
+      numero_parcela,
+      total_parcelas,
+      valor,
+      data_vencimento,
+      data_pagamento,
+      status
+    FROM contas_a_receber
+    ORDER BY data_vencimento ASC
+  `;
+
+  db.all(query, [], (err, contas) => {
+    if (err) {
+      console.error('Erro ao buscar contas a receber:', err);
+      return res.status(500).send('Erro ao buscar dados de faturamento.');
+    }
+
+    // Simplesmente renderizamos a nova view com os dados
+    res.render('faturamento', {
+      user: res.locals.user,
+      contas: Array.isArray(contas) ? contas : []
+    });
+  });
+});
+
 module.exports = router;
