@@ -27,8 +27,6 @@ router.get('/dre', (req, res) => {
 
 // Em src/routes/financeiro.js
 
-// Em src/routes/financeiro.js
-
 router.get('/completo', async (req, res) => {
   // Função auxiliar para transformar nossas chamadas de banco em Promises
   const queryPromise = (query, params = [], method = 'all') => {
