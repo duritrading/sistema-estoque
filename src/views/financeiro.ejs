@@ -1,89 +1,84 @@
 <%- include('partials/header', {
-  titulo: 'Controle Financeiro',
-  subtitulo: 'Fluxo de caixa e controle financeiro',
+  titulo: 'Controle de Faturamento',
+  subtitulo: 'Acompanhamento de contas a receber e inadimplência',
   user: locals.user
 }) %>
 
-<div class="nav">
-    <a href="/financeiro/completo">📊 Fluxo de Caixa</a>
-    <a href="/financeiro/faturamento">🧾 Faturamento</a>
-    <a href="/financeiro/dre">📈 DRE</a>
-    </div>
-
-<div class="stats">
-  <div class="stat-card">
-    <h3>R$ <%= (totais.total_credito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></h3>
-    <p>Total de Entradas</p>
-  </div>
-  <div class="stat-card">
-    <h3>R$ <%= (totais.total_debito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></h3>
-    <p>Total de Saídas</p>
-  </div>
-  <div class="stat-card <%= saldoAtual >= 0 ? '' : 'badge-danger' %>">
-    <h3>R$ <%= saldoAtual.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></h3>
-    <p>Saldo Atual</p>
-  </div>
-  <div class="stat-card">
-    <h3><%= lancamentos.length %></h3>
-    <p>Últimos Lançamentos</p>
-  </div>
-</div>
-
 <div class="card">
-  <h2>➕ Novo Lançamento</h2>
-  <form action="/financeiro/lancamento" method="POST">
+  <h2>📊 Relatório de Contas a Receber</h2>
+  <p>Abaixo estão todas as parcelas de vendas registradas no sistema.</p>
+  
+  <form method="GET" action="/financeiro/faturamento" class="filter-section">
     <div class="form-row">
       <div class="form-group">
-        <label for="data_operacao">Data *</label>
-        <input type="date" id="data_operacao" name="data_operacao" value="<%= hoje %>" required>
+        <label for="data_inicio">De:</label>
+        <input type="date" name="data_inicio" id="data_inicio" class="form-control" value="<%= locals.filtros ? filtros.data_inicio : '' %>">
       </div>
       <div class="form-group">
-        <label for="tipo">Tipo *</label>
-        <select id="tipo" name="tipo" required>
-          <option value="">Selecione</option>
-          <option value="CREDITO">💰 Entrada (Crédito)</option>
-          <option value="DEBITO">💸 Saída (Débito)</option>
-        </select>
+        <label for="data_fim">Até:</label>
+        <input type="date" name="data_fim" id="data_fim" class="form-control" value="<%= locals.filtros ? filtros.data_fim : '' %>">
+      </div>
+      <div class="form-group" style="align-self: flex-end;">
+        <button type="submit" class="btn">Filtrar</button>
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="valor">Valor (R$) *</label>
-        <input type="number" id="valor" name="valor" step="0.01" min="0.01" required>
-      </div>
-      <div class="form-group">
-        <label for="descricao">Descrição *</label>
-        <input type="text" id="descricao" name="descricao" required>
-      </div>
-    </div>
-    <button type="submit" class="btn">Registrar Lançamento</button>
   </form>
-</div>
 
-<div class="card">
-  <h2>📋 Últimos Lançamentos</h2>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Data</th>
-        <th>Tipo</th>
-        <th>Descrição</th>
-        <th>Valor</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% lancamentos.forEach(item => { %>
+  <div style="overflow-x: auto;">
+    <table class="table mt-2">
+      <thead>
         <tr>
-          <td><%= new Date(item.data_operacao).toLocaleDateString('pt-BR') %></td>
-          <td><span class="badge <%= item.tipo === 'CREDITO' ? 'badge-success' : 'badge-danger' %>"><%= item.tipo %></span></td>
-          <td><%= item.descricao %></td>
-          <td class="<%= item.tipo === 'CREDITO' ? 'saldo-positivo' : 'saldo-negativo' %>">
-            <%= item.tipo === 'CREDITO' ? '+' : '-' %> R$ <%= parseFloat(item.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-          </td>
+          <th>Cliente</th>
+          <th>Produto</th> <th>Vencimento</th>
+          <th>Parcela</th>
+          <th class="text-right">Valor</th>
+          <th>Status</th>
+          <th>Ações</th>
         </tr>
-      <% }) %>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        <% if (contas.length === 0) { %>
+          <tr>
+            <td colspan="7" class="text-center">Nenhuma conta a receber encontrada para o período selecionado.</td>
+          </tr>
+        <% } else { %>
+          <% contas.forEach(conta => { %>
+            <tr>
+              <td><%= conta.cliente_nome %></td>
+              <td><%= conta.produto_descricao %></td> <td><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
+              <td><%= conta.numero_parcela %> / <%= conta.total_parcelas %></td>
+              <td class="text-right">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></td>
+              <td>
+                <% if (conta.status === 'Pago') { %>
+                  <span class="badge badge-success">Pago</span>
+                <% } else if (new Date(conta.data_vencimento) < new Date() && conta.status !== 'Pago') { %>
+                  <span class="badge badge-danger">Atrasado</span>
+                <% } else { %>
+                  <span class="badge badge-warning">Pendente</span>
+                <% } %>
+              </td>
+              <td>
+                <% if (conta.status !== 'Pago') { %>
+                  <form action="/financeiro/faturamento/registrar-pagamento/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o recebimento desta parcela? Esta ação é irreversível.');">
+                    <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Registrar Pagamento</button>
+                  </form>
+                <% } else { %>
+                  -
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        <% } %>
+      </tbody>
+      <tfoot>
+        <tr style="font-weight: bold; background-color: #f8f9fa;">
+            <td colspan="4" class="text-right">Total do Período:</td>
+            <td class="text-right">R$ <%= totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+            <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
 </div>
 
 <%- include('partials/footer') %>
