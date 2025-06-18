@@ -27,29 +27,17 @@ router.get('/dre', (req, res) => {
 
 // Em src/routes/financeiro.js
 
-router.get('/completo', async (req, res) => {
-  // Função auxiliar para "promisificar" o db.all
-  const queryPromise = (query, params = []) => {
-    return new Promise((resolve, reject) => {
-      db.all(query, params, (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
-  };
+// Em src/routes/financeiro.js
 
-  // Função auxiliar para "promisificar" o db.get
-   const getPromise = (query, params = []) => {
+router.get('/completo', async (req, res) => {
+  // Função auxiliar para transformar nossas chamadas de banco em Promises
+  const queryPromise = (query, params = [], method = 'all') => {
     return new Promise((resolve, reject) => {
-      db.get(query, params, (err, row) => {
+      db[method](query, params, (err, result) => {
         if (err) {
-          reject(err);
-        } else {
-          resolve(row);
+          return reject(err);
         }
+        resolve(result);
       });
     });
   };
@@ -57,22 +45,25 @@ router.get('/completo', async (req, res) => {
   try {
     const hoje = new Date().toISOString().split('T')[0];
 
+    console.log('FINANCEIRO: Buscando últimos lançamentos...');
     const queryLancamentos = `SELECT * FROM fluxo_caixa ORDER BY data_operacao DESC, created_at DESC LIMIT 20`;
+    const lancamentos = await queryPromise(queryLancamentos, [], 'all'); // Usando o método 'all'
+    console.log(`FINANCEIRO: Lançamentos encontrados: ${lancamentos ? lancamentos.length : 0}`);
+
+    console.log('FINANCEIRO: Buscando totais...');
     const queryTotais = `
       SELECT 
         COALESCE(SUM(CASE WHEN tipo = 'CREDITO' THEN valor ELSE 0 END), 0) as total_credito,
         COALESCE(SUM(CASE WHEN tipo = 'DEBITO' THEN valor ELSE 0 END), 0) as total_debito
       FROM fluxo_caixa
     `;
-
-    // Executa as duas buscas em paralelo
-    const [lancamentos, totais] = await Promise.all([
-        queryPromise(queryLancamentos),
-        getPromise(queryTotais)
-    ]);
+    // Usando o método 'get' para esta query, pois ela retorna apenas uma linha
+    const totais = await queryPromise(queryTotais, [], 'get');
+    console.log('FINANCEIRO: Totais calculados.', totais);
 
     const saldoAtual = totais ? (totais.total_credito - totais.total_debito) : 0;
 
+    console.log('FINANCEIRO: Renderizando a página...');
     res.render('financeiro', {
       user: res.locals.user,
       lancamentos: lancamentos || [],
@@ -82,8 +73,8 @@ router.get('/completo', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro geral financeiro:', error);
-    return res.status(500).send('Erro ao carregar página financeira: ' + error.message);
+    console.error('Erro fatal ao carregar página financeira:', error);
+    return res.status(500).send('Erro ao carregar a página financeira.');
   }
 });
 
