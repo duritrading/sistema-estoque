@@ -520,142 +520,16 @@ app.get('/', (req, res) => {
     const valorEstoque = produtosSeguros.reduce((sum, p) => sum + ((p.saldo_atual || 0) * (p.preco_custo || 0)), 0);
     const alertas = produtosSeguros.filter(p => (p.saldo_atual || 0) <= (p.estoque_minimo || 0));
     const categorias = [...new Set(produtosSeguros.map(p => p.categoria).filter(c => c))];
-    
-    return res.send(`
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Dashboard - Sistema da OF Distribuidora</title>
-        ${styles}
-      </head>
-      <body>
-        <div class="header">
-          <div class="header-content">
-            <div>
-              <h1>🏪 Sistema da OF Distribuidora</h1>
-              <p>Gestão completa de produtos, movimentações e fornecedores</p>
-            </div>
-            <div class="user-info">
-              <div class="user-name">👤 ${res.locals.user.nomeCompleto || res.locals.user.username}</div>
-              <a href="/logout" class="btn-logout">Sair</a>
-            </div>
-          </div>
-        </div>
 
-        <div class="container">
-          <div class="nav">
-            <a href="/">📊 Dashboard</a>
-            <a href="/movimentacoes">📦 Movimentações</a>
-            <a href="/fornecedores">🏭 Fornecedores</a>
-            <a href="/financeiro">💰 Financeiro</a>
-            <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
-            <a href="/usuarios">👥 Usuários</a>
-            <a href="/backup">📦 Backup</a>
-          </div>
-
-          <div class="stats">
-            <div class="stat-card">
-              <h3>${totalProdutos}</h3>
-              <p>Total de Produtos</p>
-            </div>
-            <div class="stat-card">
-              <h3>${totalEmEstoque.toLocaleString()}</h3>
-              <p>Unidades em Estoque</p>
-            </div>
-            <div class="stat-card">
-              <h3>R$ ${valorEstoque.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
-              <p>Valor do Estoque</p>
-            </div>
-            <div class="stat-card">
-              <h3>${alertas.length}</h3>
-              <p>Alertas de Estoque</p>
-            </div>
-          </div>
-
-          ${alertas.length > 0 ? `
-          <div class="card">
-            <h2>⚠️ Alertas de Estoque Baixo</h2>
-            <div class="alert alert-warning">
-              <strong>Produtos com estoque abaixo do mínimo:</strong>
-              ${alertas.map(p => `${p.codigo} - ${p.descricao} (Saldo: ${p.saldo_atual}, Mínimo: ${p.estoque_minimo})`).join(', ')}
-            </div>
-          </div>
-          ` : ''}
-
-          <div class="card">
-            <h2>📝 Cadastrar Novo Produto</h2>
-            <form action="/produtos" method="POST">
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="codigo">Código *</label>
-                  <input type="text" id="codigo" name="codigo" required>
-                </div>
-                <div class="form-group">
-                  <label for="descricao">Descrição *</label>
-                  <input type="text" id="descricao" name="descricao" required>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="unidade">Unidade</label>
-                  <select id="unidade" name="unidade">
-                    <option value="UN">Unidade</option>
-                    <option value="KG">Quilograma</option>
-                    <option value="LT">Litro</option>
-                    <option value="MT">Metro</option>
-                    <option value="CX">Caixa</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="categoria">Categoria</label>
-                  <input type="text" id="categoria" name="categoria" list="categorias">
-                  <datalist id="categorias">
-                    ${categorias.map(cat => `<option value="${cat}">`).join('')}
-                  </datalist>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="estoque_minimo">Estoque Mínimo</label>
-                  <input type="number" id="estoque_minimo" name="estoque_minimo" min="0" value="0">
-                </div>
-                <div class="form-group">
-                  <label for="preco_custo">Preço de Custo (R$)</label>
-                  <input type="number" id="preco_custo" name="preco_custo" step="0.01" min="0">
-                </div>
-              </div>
-              <button type="submit" class="btn">Cadastrar Produto</button>
-            </form>
-          </div>
-
-          <div class="card">
-            <h2>📋 Produtos Cadastrados</h2>
-            <div class="produtos-grid">
-              ${produtosSeguros.map(produto => `
-                <div class="produto-card">
-                  <div class="produto-header">
-                    <div class="produto-codigo">${produto.codigo}</div>
-                    <div class="produto-saldo ${
-                      produto.saldo_atual > 0 ? 'saldo-positivo' : 
-                      produto.saldo_atual === 0 ? 'saldo-zero' : 'saldo-negativo'
-                    }">${produto.saldo_atual}</div>
-                  </div>
-                  <h3>${produto.descricao}</h3>
-                  <p><strong>Unidade:</strong> ${produto.unidade || 'UN'}</p>
-                  ${produto.categoria ? `<p><strong>Categoria:</strong> ${produto.categoria}</p>` : ''}
-                  <p><strong>Estoque Mínimo:</strong> ${produto.estoque_minimo || 0}</p>
-                  ${produto.preco_custo ? `<p><strong>Preço:</strong> R$ ${parseFloat(produto.preco_custo).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>` : ''}
-                  ${produto.saldo_atual <= produto.estoque_minimo ? '<span class="badge badge-warning">Estoque Baixo</span>' : ''}
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `);
+    res.render('dashboard', {
+      user: res.locals.user,
+      produtos: produtosSeguros,
+      totalProdutos,
+      totalEmEstoque,
+      valorEstoque,
+      alertas,
+      categorias
+    });
   });
 });
 
