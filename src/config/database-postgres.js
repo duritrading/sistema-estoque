@@ -17,8 +17,8 @@ const db = {
         } else {
           // Simular comportamento do SQLite
           callback.call({ 
-            lastID: result.insertId || (result.rows[0] && result.rows[0].id),
-            changes: result.rowCount 
+            lastID: result.insertId || (result.rows && result.rows[0] && result.rows[0].id),
+            changes: result.rowCount || 0
           });
         }
       }
@@ -32,20 +32,21 @@ const db = {
         if (err) {
           callback(err);
         } else {
-          callback(null, result.rows[0] || null);
+          callback(null, (result.rows && result.rows[0]) || null);
         }
       }
     });
   },
 
-  // Função para buscar múltiplas linhas
+  // Função para buscar múltiplas linhas - CORRIGIDA
   all: (query, params = [], callback) => {
     pool.query(query, params, (err, result) => {
       if (callback) {
         if (err) {
           callback(err);
         } else {
-          callback(null, result.rows || []);
+          // GARANTIR que sempre retorna um array
+          callback(null, (result && result.rows) || []);
         }
       }
     });
