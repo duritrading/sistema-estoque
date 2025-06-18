@@ -212,7 +212,7 @@ async function createUsersTable() {
     
     if (adminCheck.rows.length === 0) {
       // Criar usuário admin padrão
-      const defaultPassword = 'admin123';
+      const defaultPassword = 'adminofdistribuidora987';
       const hashedPassword = await bcrypt.hash(defaultPassword, 10);
       
       await pool.query(`
@@ -278,13 +278,13 @@ app.get('/login', (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Login - Sistema de Estoque</title>
+      <title>Login - Sistema da OF Distribuidora</title>
       ${loginStyles}
     </head>
     <body>
       <div class="login-container">
         <div class="login-header">
-          <h1>🏪 Sistema de Estoque</h1>
+          <h1>🏪 Sistema da OF Distribuidora</h1>
           <p>Faça login para acessar o sistema</p>
         </div>
 
@@ -308,9 +308,6 @@ app.get('/login', (req, res) => {
         </form>
 
         <div class="footer-info">
-          <p><strong>Usuário padrão:</strong> admin</p>
-          <p><strong>Senha padrão:</strong> admin123</p>
-          <small>Altere a senha após o primeiro login</small>
         </div>
       </div>
     </body>
@@ -635,14 +632,14 @@ app.get('/', (req, res) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Dashboard - Sistema de Estoque</title>
+        <title>Dashboard - Sistema da OF Distribuidora</title>
         ${styles}
       </head>
       <body>
         <div class="header">
           <div class="header-content">
             <div>
-              <h1>🏪 Sistema de Estoque</h1>
+              <h1>🏪 Sistema da OF Distribuidora</h1>
               <p>Gestão completa de produtos, movimentações e fornecedores</p>
             </div>
             <div class="user-info">
@@ -849,7 +846,7 @@ app.get('/movimentacoes', (req, res) => {
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Movimentações - Sistema de Estoque</title>
+            <title>Movimentações - Sistema da OF Distribuidora</title>
             ${styles}
           </head>
           <body>
@@ -1024,7 +1021,7 @@ app.post('/movimentacoes', async (req, res) => {
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Erro - Sistema de Estoque</title>
+            <title>Erro - Sistema da OF Distribuidora</title>
             ${styles}
           </head>
           <body>
@@ -1093,7 +1090,7 @@ app.get('/fornecedores', (req, res) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Fornecedores - Sistema de Estoque</title>
+        <title>Fornecedores - Sistema da OF Distribuidora</title>
         ${styles}
       </head>
       <body>
@@ -1227,7 +1224,7 @@ app.get('/financeiro/setup', (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Setup Financeiro - Sistema de Estoque</title>
+      <title>Setup Financeiro - Sistema da OF Distribuidora</title>
       ${styles}
     </head>
     <body>
@@ -1292,7 +1289,7 @@ app.get('/financeiro/completo', async (req, res) => {
             <head>
               <meta charset="UTF-8">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Financeiro - Sistema de Estoque</title>
+              <title>Financeiro - Sistema da OF Distribuidora</title>
               ${styles}
             </head>
             <body>
@@ -1454,7 +1451,7 @@ app.get('/gerenciar/produtos', (req, res) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Gerenciar Produtos - Sistema de Estoque</title>
+        <title>Gerenciar Produtos - Sistema da OF Distribuidora</title>
         ${styles}
       </head>
       <body>
@@ -1548,7 +1545,7 @@ app.get('/gerenciar/movimentacoes', (req, res) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Gerenciar Movimentações - Sistema de Estoque</title>
+        <title>Gerenciar Movimentações - Sistema da OF Distribuidora</title>
         ${styles}
       </head>
       <body>
@@ -1632,7 +1629,7 @@ app.get('/usuarios', async (req, res) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Usuários - Sistema de Estoque</title>
+        <title>Usuários - Sistema da OF Distribuidora</title>
         ${styles}
       </head>
       <body>
