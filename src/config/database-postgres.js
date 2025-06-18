@@ -198,6 +198,24 @@ const initializeDatabase = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    
+// Criar tabela contas_a_receber
+console.log('📝 Criando tabela contas_a_receber...');
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS contas_a_receber (
+    id SERIAL PRIMARY KEY,
+    movimentacao_id INTEGER NOT NULL REFERENCES movimentacoes(id) ON DELETE CASCADE,
+    cliente_nome VARCHAR(200),
+    numero_parcela INTEGER NOT NULL,
+    total_parcelas INTEGER NOT NULL,
+    valor DECIMAL(10,2) NOT NULL,
+    data_vencimento DATE NOT NULL,
+    data_pagamento DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'Pendente',
+    fluxo_caixa_id INTEGER REFERENCES fluxo_caixa(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 
     // Inserir dados iniciais se não existirem
     console.log('🔧 Verificando dados iniciais...');

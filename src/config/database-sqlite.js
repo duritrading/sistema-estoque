@@ -102,6 +102,24 @@ db.serialize(() => {
     )
   `);
 
+// Tabela para contas a receber (faturamento e inadimplência)
+db.run(`
+  CREATE TABLE IF NOT EXISTS contas_a_receber (
+    id INTEGER PRIMARY KEY,
+    movimentacao_id INTEGER NOT NULL,
+    cliente_nome TEXT,
+    numero_parcela INTEGER NOT NULL,
+    total_parcelas INTEGER NOT NULL,
+    valor REAL NOT NULL,
+    data_vencimento DATE NOT NULL,
+    data_pagamento DATE,
+    status TEXT CHECK (status IN ('Pendente', 'Pago', 'Atrasado')) NOT NULL DEFAULT 'Pendente',
+    fluxo_caixa_id INTEGER,
+    FOREIGN KEY (movimentacao_id) REFERENCES movimentacoes (id) ON DELETE CASCADE,
+    FOREIGN KEY (fluxo_caixa_id) REFERENCES fluxo_caixa (id) ON DELETE SET NULL
+  )
+`);
+
   // Inserir categorias baseadas na planilha
   db.run(`
     INSERT OR IGNORE INTO categorias_financeiras (id, nome, tipo) VALUES 
