@@ -1,5 +1,10 @@
+// SISTEMA DE ESTOQUE COMPLETO + LOGIN INTEGRADO
+// Versão final com todas as funcionalidades + autenticação
+
 const express = require('express');
 const { Pool } = require('pg');
+const bcrypt = require('bcrypt');
+const session = require('express-session');
 const path = require('path');
 
 const app = express();
@@ -10,13 +15,24 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 
+// Configuração de Sessões
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'sistema-estoque-2024-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 horas
+  }
+}));
+
 // Configuração PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Função para executar SQL
+// Função para executar SQL (compatível com seu código atual)
 const db = {
   all: (query, params, callback) => {
     pool.query(query, params, (err, result) => {
@@ -38,15 +54,323 @@ const db = {
   }
 };
 
-// CSS styles
+// ========================================
+// SISTEMA DE LOGIN
+// ========================================
+
+// CSS para Login
+const loginStyles = `
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .login-container {
+    background: white;
+    padding: 3rem;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+  .login-header {
+    margin-bottom: 2rem;
+  }
+  .login-header h1 {
+    color: #2d3748;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+  .login-header p {
+    color: #718096;
+    font-size: 1rem;
+  }
+  .form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #4a5568;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+  .btn-login {
+    width: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1rem;
+  }
+  .btn-login:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  }
+  .alert {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+  .alert-danger {
+    background: #fed7d7;
+    color: #742a2a;
+    border: 1px solid #feb2b2;
+  }
+  .alert-success {
+    background: #f0fff4;
+    color: #22543d;
+    border: 1px solid #9ae6b4;
+  }
+  .footer-info {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    color: #718096;
+    font-size: 0.9rem;
+  }
+  @media (max-width: 480px) {
+    .login-container {
+      margin: 1rem;
+      padding: 2rem;
+    }
+  }
+</style>
+`;
+
+// Middleware de Autenticação
+function requireAuth(req, res, next) {
+  if (req.session && req.session.userId) {
+    return next();
+  } else {
+    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+  }
+}
+
+// Função para criar tabela de usuários
+async function createUsersTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(150) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        nome_completo VARCHAR(200),
+        ativo BOOLEAN DEFAULT true,
+        ultimo_login TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Verificar se existe usuário admin
+    const adminCheck = await pool.query('SELECT * FROM usuarios WHERE username = $1', ['admin']);
+    
+    if (adminCheck.rows.length === 0) {
+      // Criar usuário admin padrão
+      const defaultPassword = 'admin123';
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+      
+      await pool.query(`
+        INSERT INTO usuarios (username, email, password_hash, nome_completo)
+        VALUES ($1, $2, $3, $4)
+      `, ['admin', 'admin@sistema.com', hashedPassword, 'Administrador do Sistema']);
+      
+      console.log('✅ Usuário admin criado: admin / admin123');
+    }
+  } catch (error) {
+    console.error('Erro criar tabela usuários:', error);
+  }
+}
+
+// Middleware para adicionar informações do usuário
+app.use((req, res, next) => {
+  if (req.session && req.session.userId) {
+    res.locals.user = {
+      id: req.session.userId,
+      username: req.session.username,
+      nomeCompleto: req.session.nomeCompleto
+    };
+  }
+  next();
+});
+
+// Aplicar autenticação em todas as rotas principais
+app.use('/', (req, res, next) => {
+  // Rotas públicas (não precisam de login)
+  const publicRoutes = ['/login', '/health'];
+  
+  if (publicRoutes.includes(req.path) || req.path.startsWith('/login')) {
+    return next();
+  }
+  
+  // Todas as outras rotas precisam de autenticação
+  return requireAuth(req, res, next);
+});
+
+// ========================================
+// ROTAS DE LOGIN
+// ========================================
+
+// Página de Login
+app.get('/login', (req, res) => {
+  const redirectUrl = req.query.redirect || '/';
+  const error = req.query.error;
+  const success = req.query.success;
+  
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Login - Sistema de Estoque</title>
+      ${loginStyles}
+    </head>
+    <body>
+      <div class="login-container">
+        <div class="login-header">
+          <h1>🏪 Sistema de Estoque</h1>
+          <p>Faça login para acessar o sistema</p>
+        </div>
+
+        ${error ? `<div class="alert alert-danger">${error}</div>` : ''}
+        ${success ? `<div class="alert alert-success">${success}</div>` : ''}
+
+        <form action="/login" method="POST">
+          <input type="hidden" name="redirect" value="${redirectUrl}">
+          
+          <div class="form-group">
+            <label for="username">Usuário</label>
+            <input type="text" id="username" name="username" required autocomplete="username">
+          </div>
+
+          <div class="form-group">
+            <label for="password">Senha</label>
+            <input type="password" id="password" name="password" required autocomplete="current-password">
+          </div>
+
+          <button type="submit" class="btn-login">Entrar no Sistema</button>
+        </form>
+
+        <div class="footer-info">
+          <p><strong>Usuário padrão:</strong> admin</p>
+          <p><strong>Senha padrão:</strong> admin123</p>
+          <small>Altere a senha após o primeiro login</small>
+        </div>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+// Processar Login
+app.post('/login', async (req, res) => {
+  const { username, password, redirect } = req.body;
+  
+  try {
+    // Buscar usuário
+    const userResult = await pool.query(
+      'SELECT * FROM usuarios WHERE username = $1 AND ativo = true',
+      [username]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.redirect('/login?error=' + encodeURIComponent('Usuário não encontrado ou inativo'));
+    }
+
+    const user = userResult.rows[0];
+
+    // Verificar senha
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordMatch) {
+      return res.redirect('/login?error=' + encodeURIComponent('Senha incorreta'));
+    }
+
+    // Atualizar último login
+    await pool.query(
+      'UPDATE usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = $1',
+      [user.id]
+    );
+
+    // Criar sessão
+    req.session.userId = user.id;
+    req.session.username = user.username;
+    req.session.nomeCompleto = user.nome_completo;
+
+    // Redirecionar
+    const redirectUrl = redirect && redirect !== '/' ? redirect : '/';
+    res.redirect(redirectUrl);
+
+  } catch (error) {
+    console.error('Erro no login:', error);
+    res.redirect('/login?error=' + encodeURIComponent('Erro interno do servidor'));
+  }
+});
+
+// Logout
+app.get('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Erro no logout:', err);
+    }
+    res.redirect('/login?success=' + encodeURIComponent('Logout realizado com sucesso'));
+  });
+});
+
+// Health check (público)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime() 
+  });
+});
+
+// ========================================
+// SEU SISTEMA ATUAL (COM LOGIN INTEGRADO)
+// ========================================
+
+// CSS styles (atualizado com header de usuário)
 const styles = `
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #2d3748; line-height: 1.6; }
   .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
   .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem 0; margin-bottom: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-  .header h1 { text-align: center; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
-  .header p { text-align: center; font-size: 1.1rem; opacity: 0.9; }
+  .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .header p { font-size: 1.1rem; opacity: 0.9; }
+  .user-info { text-align: right; }
+  .user-info .user-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .btn-logout { background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 0.9rem; transition: all 0.2s; }
+  .btn-logout:hover { background: rgba(255,255,255,0.3); transform: translateY(-1px); }
   .nav { display: flex; justify-content: center; gap: 1rem; margin: 2rem 0; flex-wrap: wrap; }
   .nav a { background: white; color: #4a5568; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s; border: 2px solid transparent; }
   .nav a:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); color: #667eea; border-color: #667eea; }
@@ -91,11 +415,17 @@ const styles = `
   .saldo-positivo { color: #38a169; }
   .saldo-zero { color: #ed8936; }
   .saldo-negativo { color: #e53e3e; }
-  @media (max-width: 768px) { .container { padding: 10px; } .nav { flex-direction: column; align-items: center; } .form-row { grid-template-columns: 1fr; } .stats { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) { 
+    .container { padding: 10px; } 
+    .header-content { flex-direction: column; text-align: center; gap: 1rem; }
+    .nav { flex-direction: column; align-items: center; } 
+    .form-row { grid-template-columns: 1fr; } 
+    .stats { grid-template-columns: 1fr; } 
+  }
 </style>
 `;
 
-// Função auxiliar para obter saldo de produto
+// Função auxiliar para obter saldo de produto (SUA FUNÇÃO ATUAL)
 function getSaldoProduto(produtoId) {
   return new Promise((resolve, reject) => {
     db.get(
@@ -115,12 +445,15 @@ function getSaldoProduto(produtoId) {
   });
 }
 
-// Inicializar banco de dados
+// Inicializar banco de dados (SUA FUNÇÃO + USUÁRIOS)
 async function initializeDatabase() {
   try {
     console.log('🔧 Inicializando banco PostgreSQL...');
     
-    // Criar tabelas se não existirem
+    // Criar tabela de usuários PRIMEIRO
+    await createUsersTable();
+    
+    // Suas tabelas atuais
     await pool.query(`
       CREATE TABLE IF NOT EXISTS produtos (
         id SERIAL PRIMARY KEY,
@@ -200,7 +533,6 @@ async function initializeDatabase() {
       `);
     }
 
-    // Verificar dados iniciais
     const countProdutos = await pool.query('SELECT COUNT(*) as count FROM produtos');
     console.log(`✅ Banco PostgreSQL inicializado! Produtos: ${countProdutos.rows[0].count}`);
 
@@ -209,7 +541,11 @@ async function initializeDatabase() {
   }
 }
 
-// Página principal - Dashboard
+// ========================================
+// SUAS ROTAS ATUAIS (TODAS PROTEGIDAS + HEADER ATUALIZADO)
+// ========================================
+
+// Página principal - Dashboard (COM HEADER DE USUÁRIO)
 app.get('/', (req, res) => {
   db.all(`
     SELECT 
@@ -247,9 +583,15 @@ app.get('/', (req, res) => {
       </head>
       <body>
         <div class="header">
-          <div class="container">
-            <h1>🏪 Sistema de Estoque</h1>
-            <p>Gestão completa de produtos, movimentações e fornecedores</p>
+          <div class="header-content">
+            <div>
+              <h1>🏪 Sistema de Estoque</h1>
+              <p>Gestão completa de produtos, movimentações e fornecedores</p>
+            </div>
+            <div class="user-info">
+              <div class="user-name">👤 ${res.locals.user.nomeCompleto || res.locals.user.username}</div>
+              <a href="/logout" class="btn-logout">Sair</a>
+            </div>
           </div>
         </div>
 
@@ -260,6 +602,7 @@ app.get('/', (req, res) => {
             <a href="/fornecedores">🏭 Fornecedores</a>
             <a href="/financeiro">💰 Financeiro</a>
             <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
+            <a href="/usuarios">👥 Usuários</a>
           </div>
 
           <div class="stats">
@@ -406,7 +749,7 @@ app.post('/produtos', (req, res) => {
   });
 });
 
-// Página de movimentações
+// Página de movimentações (COM HEADER DE USUÁRIO)
 app.get('/movimentacoes', (req, res) => {
   db.all('SELECT * FROM produtos ORDER BY codigo', [], (err, produtos) => {
     if (err) {
@@ -454,9 +797,15 @@ app.get('/movimentacoes', (req, res) => {
           </head>
           <body>
             <div class="header">
-              <div class="container">
-                <h1>📦 Movimentações de Estoque</h1>
-                <p>Entradas e saídas de produtos</p>
+              <div class="header-content">
+                <div>
+                  <h1>📦 Movimentações de Estoque</h1>
+                  <p>Entradas e saídas de produtos</p>
+                </div>
+                <div class="user-info">
+                  <div class="user-name">👤 ${res.locals.user.nomeCompleto || res.locals.user.username}</div>
+                  <a href="/logout" class="btn-logout">Sair</a>
+                </div>
               </div>
             </div>
 
@@ -467,6 +816,7 @@ app.get('/movimentacoes', (req, res) => {
                 <a href="/fornecedores">🏭 Fornecedores</a>
                 <a href="/financeiro">💰 Financeiro</a>
                 <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
+                <a href="/usuarios">👥 Usuários</a>
               </div>
 
               <div class="card">
@@ -670,7 +1020,7 @@ app.post('/movimentacoes', async (req, res) => {
   }
 });
 
-// Página de fornecedores
+// Página de fornecedores (COM HEADER DE USUÁRIO)
 app.get('/fornecedores', (req, res) => {
   db.all('SELECT * FROM fornecedores ORDER BY nome', [], (err, fornecedores) => {
     if (err) {
@@ -691,9 +1041,15 @@ app.get('/fornecedores', (req, res) => {
       </head>
       <body>
         <div class="header">
-          <div class="container">
-            <h1>🏭 Fornecedores</h1>
-            <p>Gestão de fornecedores e parceiros</p>
+          <div class="header-content">
+            <div>
+              <h1>🏭 Fornecedores</h1>
+              <p>Gestão de fornecedores e parceiros</p>
+            </div>
+            <div class="user-info">
+              <div class="user-name">👤 ${res.locals.user.nomeCompleto || res.locals.user.username}</div>
+              <a href="/logout" class="btn-logout">Sair</a>
+            </div>
           </div>
         </div>
 
@@ -704,6 +1060,7 @@ app.get('/fornecedores', (req, res) => {
             <a href="/fornecedores">🏭 Fornecedores</a>
             <a href="/financeiro">💰 Financeiro</a>
             <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
+            <a href="/usuarios">👥 Usuários</a>
           </div>
 
           <div class="card">
@@ -818,9 +1175,15 @@ app.get('/financeiro/setup', (req, res) => {
     </head>
     <body>
       <div class="header">
-        <div class="container">
-          <h1>💰 Setup Financeiro</h1>
-          <p>Configuração inicial do módulo financeiro</p>
+        <div class="header-content">
+          <div>
+            <h1>💰 Setup Financeiro</h1>
+            <p>Configuração inicial do módulo financeiro</p>
+          </div>
+          <div class="user-info">
+            <div class="user-name">👤 ${res.locals.user ? (res.locals.user.nomeCompleto || res.locals.user.username) : 'Usuário'}</div>
+            <a href="/logout" class="btn-logout">Sair</a>
+          </div>
         </div>
       </div>
 
@@ -836,7 +1199,7 @@ app.get('/financeiro/setup', (req, res) => {
   `);
 });
 
-// Financeiro completo
+// Financeiro completo (COM HEADER DE USUÁRIO)
 app.get('/financeiro/completo', async (req, res) => {
   try {
     const hoje = new Date().toISOString().split('T')[0];
@@ -877,9 +1240,15 @@ app.get('/financeiro/completo', async (req, res) => {
             </head>
             <body>
               <div class="header">
-                <div class="container">
-                  <h1>💰 Controle Financeiro</h1>
-                  <p>Fluxo de caixa e controle financeiro</p>
+                <div class="header-content">
+                  <div>
+                    <h1>💰 Controle Financeiro</h1>
+                    <p>Fluxo de caixa e controle financeiro</p>
+                  </div>
+                  <div class="user-info">
+                    <div class="user-name">👤 ${res.locals.user.nomeCompleto || res.locals.user.username}</div>
+                    <a href="/logout" class="btn-logout">Sair</a>
+                  </div>
                 </div>
               </div>
 
@@ -890,6 +1259,7 @@ app.get('/financeiro/completo', async (req, res) => {
                   <a href="/fornecedores">🏭 Fornecedores</a>
                   <a href="/financeiro">💰 Financeiro</a>
                   <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
+                  <a href="/usuarios">👥 Usuários</a>
                 </div>
 
                 <div class="stats">
@@ -998,7 +1368,7 @@ app.post('/financeiro/lancamento', (req, res) => {
   });
 });
 
-// Página de gerenciamento de produtos
+// Página de gerenciamento de produtos (COM HEADER DE USUÁRIO)
 app.get('/gerenciar/produtos', (req, res) => {
   db.all(`
     SELECT 
@@ -1032,9 +1402,15 @@ app.get('/gerenciar/produtos', (req, res) => {
       </head>
       <body>
         <div class="header">
-          <div class="container">
-            <h1>⚙️ Gerenciar Produtos</h1>
-            <p>Administração e controle de produtos</p>
+          <div class="header-content">
+            <div>
+              <h1>⚙️ Gerenciar Produtos</h1>
+              <p>Administração e controle de produtos</p>
+            </div>
+            <div class="user-info">
+              <div class="user-name">👤 ${res.locals.user.nomeCompleto || res.locals.user.username}</div>
+              <a href="/logout" class="btn-logout">Sair</a>
+            </div>
           </div>
         </div>
 
@@ -1045,6 +1421,7 @@ app.get('/gerenciar/produtos', (req, res) => {
             <a href="/fornecedores">🏭 Fornecedores</a>
             <a href="/financeiro">💰 Financeiro</a>
             <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
+            <a href="/usuarios">👥 Usuários</a>
           </div>
 
           <div class="card">
@@ -1089,7 +1466,7 @@ app.get('/gerenciar/produtos', (req, res) => {
   });
 });
 
-// Página de gerenciamento de movimentações
+// Página de gerenciamento de movimentações (COM HEADER DE USUÁRIO)
 app.get('/gerenciar/movimentacoes', (req, res) => {
   db.all(`
     SELECT 
@@ -1119,9 +1496,15 @@ app.get('/gerenciar/movimentacoes', (req, res) => {
       </head>
       <body>
         <div class="header">
-          <div class="container">
-            <h1>📦 Gerenciar Movimentações</h1>
-            <p>Histórico completo de movimentações</p>
+          <div class="header-content">
+            <div>
+              <h1>📦 Gerenciar Movimentações</h1>
+              <p>Histórico completo de movimentações</p>
+            </div>
+            <div class="user-info">
+              <div class="user-name">👤 ${res.locals.user.nomeCompleto || res.locals.user.username}</div>
+              <a href="/logout" class="btn-logout">Sair</a>
+            </div>
           </div>
         </div>
 
@@ -1132,6 +1515,7 @@ app.get('/gerenciar/movimentacoes', (req, res) => {
             <a href="/fornecedores">🏭 Fornecedores</a>
             <a href="/financeiro">💰 Financeiro</a>
             <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
+            <a href="/usuarios">👥 Usuários</a>
           </div>
 
           <div class="card">
@@ -1172,12 +1556,147 @@ app.get('/gerenciar/movimentacoes', (req, res) => {
   });
 });
 
+// ========================================
+// NOVA FUNCIONALIDADE: GERENCIAMENTO DE USUÁRIOS
+// ========================================
+
+// Página de usuários
+app.get('/usuarios', async (req, res) => {
+  try {
+    const usuarios = await pool.query(`
+      SELECT id, username, email, nome_completo, ativo, ultimo_login, created_at 
+      FROM usuarios 
+      ORDER BY created_at DESC
+    `);
+
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Usuários - Sistema de Estoque</title>
+        ${styles}
+      </head>
+      <body>
+        <div class="header">
+          <div class="header-content">
+            <div>
+              <h1>👥 Gerenciar Usuários</h1>
+              <p>Controle de acesso ao sistema</p>
+            </div>
+            <div class="user-info">
+              <div class="user-name">👤 ${res.locals.user.nomeCompleto || res.locals.user.username}</div>
+              <a href="/logout" class="btn-logout">Sair</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="container">
+          <div class="nav">
+            <a href="/">📊 Dashboard</a>
+            <a href="/movimentacoes">📦 Movimentações</a>
+            <a href="/fornecedores">🏭 Fornecedores</a>
+            <a href="/financeiro">💰 Financeiro</a>
+            <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
+            <a href="/usuarios">👥 Usuários</a>
+          </div>
+
+          <div class="card">
+            <h2>➕ Criar Novo Usuário</h2>
+            <form action="/usuarios" method="POST">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="username">Nome de Usuário *</label>
+                  <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                  <label for="email">E-mail *</label>
+                  <input type="email" id="email" name="email" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="nome_completo">Nome Completo</label>
+                  <input type="text" id="nome_completo" name="nome_completo">
+                </div>
+                <div class="form-group">
+                  <label for="password">Senha *</label>
+                  <input type="password" id="password" name="password" required minlength="6">
+                </div>
+              </div>
+              <button type="submit" class="btn">Criar Usuário</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h2>📋 Usuários Cadastrados</h2>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Usuário</th>
+                  <th>Nome Completo</th>
+                  <th>E-mail</th>
+                  <th>Status</th>
+                  <th>Último Login</th>
+                  <th>Cadastro</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${usuarios.rows.map(user => `
+                  <tr>
+                    <td><strong>${user.username}</strong></td>
+                    <td>${user.nome_completo || '-'}</td>
+                    <td>${user.email}</td>
+                    <td>
+                      <span class="badge ${user.ativo ? 'badge-success' : 'badge-danger'}">
+                        ${user.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td>${user.ultimo_login ? new Date(user.ultimo_login).toLocaleDateString('pt-BR') : 'Nunca'}</td>
+                    <td>${new Date(user.created_at).toLocaleDateString('pt-BR')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Erro buscar usuários:', error);
+    res.status(500).send('Erro interno');
+  }
+});
+
+// Criar usuário
+app.post('/usuarios', async (req, res) => {
+  const { username, email, nome_completo, password } = req.body;
+  
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    await pool.query(`
+      INSERT INTO usuarios (username, email, nome_completo, password_hash)
+      VALUES ($1, $2, $3, $4)
+    `, [username, email, nome_completo, hashedPassword]);
+    
+    res.redirect('/usuarios?success=Usuário criado com sucesso');
+  } catch (error) {
+    console.error('Erro criar usuário:', error);
+    res.redirect('/usuarios?error=Erro ao criar usuário: ' + error.message);
+  }
+});
+
 // Inicializar servidor
 async function startServer() {
   await initializeDatabase();
   
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Sistema rodando na porta ${PORT}`);
+    console.log(`🔐 Login: http://localhost:${PORT}/login`);
+    console.log(`👤 Admin padrão: admin / admin123`);
     console.log(`🌍 Acesso: https://seu-dominio.railway.app`);
   });
 }
