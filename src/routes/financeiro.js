@@ -81,6 +81,7 @@ router.get('/faturamento', (req, res) => {
     data_fim = ultimoDiaDoMes.toISOString().split('T')[0];
   }
 
+  // Query SQL base
   let query = `
     SELECT id, movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, data_pagamento, status
     FROM contas_a_receber
@@ -89,6 +90,7 @@ router.get('/faturamento', (req, res) => {
   let whereClauses = [];
   let paramCount = 1;
 
+  // Monta a cláusula WHERE dinamicamente com os placeholders corretos
   if (data_inicio) {
     whereClauses.push(`data_vencimento >= <span class="math-inline">\{isProduction ? '</span>' + paramCount++ : '?'}`);
     params.push(data_inicio);
@@ -99,9 +101,14 @@ router.get('/faturamento', (req, res) => {
   }
 
   if (whereClauses.length > 0) {
+    // Garante o espaço antes do WHERE
     query += ' WHERE ' + whereClauses.join(' AND ');
   }
   query += ' ORDER BY data_vencimento ASC';
+
+  // Log para depuração. Se o erro continuar, isso nos ajudará.
+  console.log('Executando query de faturamento:', query);
+  console.log('Com parâmetros:', params);
 
   db.all(query, params, (err, contas) => {
     if (err) {
