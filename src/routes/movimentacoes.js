@@ -49,58 +49,45 @@ router.get('/', (req, res) => {
 });
 
 // Dentro de src/routes/movimentacoes.js
-
 router.post('/', async (req, res) => {
-  const { produto_id, fornecedor_id, cliente_nome, rca, tipo, quantidade, preco_unitario, valor_total, documento, observacao, total_parcelas } = req.body;
+  // 'vencimentos' agora é um array de datas que vem do formulário
+  const { produto_id, fornecedor_id, cliente_nome, rca, tipo, quantidade, preco_unitario, valor_total, documento, observacao, total_parcelas, vencimentos } = req.body;
 
   try {
     if (tipo === 'SAIDA') { /* ... (verificação de saldo) ... */ }
 
-    // Comando SQL corrigido com "RETURNING id" no final
-    const query = `
-      INSERT INTO movimentacoes (
-        produto_id, fornecedor_id, cliente_nome, rca, tipo, quantidade, 
-        preco_unitario, valor_total, documento, observacao
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING id
-    `;
-
-    const params = [
-      produto_id, fornecedor_id || null, cliente_nome || null, rca || null, 
-      tipo, quantidade, preco_unitario || null, valor_total || null, 
-      documento || null, observacao || null
-    ];
+    const query = `INSERT INTO movimentacoes (...) VALUES (...) RETURNING id`;
+    const params = [ /* ... */ ];
 
     db.run(query, params, function(err) {
       if (err) {
-          console.error('Erro ao inserir movimentação:', err);
-          return res.status(500).send('Erro: ' + err.message);
+        console.error('Erro ao inserir movimentação:', err);
+        return res.status(500).send('Erro: ' + err.message);
       }
 
       const movimentacaoId = this.lastID;
       if (!movimentacaoId) {
-          console.error('Não foi possível obter o ID da movimentação inserida.');
-          return res.redirect('/movimentacoes');
+        return res.redirect('/movimentacoes');
       }
 
       if (tipo === 'SAIDA' && valor_total > 0) {
-        // ... (o restante da lógica para criar as parcelas continua o mesmo) ...
-        const numParcelas = parseInt(total_parcelas) || 1;
+        const numParcelas = parseInt(total_parcelas) || 0;
         const valorParcela = valor_total / numParcelas;
-        const hoje = new Date();
 
-        for (let i = 1; i <= numParcelas; i++) {
-          const dataVencimento = new Date(hoje);
-          dataVencimento.setDate(hoje.getDate() + (i * 30));
+        // Loop para salvar cada parcela com sua data personalizada
+        for (let i = 0; i < numParcelas; i++) {
+          // Pega a data do array de vencimentos enviado pelo formulário
+          const dataVencimento = vencimentos[i]; 
 
-          db.run(`
-            INSERT INTO contas_a_receber (movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-          `, [movimentacaoId, cliente_nome, i, numParcelas, valorParcela.toFixed(2), dataVencimento.toISOString().split('T')[0], 'Pendente'],
-          (err) => {
-            if (err) console.error(`Erro ao criar parcela ${i}:`, err);
-          });
+          if (dataVencimento) {
+              db.run(`
+                INSERT INTO contas_a_receber (movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+              `, [movimentacaoId, cliente_nome, i + 1, numParcelas, valorParcela.toFixed(2), dataVencimento, 'Pendente'],
+              (err) => {
+                if (err) console.error(`Erro ao criar parcela ${i + 1}:`, err);
+              });
+          }
         }
       }
 

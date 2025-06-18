@@ -9,13 +9,15 @@
   <form action="/movimentacoes" method="POST">
     <div class="form-row">
       <div class="form-group">
-        <label for="produto_id">Produto *</label>
-        <select id="produto_id" name="produto_id" required>
-          <option value="">Selecione um produto</option>
-          <% produtos.forEach(p => { %>
-            <option value="<%= p.id %>"><%= p.codigo %> - <%= p.descricao %></option>
-          <% }) %>
-        </select>
+  <label for="produto_id">Produto *</label>
+  <select id="produto_id" name="produto_id" required onchange="mostrarUnidade()">
+    <option value="">Selecione um produto</option>
+    <% produtos.forEach(p => { %>
+      <option value="<%= p.id %>"><%= p.codigo %> - <%= p.descricao %></option>
+    <% }) %>
+  </select>
+  <span id="unidade_produto" style="margin-left: 10px; font-weight: bold; color: #555;"></span>
+</div>
       </div>
       <div class="form-group">
         <label for="tipo">Tipo *</label>
@@ -115,23 +117,89 @@
   </table>
 </div>
 
+<script type="application/json" id="produtos-data">
+  <%- JSON.stringify(produtos) %>
+</script>
+
 <script>
-  function toggleFields() {
-    // ... (função toggleFields continua a mesma) ...
-  }
+  document.addEventListener('DOMContentLoaded', function() {
+    // Pega o texto de dentro do nosso bloco de dados e o transforma em um objeto JavaScript
+    const produtosDataElement = document.getElementById('produtos-data');
+    const produtos = JSON.parse(produtosDataElement.textContent);
 
-  function calcularValorTotal() {
-    const quantidade = parseFloat(document.getElementById('quantidade').value) || 0;
-    const precoUnitario = parseFloat(document.getElementById('preco_unitario').value) || 0;
-    const valorTotal = quantidade * precoUnitario;
-    document.getElementById('valor_total').value = valorTotal.toFixed(2);
-  }
+    // O resto do seu código funciona exatamente como antes
+    const produtoSelect = document.getElementById('produto_id');
+    const quantidadeInput = document.getElementById('quantidade');
+    const precoUnitarioInput = document.getElementById('preco_unitario');
+    const spanUnidade = document.getElementById('unidade_produto');
+    const valorTotalInput = document.getElementById('valor_total');
 
-  // Adiciona os "escutadores" de evento aos campos
-  document.getElementById('quantidade').addEventListener('input', calcularValorTotal);
-  document.getElementById('preco_unitario').addEventListener('input', calcularValorTotal);
+    function mostrarUnidade() {
+      if (!produtoSelect || !spanUnidade) return;
+      const produtoId = produtoSelect.value;
 
-  toggleFields();
+      if (produtoId) {
+        const produtoSelecionado = produtos.find(p => p.id == produtoId);
+        if (produtoSelecionado) {
+          spanUnidade.textContent = `(${produtoSelecionado.unidade || 'UN'})`;
+        }
+      } else {
+        spanUnidade.textContent = '';
+      }
+    }
+
+    function calcularValorTotal() {
+      if (!quantidadeInput || !precoUnitarioInput || !valorTotalInput) return;
+      const quantidade = parseFloat(quantidadeInput.value) || 0;
+      const precoUnitario = parseFloat(precoUnitarioInput.value) || 0;
+      const valorTotal = quantidade * precoUnitario;
+      valorTotalInput.value = valorTotal.toFixed(2);
+    }
+
+    function gerarCamposDeVencimento() {
+      const numParcelas = parseInt(document.getElementById('total_parcelas').value) || 0;
+      const container = document.getElementById('vencimentos-container');
+      container.innerHTML = ''; 
+
+      if (numParcelas > 0) {
+          const hoje = new Date();
+          for (let i = 1; i <= numParcelas; i++) {
+              const dataVencimento = new Date(hoje);
+              dataVencimento.setDate(hoje.getDate() + (i * 30));
+              const dataFormatada = dataVencimento.toISOString().split('T')[0];
+
+              const formGroup = document.createElement('div');
+              formGroup.className = 'form-group';
+
+              const label = document.createElement('label');
+              label.htmlFor = `vencimento_parcela_${i}`;
+              label.textContent = `Vencimento Parcela ${i}`;
+
+              const input = document.createElement('input');
+              input.type = 'date';
+              input.id = `vencimento_parcela_${i}`;
+              input.name = `vencimentos[${i-1}]`;
+              input.value = dataFormatada;
+              input.required = true;
+
+              formGroup.appendChild(label);
+              formGroup.appendChild(input);
+              container.appendChild(formGroup);
+          }
+      }
+    }
+
+    // Adiciona os "escutadores" de evento
+    if(quantidadeInput) quantidadeInput.addEventListener('input', calcularValorTotal);
+    if(precoUnitarioInput) precoUnitarioInput.addEventListener('input', calcularValorTotal);
+    if(produtoSelect) produtoSelect.addEventListener('change', mostrarUnidade);
+    const parcelasInput = document.getElementById('total_parcelas');
+    if(parcelasInput) parcelasInput.addEventListener('input', gerarCamposDeVencimento);
+
+    // Chama as funções no carregamento inicial
+    mostrarUnidade();
+    gerarCamposDeVencimento();
+  });
 </script>
 
 <%- include('partials/footer') %>
