@@ -5,4 +5,4 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-module.exports = pool; // Exporta a pool diretamente
+module.exports = pool;

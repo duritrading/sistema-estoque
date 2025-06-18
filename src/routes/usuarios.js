@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const { db } = require('../config/database');
-
+const db = require('../config/database');
 
 // GET /usuarios - Mostra a página com a lista e o formulário
 router.get('/', (req, res) => {
