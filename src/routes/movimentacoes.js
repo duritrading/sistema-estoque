@@ -49,44 +49,74 @@ router.get('/', (req, res) => {
 });
 
 // Dentro de src/routes/movimentacoes.js
+
 router.post('/', async (req, res) => {
-  // 'vencimentos' agora é um array de datas que vem do formulário
+  // 'vencimentos' é o array de datas que vem do formulário
   const { produto_id, fornecedor_id, cliente_nome, rca, tipo, quantidade, preco_unitario, valor_total, documento, observacao, total_parcelas, vencimentos } = req.body;
 
   try {
-    if (tipo === 'SAIDA') { /* ... (verificação de saldo) ... */ }
+    if (tipo === 'SAIDA') {
+        const saldo = await getSaldoProduto(produto_id);
+        if (saldo < quantidade) {
+            return res.render('error', {
+                user: res.locals.user,
+                titulo: 'Estoque Insuficiente',
+                mensagem: `Não foi possível registrar a saída. Saldo atual: ${saldo}, Quantidade solicitada: ${quantidade}.`,
+                voltar_url: '/movimentacoes'
+            });
+        }
+    }
 
-    const query = `INSERT INTO movimentacoes (...) VALUES (...) RETURNING id`;
-    const params = [ /* ... */ ];
+    // Query SQL COMPLETA e CORRIGIDA
+    const query = `
+      INSERT INTO movimentacoes (
+        produto_id, fornecedor_id, cliente_nome, rca, tipo, quantidade, 
+        preco_unitario, valor_total, documento, observacao
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id
+    `;
+
+    // Parâmetros COMPLETOS e CORRIGIDOS
+    const params = [
+      produto_id, fornecedor_id || null, cliente_nome || null, rca || null, 
+      tipo, quantidade, preco_unitario || null, valor_total || null, 
+      documento || null, observacao || null
+    ];
 
     db.run(query, params, function(err) {
       if (err) {
-        console.error('Erro ao inserir movimentação:', err);
-        return res.status(500).send('Erro: ' + err.message);
+          console.error('Erro ao inserir movimentação:', err);
+          return res.status(500).send('Erro ao registrar movimentação.');
       }
 
       const movimentacaoId = this.lastID;
       if (!movimentacaoId) {
+        console.error('Não foi possível obter o ID da movimentação inserida.');
+        // Mesmo com erro na parcela, a movimentação foi feita, então redirecionamos.
         return res.redirect('/movimentacoes');
       }
 
+      // Se for uma SAÍDA (venda), criar as contas a receber
       if (tipo === 'SAIDA' && valor_total > 0) {
         const numParcelas = parseInt(total_parcelas) || 0;
-        const valorParcela = valor_total / numParcelas;
+        // Garante que o valor da parcela seja calculado corretamente
+        const valorCalculado = parseFloat(quantidade) * parseFloat(preco_unitario);
+        const valorParcela = valorCalculado / numParcelas;
 
-        // Loop para salvar cada parcela com sua data personalizada
-        for (let i = 0; i < numParcelas; i++) {
-          // Pega a data do array de vencimentos enviado pelo formulário
-          const dataVencimento = vencimentos[i]; 
+        if (vencimentos && numParcelas > 0) {
+          for (let i = 0; i < numParcelas; i++) {
+            const dataVencimento = vencimentos[i]; 
 
-          if (dataVencimento) {
-              db.run(`
-                INSERT INTO contas_a_receber (movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-              `, [movimentacaoId, cliente_nome, i + 1, numParcelas, valorParcela.toFixed(2), dataVencimento, 'Pendente'],
-              (err) => {
-                if (err) console.error(`Erro ao criar parcela ${i + 1}:`, err);
-              });
+            if (dataVencimento) {
+                db.run(`
+                  INSERT INTO contas_a_receber (movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, status)
+                  VALUES ($1, $2, $3, $4, $5, $6, $7)
+                `, [movimentacaoId, cliente_nome, i + 1, numParcelas, valorParcela.toFixed(2), dataVencimento, 'Pendente'],
+                (err) => {
+                  if (err) console.error(`Erro ao criar parcela ${i + 1}:`, err);
+                });
+            }
           }
         }
       }
