@@ -657,6 +657,7 @@ app.get('/', (req, res) => {
             <a href="/financeiro">💰 Financeiro</a>
             <a href="/gerenciar/produtos">⚙️ Gerenciar</a>
             <a href="/usuarios">👥 Usuários</a>
+            <a href="/backup">📦 Backup</a>
           </div>
 
           <div class="stats">
@@ -1825,3 +1826,48 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
+// ========================================
+// BACKUP MANUAL SIMPLES (ADICIONAR NO SEU APP.JS)
+// ========================================
+
+// Rota para backup manual
+app.get('/backup', async (req, res) => {
+  try {
+    console.log('📦 Gerando backup manual...');
+    
+    const backup = {
+      sistema: 'Sistema de Estoque',
+      data: new Date().toISOString(),
+      gerado_por: res.locals.user.username,
+      dados: {}
+    };
+
+    // Backup das tabelas principais
+    const tabelas = ['produtos', 'fornecedores', 'movimentacoes', 'fluxo_caixa'];
+    
+    for (const tabela of tabelas) {
+      const result = await pool.query(`SELECT * FROM ${tabela} ORDER BY id`);
+      backup.dados[tabela] = result.rows;
+    }
+
+    // Usuarios (sem senhas)
+    const usuarios = await pool.query('SELECT id, username, email, nome_completo, ativo FROM usuarios');
+    backup.dados.usuarios = usuarios.rows;
+
+    const total = Object.values(backup.dados).reduce((sum, t) => sum + t.length, 0);
+    console.log(`✅ Backup gerado: ${total} registros`);
+
+    // Download do arquivo
+    const arquivo = `backup_${new Date().toISOString().split('T')[0]}.json`;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${arquivo}"`);
+    res.json(backup);
+
+  } catch (error) {
+    console.error('❌ Erro backup:', error);
+    res.status(500).send('Erro no backup: ' + error.message);
+  }
+});
+
+// Adicionar link na navegação (ATUALIZAR suas páginas HTML):
