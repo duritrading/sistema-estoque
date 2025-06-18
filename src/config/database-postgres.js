@@ -1,69 +1,122 @@
 const { Pool } = require('pg');
 
-// Configuração do PostgreSQL
+// Configuração do PostgreSQL com tratamento de erro robusto
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
-// Wrapper para compatibilidade com SQLite
+// Log de conexão
+pool.on('connect', () => {
+  console.log('✅ Nova conexão PostgreSQL estabelecida');
+});
+
+pool.on('error', (err) => {
+  console.error('❌ Erro no pool PostgreSQL:', err);
+});
+
+// Wrapper SUPER compatível com SQLite
 const db = {
   // Função para executar queries simples
   run: (query, params = [], callback) => {
-    pool.query(query, params, (err, result) => {
-      if (callback) {
-        if (err) {
-          callback(err);
-        } else {
-          // Simular comportamento do SQLite
-          callback.call({ 
-            lastID: result.insertId || (result.rows && result.rows[0] && result.rows[0].id),
+    // Converter query SQLite para PostgreSQL se necessário
+    const pgQuery = query
+      .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/g, 'SERIAL PRIMARY KEY')
+      .replace(/DATETIME DEFAULT CURRENT_TIMESTAMP/g, 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+    pool.query(pgQuery, params)
+      .then(result => {
+        if (callback) {
+          const mockThis = { 
+            lastID: (result.rows && result.rows[0] && result.rows[0].id) || result.insertId || null,
             changes: result.rowCount || 0
-          });
+          };
+          callback.call(mockThis, null);
         }
-      }
-    });
+      })
+      .catch(err => {
+        console.error('❌ Erro na query run:', err.message);
+        if (callback) callback(err);
+      });
   },
 
   // Função para buscar uma linha
   get: (query, params = [], callback) => {
-    pool.query(query, params, (err, result) => {
-      if (callback) {
-        if (err) {
-          callback(err);
-        } else {
-          callback(null, (result.rows && result.rows[0]) || null);
+    // Converter query SQLite para PostgreSQL se necessário
+    const pgQuery = query
+      .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/g, 'SERIAL PRIMARY KEY')
+      .replace(/DATETIME DEFAULT CURRENT_TIMESTAMP/g, 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+    pool.query(pgQuery, params)
+      .then(result => {
+        if (callback) {
+          const row = (result.rows && result.rows.length > 0) ? result.rows[0] : null;
+          callback(null, row);
         }
-      }
-    });
+      })
+      .catch(err => {
+        console.error('❌ Erro na query get:', err.message);
+        if (callback) callback(err, null);
+      });
   },
 
-  // Função para buscar múltiplas linhas - CORRIGIDA
+  // Função para buscar múltiplas linhas - SUPER ROBUSTA
   all: (query, params = [], callback) => {
-    pool.query(query, params, (err, result) => {
-      if (callback) {
-        if (err) {
-          callback(err);
-        } else {
-          // GARANTIR que sempre retorna um array
-          callback(null, (result && result.rows) || []);
+    // Converter query SQLite para PostgreSQL se necessário
+    const pgQuery = query
+      .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/g, 'SERIAL PRIMARY KEY')
+      .replace(/DATETIME DEFAULT CURRENT_TIMESTAMP/g, 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+    pool.query(pgQuery, params)
+      .then(result => {
+        if (callback) {
+          // SEMPRE garantir que retorna array
+          const rows = (result && result.rows && Array.isArray(result.rows)) ? result.rows : [];
+          console.log(`✅ Query retornou ${rows.length} registros`);
+          callback(null, rows);
         }
-      }
-    });
+      })
+      .catch(err => {
+        console.error('❌ Erro na query all:', err.message);
+        console.error('Query que falhou:', pgQuery);
+        if (callback) callback(err, []);
+      });
   },
 
   // Função para executar múltiplas queries em série
   serialize: (callback) => {
-    if (callback) callback();
+    if (callback && typeof callback === 'function') {
+      callback();
+    }
+  },
+
+  // Função adicional para debug
+  exec: (query, callback) => {
+    pool.query(query)
+      .then(result => {
+        if (callback) callback(null);
+      })
+      .catch(err => {
+        console.error('❌ Erro na query exec:', err.message);
+        if (callback) callback(err);
+      });
   }
 };
 
-// Função para inicializar as tabelas
+// Função para inicializar as tabelas com mais logs
 const initializeDatabase = async () => {
   try {
     console.log('🔧 Inicializando banco PostgreSQL...');
 
+    // Testar conexão primeiro
+    await pool.query('SELECT NOW()');
+    console.log('✅ Conexão PostgreSQL confirmada');
+
     // Criar tabela produtos
+    console.log('📝 Criando tabela produtos...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS produtos (
         id SERIAL PRIMARY KEY,
@@ -78,6 +131,7 @@ const initializeDatabase = async () => {
     `);
 
     // Criar tabela fornecedores
+    console.log('📝 Criando tabela fornecedores...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS fornecedores (
         id SERIAL PRIMARY KEY,
@@ -94,6 +148,7 @@ const initializeDatabase = async () => {
     `);
 
     // Criar tabela movimentacoes
+    console.log('📝 Criando tabela movimentacoes...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS movimentacoes (
         id SERIAL PRIMARY KEY,
@@ -112,6 +167,7 @@ const initializeDatabase = async () => {
     `);
 
     // Criar tabelas financeiras
+    console.log('📝 Criando tabelas financeiras...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS categorias_financeiras (
         id SERIAL PRIMARY KEY,
@@ -144,8 +200,10 @@ const initializeDatabase = async () => {
     `);
 
     // Inserir dados iniciais se não existirem
+    console.log('🔧 Verificando dados iniciais...');
     const { rows } = await pool.query('SELECT COUNT(*) as count FROM categorias_financeiras');
-    if (rows[0].count == 0) {
+    if (parseInt(rows[0].count) === 0) {
+      console.log('📝 Inserindo dados iniciais...');
       await pool.query(`
         INSERT INTO categorias_financeiras (nome, tipo) VALUES 
           ('Receita de Vendas', 'RECEITA'),
@@ -164,14 +222,21 @@ const initializeDatabase = async () => {
     }
 
     console.log('✅ Banco PostgreSQL inicializado com sucesso!');
+    console.log('🎯 Sistema pronto para uso com dados permanentes!');
+    
   } catch (error) {
-    console.error('❌ Erro ao inicializar banco:', error);
+    console.error('❌ Erro ao inicializar banco PostgreSQL:', error.message);
+    console.error('Stack:', error.stack);
+    // Não fazer throw para não quebrar o sistema
   }
 };
 
 // Inicializar banco na primeira execução
 if (process.env.DATABASE_URL) {
+  console.log('🔌 DATABASE_URL detectada, inicializando PostgreSQL...');
   initializeDatabase();
+} else {
+  console.log('⚠️ DATABASE_URL não encontrada');
 }
 
 module.exports = db;
