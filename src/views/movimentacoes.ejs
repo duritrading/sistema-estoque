@@ -1,0 +1,138 @@
+<%- include('partials/header', {
+  titulo: 'Movimentações de Estoque',
+  subtitulo: 'Entradas e saídas de produtos',
+  user: locals.user
+}) %>
+
+<div class="card">
+  <h2>➕ Nova Movimentação</h2>
+  <form action="/movimentacoes" method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="produto_id">Produto *</label>
+        <select id="produto_id" name="produto_id" required>
+          <option value="">Selecione um produto</option>
+          <% produtos.forEach(p => { %>
+            <option value="<%= p.id %>"><%= p.codigo %> - <%= p.descricao %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="tipo">Tipo *</label>
+        <select id="tipo" name="tipo" required onchange="toggleFields()">
+          <option value="">Selecione o tipo</option>
+          <option value="ENTRADA">Entrada</option>
+          <option value="SAIDA">Saída</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="quantidade">Quantidade *</label>
+        <input type="number" id="quantidade" name="quantidade" step="0.001" min="0.001" required>
+      </div>
+      <div class="form-group">
+        <label for="preco_unitario">Preço Unitário (R$)</label>
+        <input type="number" id="preco_unitario" name="preco_unitario" step="0.01" min="0">
+      </div>
+    </div>
+
+    <div id="entrada-fields" style="display: none;">
+      <div class="form-group">
+        <label for="fornecedor_id">Fornecedor</label>
+        <select id="fornecedor_id" name="fornecedor_id">
+          <option value="">Selecione um fornecedor</option>
+          <% fornecedores.forEach(f => { %>
+            <option value="<%= f.id %>"><%= f.nome %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+
+    <div id="saida-fields" style="display: none;">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cliente_nome">Cliente *</label>
+          <input type="text" id="cliente_nome" name="cliente_nome">
+        </div>
+        <div class="form-group">
+          <label for="rca">RCA</label>
+          <input type="text" id="rca" name="rca">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="documento">Documento</label>
+        <input type="text" id="documento" name="documento" placeholder="NF, Pedido, etc.">
+      </div>
+      <div class="form-group">
+        <label for="valor_total">Valor Total (R$)</label>
+        <input type="number" id="valor_total" name="valor_total" step="0.01" min="0">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="observacao">Observações</label>
+      <textarea id="observacao" name="observacao" rows="3"></textarea>
+    </div>
+
+    <button type="submit" class="btn">Registrar Movimentação</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>📋 Últimas Movimentações</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Produto</th>
+        <th>Tipo</th>
+        <th>Quantidade</th>
+        <th>Cliente/Fornecedor</th>
+        <th>Documento</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% movimentacoes.forEach(m => { %>
+        <tr>
+          <td><%= new Date(m.created_at).toLocaleDateString('pt-BR') %></td>
+          <td><%= m.codigo %> - <%= m.descricao %></td>
+          <td><span class="badge <%= m.tipo === 'ENTRADA' ? 'badge-success' : 'badge-danger' %>"><%= m.tipo %></span></td>
+          <td><%= m.quantidade %></td>
+          <td><%= m.tipo === 'ENTRADA' ? (m.fornecedor_nome || '-') : (m.cliente_nome || '-') %></td>
+          <td><%= m.documento || '-' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  function toggleFields() {
+    const tipo = document.getElementById('tipo').value;
+    const entradaFields = document.getElementById('entrada-fields');
+    const saidaFields = document.getElementById('saida-fields');
+    const clienteNome = document.getElementById('cliente_nome');
+
+    if (tipo === 'ENTRADA') {
+      entradaFields.style.display = 'block';
+      saidaFields.style.display = 'none';
+      clienteNome.required = false;
+    } else if (tipo === 'SAIDA') {
+      entradaFields.style.display = 'none';
+      saidaFields.style.display = 'block';
+      clienteNome.required = true;
+    } else {
+      entradaFields.style.display = 'none';
+      saidaFields.style.display = 'none';
+      clienteNome.required = false;
+    }
+  }
+  toggleFields();
+</script>
+
+<%- include('partials/footer') %>
