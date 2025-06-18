@@ -1,54 +1,38 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
+const pool = require('../config/database');
 
-// GET /backup - Gera e faz o download do backup completo
-router.get('/', (req, res) => {
-  if (!res.locals.user || !res.locals.user.username) {
+router.get('/', async (req, res) => {
+  if (!req.locals.user || !req.locals.user.username) {
       return res.status(403).send('Acesso negado.');
+  }
+  if (!pool) {
+      return res.status(500).send('Erro: Banco de dados não configurado para backup.');
   }
 
   try {
-    console.log('📦 Gerando backup manual...');
-
     const backup = {
       sistema: 'Sistema de Estoque',
       data: new Date().toISOString(),
-      gerado_por: res.locals.user.username,
+      gerado_por: req.locals.user.username,
       dados: {}
     };
 
-    const tabelas = ['produtos', 'fornecedores', 'movimentacoes', 'fluxo_caixa', 'usuarios'];
-    let tabelasProcessadas = 0;
+    const tabelas = ['produtos', 'fornecedores', 'movimentacoes', 'fluxo_caixa', 'categorias_financeiras', 'formas_pagamento'];
+    
+    for (const tabela of tabelas) {
+      const result = await pool.query(`SELECT * FROM ${tabela} ORDER BY id`);
+      backup.dados[tabela] = result.rows;
+    }
 
-    tabelas.forEach(tabela => {
-      // Usuários não tem senha, então a query é diferente
-      const query = tabela === 'usuarios'
-        ? 'SELECT id, username, email, nome_completo, ativo FROM usuarios ORDER BY id'
-        : `SELECT * FROM ${tabela} ORDER BY id`;
+    const usuariosResult = await pool.query('SELECT id, username, email, nome_completo, ativo FROM usuarios ORDER BY id');
+    backup.dados.usuarios = usuariosResult.rows;
 
-      db.all(query, [], (err, rows) => {
-        if (err) {
-          throw new Error(`Erro ao fazer backup da tabela ${tabela}: ${err.message}`);
-        }
-        backup.dados[tabela] = rows;
-        tabelasProcessadas++;
-
-        // Quando todas as tabelas forem processadas, envia o arquivo
-        if (tabelasProcessadas === tabelas.length) {
-          const total = Object.values(backup.dados).reduce((sum, t) => sum + t.length, 0);
-          console.log(`✅ Backup gerado: ${total} registros`);
-
-          const arquivoNome = `backup_${new Date().toISOString().split('T')[0]}.json`;
-          res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Content-Disposition', `attachment; filename="${arquivoNome}"`);
-          res.json(backup);
-        }
-      });
-    });
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="backup_${new Date().toISOString().split('T')[0]}.json"`);
+    res.json(backup);
 
   } catch (error) {
-    console.error('❌ Erro no backup:', error);
     res.status(500).send('Erro no backup: ' + error.message);
   }
 });
