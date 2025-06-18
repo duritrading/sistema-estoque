@@ -15,15 +15,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 
-// Configuração de Sessões
+// Configuração de Sessões (CORRIGIDA)
 app.use(session({
   secret: process.env.SESSION_SECRET || 'sistema-estoque-2024-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // SEMPRE false para desenvolvimento local
+    httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 horas
-  }
+  },
+  name: 'sessionId' // Nome personalizado para o cookie
 }));
 
 // Configuração PostgreSQL
