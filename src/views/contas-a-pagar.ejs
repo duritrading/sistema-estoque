@@ -1,0 +1,85 @@
+<%- include('partials/header', {
+  titulo: 'Contas a Pagar',
+  subtitulo: 'Gerencie suas despesas e obrigações futuras',
+  user: locals.user
+}) %>
+
+<div class="card">
+  <h2>💸 Nova Conta a Pagar</h2>
+  <form action="/contas-a-pagar" method="POST">
+    <div class="form-row">
+        <div class="form-group">
+            <label for="descricao">Descrição *</label>
+            <input type="text" id="descricao" name="descricao" required>
+        </div>
+        <div class="form-group">
+            <label for="fornecedor_id">Fornecedor (Opcional)</label>
+            <select id="fornecedor_id" name="fornecedor_id">
+                <option value="">Nenhum</option>
+                <% fornecedores.forEach(f => { %>
+                    <option value="<%= f.id %>"><%= f.nome %></option>
+                <% }) %>
+            </select>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <label for="valor">Valor (R$) *</label>
+            <input type="number" id="valor" name="valor" step="0.01" min="0.01" required>
+        </div>
+        <div class="form-group">
+            <label for="data_vencimento">Data de Vencimento *</label>
+            <input type="date" id="data_vencimento" name="data_vencimento" required>
+        </div>
+    </div>
+    <button type="submit" class="btn">Adicionar Conta</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>📋 Lista de Contas a Pagar</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Descrição</th>
+        <th>Fornecedor</th>
+        <th>Vencimento</th>
+        <th class="text-right">Valor</th>
+        <th>Status</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (contas.length > 0) { %>
+        <% contas.forEach(conta => { %>
+          <tr>
+            <td><%= conta.descricao %></td>
+            <td><%= conta.fornecedor_nome || '-' %></td>
+            <td><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
+            <td class="text-right">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+            <td>
+              <span class="badge <%= conta.status === 'Pago' ? 'badge-success' : 'badge-danger' %>">
+                <%= conta.status %>
+              </span>
+            </td>
+            <td>
+              <% if (conta.status === 'Pendente') { %>
+                <form action="/contas-a-pagar/pagar/<%= conta.id %>" method="POST">
+                    <button type="submit" class="btn">Registrar Pagamento</button>
+                </form>
+              <% } else { %>
+                -
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      <% } else { %>
+        <tr>
+          <td colspan="6" class="text-center">Nenhuma conta a pagar encontrada.</td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/footer') %>

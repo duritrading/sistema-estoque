@@ -202,4 +202,19 @@ db.run(`
   `);
 });
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS contas_a_pagar (
+    id INTEGER PRIMARY KEY,
+    fornecedor_id INTEGER,
+    descricao TEXT NOT NULL,
+    valor REAL NOT NULL,
+    data_vencimento DATE NOT NULL,
+    data_pagamento DATE,
+    status TEXT CHECK (status IN ('Pendente', 'Pago', 'Atrasado')) NOT NULL DEFAULT 'Pendente',
+    fluxo_caixa_id INTEGER,
+    FOREIGN KEY (fornecedor_id) REFERENCES fornecedores (id),
+    FOREIGN KEY (fluxo_caixa_id) REFERENCES fluxo_caixa (id)
+  )
+`);
+
 module.exports = db;

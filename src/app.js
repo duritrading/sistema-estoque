@@ -426,6 +426,22 @@ async function initializeDatabase() {
       )
     `);
 
+    console.log('📝 Criando tabela contas_a_pagar...');
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS contas_a_pagar (
+    id SERIAL PRIMARY KEY,
+    fornecedor_id INTEGER REFERENCES fornecedores(id),
+    descricao TEXT NOT NULL,
+    valor DECIMAL(10,2) NOT NULL,
+    data_vencimento DATE NOT NULL,
+    data_pagamento DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'Pendente',
+    fluxo_caixa_id INTEGER REFERENCES fluxo_caixa(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS fornecedores (
         id SERIAL PRIMARY KEY,
@@ -627,6 +643,8 @@ const produtosRoutes = require('./routes/produtos');
 const fluxoCaixaRoutes = require('./routes/fluxo-caixa');
 const dreRoutes = require('./routes/dre');
 const faturamentoRoutes = require('./routes/faturamento');
+const contasAPagarRoutes = require('./routes/contas-a-pagar');
+
 
 
 // ...
@@ -642,6 +660,7 @@ app.use('/produtos', produtosRoutes);
 app.use('/fluxo-caixa', fluxoCaixaRoutes);
 app.use('/dre', dreRoutes);
 app.use('/faturamento', faturamentoRoutes);
+app.use('/contas-a-pagar', contasAPagarRoutes);
 
 
 // Inicializar servidor
