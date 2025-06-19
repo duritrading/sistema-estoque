@@ -62,23 +62,28 @@
       </tr>
     </thead>
     <tbody>
-      <% if (contas.length > 0) { %>
-        <% contas.forEach(item => { %>
-          <tr>
-            <td><%= new Date(item.data_operacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
-            <td><span class="badge <%= item.tipo === 'CREDITO' ? 'badge-success' : 'badge-danger' %>"><%= item.tipo %></span></td>
-            <td><%= item.descricao %></td>
-            <td class="text-right <%= item.tipo === 'CREDITO' ? 'saldo-positivo' : 'saldo-negativo' %>">
-              <%= item.tipo === 'CREDITO' ? '+' : '-' %> R$ <%= parseFloat(item.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-            </td>
-          </tr>
-        <% }) %>
-      <% } else { %>
-        <tr>
-          <td colspan="4" class="text-center">Nenhum lançamento encontrado.</td>
-        </tr>
-      <% } %>
-    </tbody>
+  <% if (lancamentos.length > 0) { %>
+    <% lancamentos.forEach(item => { %>
+      <tr>
+        <td><%= new Date(item.data_operacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
+        <td><span class="badge <%= item.tipo === 'CREDITO' ? 'badge-success' : 'badge-danger' %>"><%= item.tipo %></span></td>
+        <td><%= item.descricao %></td>
+        <td class="text-right <%= item.tipo === 'CREDITO' ? 'saldo-positivo' : 'saldo-negativo' %>">
+          <%= item.tipo === 'CREDITO' ? '+' : '-' %> R$ <%= parseFloat(item.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+        </td>
+        <td>
+          <form action="/fluxo-caixa/delete/<%= item.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este lançamento?');">
+            <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+  <% } else { %>
+    <tr>
+      <td colspan="5" class="text-center">Nenhum lançamento encontrado.</td>
+    </tr>
+  <% } %>
+</tbody>
   </table>
 </div>
 
