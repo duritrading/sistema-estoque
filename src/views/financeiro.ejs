@@ -104,13 +104,16 @@
     <% } %>
   </tbody>
   <tfoot>
-    <% const totalPagina = contas.reduce((sum, item) => sum + (item.tipo === 'CREDITO' ? parseFloat(item.valor) : -parseFloat(item.valor)), 0); %>
-    <tr style="font-weight: bold; background-color: #f8f9fa;">
-        <td colspan="3" class="text-right">Balanço na Página:</td>
-        <td class="text-right <%= totalPagina >= 0 ? 'saldo-positivo' : 'saldo-negativo' %>">
-            R$ <%= totalPagina.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-        </td>
-    </tr>
+  <tr style="font-weight: bold; background-color: #f8f9fa;">
+      <td colspan="4" class="text-right">Total do Período:</td>
+      <td class="text-right">R$ <%= totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+      <td colspan="2"></td>
+  </tr>
+  <tr style="font-weight: bold; background-color: #fff3cd;">
+      <td colspan="4" class="text-right">Total Pendente no Período:</td>
+      <td class="text-right">R$ <%= totalPendente.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+      <td colspan="2"></td>
+  </tr>
 </tfoot>
 </table>
 </div>
