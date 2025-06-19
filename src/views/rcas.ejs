@@ -1,0 +1,68 @@
+<%- include('partials/header', {
+  titulo: 'RCAs',
+  subtitulo: 'Cadastro de Representantes Comerciais',
+  user: locals.user
+}) %>
+
+<div class="card">
+  <h2>➕ Cadastrar Novo RCA</h2>
+  <form action="/rcas" method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="nome">Nome *</label>
+        <input type="text" id="nome" name="nome" required>
+      </div>
+      <div class="form-group">
+        <label for="codigo">Código</label>
+        <input type="text" id="codigo" name="codigo">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="praca">Praça (Cidade/Região)</label>
+        <input type="text" id="praca" name="praca">
+      </div>
+      <div class="form-group">
+        <label for="telefone">Telefone</label>
+        <input type="text" id="telefone" name="telefone">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="email">E-mail</label>
+      <input type="email" id="email" name="email">
+    </div>
+    <div class="form-group">
+      <label for="observacao">Observações</label>
+      <textarea id="observacao" name="observacao" rows="3"></textarea>
+    </div>
+    <button type="submit" class="btn">Cadastrar RCA</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>📋 RCAs Cadastrados</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Código</th>
+        <th>Praça</th>
+        <th>Telefone</th>
+        <th>E-mail</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% rcas.forEach(rca => { %>
+        <tr>
+          <td><strong><%= rca.nome %></strong></td>
+          <td><%= rca.codigo || '-' %></td>
+          <td><%= rca.praca || '-' %></td>
+          <td><%= rca.telefone || '-' %></td>
+          <td><%= rca.email || '-' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/footer') %>

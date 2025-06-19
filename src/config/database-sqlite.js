@@ -160,6 +160,20 @@ db.run(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
+
+// Tabela para RCAs
+db.run(`
+  CREATE TABLE IF NOT EXISTS rcas (
+    id INTEGER PRIMARY KEY,
+    nome TEXT NOT NULL,
+    codigo TEXT UNIQUE,
+    praca TEXT,
+    telefone TEXT,
+    email TEXT,
+    observacao TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 //...
 
   // Dados de exemplo existentes

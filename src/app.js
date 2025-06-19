@@ -517,6 +517,21 @@ async function initializeDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Criar tabela rcas
+console.log('📝 Criando tabela rcas...');
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS rcas (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(200) NOT NULL,
+    codigo VARCHAR(50) UNIQUE,
+    praca VARCHAR(150),
+    telefone VARCHAR(20),
+    email VARCHAR(150),
+    observacao TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
     // ==========================================================
 
     const countProdutos = await pool.query('SELECT COUNT(*) as count FROM produtos');
@@ -617,7 +632,7 @@ const financeiroRoutes = require('./routes/financeiro'); // ADICIONE ESTA LINHA
 const gerenciarRoutes = require('./routes/gerenciar'); // ADICIONE ESTA LINHA
 const backupRoutes = require('./routes/backup'); // GARANTA QUE ESTA LINHA EXISTE
 const clientesRoutes = require('./routes/clientes');
-const rcaRoutes = require('./routes/rca'); // NOVO
+const rcaRoutes = require('./routes/rcas');
 
 
 // ...
@@ -628,8 +643,7 @@ app.use('/financeiro', financeiroRoutes); // ADICIONE ESTA LINHA
 app.use('/gerenciar', gerenciarRoutes); // ADICIONE ESTA LINHA
 app.use('/backup', backupRoutes); // GARANTA QUE ESTA LINHA EXISTE
 app.use('/clientes', clientesRoutes);
-app.use('/rca', rcaRoutes); // NOVO
-
+app.use('/rcas', rcaRoutes);
 
 
 // Inicializar servidor
