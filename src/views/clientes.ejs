@@ -9,38 +9,45 @@
   <form action="/clientes" method="POST">
     <div class="form-row">
       <div class="form-group">
-        <label for="codigo">Código</label>
-        <input type="text" id="codigo" name="codigo">
-      </div>
-      <div class="form-group">
         <label for="nome">Nome/Razão Social *</label>
         <input type="text" id="nome" name="nome" required>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="contato">Contato</label>
-        <input type="text" id="contato" name="contato">
-      </div>
-      <div class="form-group">
-        <label for="telefone">Telefone</label>
-        <input type="text" id="telefone" name="telefone">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="email">E-mail</label>
-        <input type="email" id="email" name="email">
       </div>
       <div class="form-group">
         <label for="cpf_cnpj">CPF/CNPJ</label>
         <input type="text" id="cpf_cnpj" name="cpf_cnpj">
       </div>
     </div>
-    <div class="form-group">
-      <label for="endereco">Endereço</label>
-      <input type="text" id="endereco" name="endereco">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="endereco">Endereço</label>
+        <input type="text" id="endereco" name="endereco">
+      </div>
+      <div class="form-group">
+        <label for="cep">CEP</label>
+        <input type="text" id="cep" name="cep">
+      </div>
     </div>
+    <div class="form-row">
+        <div class="form-group">
+            <label for="telefone">Telefone</label>
+            <input type="text" id="telefone" name="telefone">
+        </div>
+        <div class="form-group">
+            <label for="email">E-mail</label>
+            <input type="email" id="email" name="email">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="rca_id">RCA Associado</label>
+        <select id="rca_id" name="rca_id">
+            <option value="">Nenhum</option>
+            <% rcas.forEach(rca => { %>
+                <option value="<%= rca.id %>"><%= rca.nome %></option>
+            <% }) %>
+        </select>
+    </div>
+
     <div class="form-group">
       <label for="observacao">Observações</label>
       <textarea id="observacao" name="observacao" rows="3"></textarea>
@@ -54,21 +61,23 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Código</th>
         <th>Nome</th>
-        <th>Contato</th>
+        <th>RCA Associado</th> <th>CPF/CNPJ</th>
         <th>Telefone</th>
         <th>E-mail</th>
-      </tr>
+        <th>Ações</th> </tr>
     </thead>
     <tbody>
       <% clientes.forEach(c => { %>
         <tr>
-          <td><%= c.codigo || '-' %></td>
           <td><strong><%= c.nome %></strong></td>
-          <td><%= c.contato || '-' %></td>
+          <td><%= c.rca_nome || '-' %></td> <td><%= c.cpf_cnpj || '-' %></td>
           <td><%= c.telefone || '-' %></td>
           <td><%= c.email || '-' %></td>
+          <td> <form action="/clientes/delete/<%= c.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este cliente?');">
+              <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
+            </form>
+          </td>
         </tr>
       <% }) %>
     </tbody>

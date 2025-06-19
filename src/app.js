@@ -518,6 +518,15 @@ async function initializeDatabase() {
       )
     `);
 
+    // ADICIONE ESTE BLOCO PARA ATUALIZAR A TABELA 'clientes'
+try {
+  console.log('🔧 Verificando e atualizando tabela clientes...');
+  // Adiciona a coluna rca_id se ela não existir, com uma referência à tabela rcas
+  await pool.query('ALTER TABLE clientes ADD COLUMN IF NOT EXISTS rca_id INTEGER REFERENCES rcas(id)');
+  console.log('✅ Tabela "clientes" atualizada com sucesso.');
+} catch (err) {
+  console.error('⚠️  Não foi possível atualizar a tabela clientes (pode já estar atualizada):', err.message);
+}
     // Criar tabela rcas (ATUALIZADA)
 console.log('📝 Criando/Verificando tabela rcas...');
 await pool.query(`
