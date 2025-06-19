@@ -102,7 +102,10 @@ router.get('/dre', async (req, res) => {
     try {
         const ano = new Date().getFullYear();
         const query = `
-            SELECT TO_CHAR(data_operacao, 'MM') as mes_index, cf.nome as categoria, SUM(fc.valor) as total
+            SELECT 
+                TO_CHAR(data_operacao, 'MM') as mes_index,
+                cf.nome as categoria,
+                SUM(fc.valor) as total
             FROM fluxo_caixa fc
             JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
             WHERE EXTRACT(YEAR FROM data_operacao) = $1 AND fc.status = 'PAGO'
@@ -118,11 +121,23 @@ router.get('/dre', async (req, res) => {
         });
 
         const estruturaDRE = [
-            // ... (a sua estruturaDRE completa que já definimos antes) ...
-            { nome: 'Receita de Vendas e Serviços', tipo: 'receita', isSubItem: true },
-            { nome: 'Receita Bruta de Vendas', tipo: 'subtotal', isHeader: true, formula: r => r.receitas },
-            // ... e assim por diante para todas as linhas ...
-            { nome: 'Lucro / Prejuízo Operacional', tipo: 'subtotal', isHeader: true, style: 'final-result', formula: r => ((r.receitas - r.deducoes) - r.custos) - r.despesas },
+            { id: 'rec_vendas', nome: 'Receita de Vendas de Produtos e Serviços', tipo: 'receita' },
+            { id: 'rec_fretes', nome: 'Receita de Fretes e Entregas', tipo: 'receita' },
+            { id: 'rec_bruta', nome: 'Receita Bruta de Vendas', tipo: 'subtotal', isHeader: true, formula: (r) => r.receitas },
+
+            { id: 'ded_impostos', nome: 'Impostos Sobre Vendas', tipo: 'deducao' },
+            { id: 'ded_comissoes', nome: 'Comissões Sobre Vendas', tipo: 'deducao' },
+            { id: 'rec_liquida', nome: 'Receita Líquida de Vendas', tipo: 'subtotal', isHeader: true, formula: (r) => r.receitas - r.deducoes },
+
+            { id: 'custo_produtos', nome: 'Custo dos Produtos Vendidos', tipo: 'custo' },
+            { id: 'custo_total', nome: 'Custos Operacionais', tipo: 'subtotal', isHeader: true, formula: (r) => r.custos },
+
+            { id: 'lucro_bruto', nome: 'Lucro Bruto', tipo: 'subtotal', isHeader: true, formula: (r) => (r.receitas - r.deducoes) - r.custos },
+
+            { id: 'desp_comerciais', nome: 'Despesas Comerciais', tipo: 'despesa' },
+            { id: 'desp_administrativas', nome: 'Despesas Administrativas', tipo: 'despesa' },
+            { id: 'desp_operacionais', nome: 'Despesas Operacionais', tipo: 'despesa' },
+            { id: 'lucro_operacional', nome: 'Lucro / Prejuízo Operacional', tipo: 'subtotal', isHeader: true, style: 'final-result', formula: (r) => ((r.receitas - r.deducoes) - r.custos) - r.despesas },
         ];
 
         const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -130,23 +145,32 @@ router.get('/dre', async (req, res) => {
         const totaisPorTipo = { receitas: Array(12).fill(0), deducoes: Array(12).fill(0), custos: Array(12).fill(0), despesas: Array(12).fill(0) };
 
         estruturaDRE.forEach(linha => {
-            let valoresMensais = Array(12).fill(0);
+            let valoresMensais = dadosPorCategoria[linha.nome] || Array(12).fill(0);
             if (linha.tipo !== 'subtotal') {
-                valoresMensais = dadosPorCategoria[linha.nome] || Array(12).fill(0);
-                for(let i=0; i<12; i++) totaisPorTipo[linha.tipo][i] += valoresMensais[i];
+                for(let i=0; i<12; i++) {
+                    totaisPorTipo[linha.tipo][i] += valoresMensais[i];
+                }
             } else {
-                for(let i=0; i<12; i++) valoresMensais[i] = linha.formula(totaisPorTipo);
+                for(let i=0; i<12; i++) {
+                    // CORREÇÃO AQUI: Verificamos se o item da fórmula existe antes de somar
+                    const totaisDoMes = {
+                        receitas: totaisPorTipo.receitas[i] || 0,
+                        deducoes: totaisPorTipo.deducoes[i] || 0,
+                        custos: totaisPorTipo.custos[i] || 0,
+                        despesas: totaisPorTipo.despesas[i] || 0
+                    };
+                    valoresMensais[i] = linha.formula(totaisDoMes);
+                }
             }
-
-            // LÓGICA DE CLASSE AQUI
-            let classString = '';
-            if (linha.isHeader) classString += 'dre-header-row';
-            if (linha.style === 'final-result') classString += ' dre-final-result-row';
-
-            relatorioFinal.push({ ...linha, valores: valoresMensais, classes: classString });
+            relatorioFinal.push({ ...linha, valores: valoresMensais });
         });
 
-        res.render('dre', { user: res.locals.user, ano, meses, relatorio: relatorioFinal });
+        res.render('dre', {
+            user: res.locals.user,
+            ano,
+            meses,
+            relatorio: relatorioFinal
+        });
     } catch (err) {
         console.error("Erro ao gerar DRE:", err);
         res.status(500).send('Erro ao gerar relatório DRE.');
