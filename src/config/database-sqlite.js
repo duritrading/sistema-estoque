@@ -122,16 +122,26 @@ db.run(`
 
   // Inserir categorias baseadas na planilha
   db.run(`
-    INSERT OR IGNORE INTO categorias_financeiras (id, nome, tipo) VALUES 
-      (1, 'Receita de Vendas de Produtos e Serviços', 'RECEITA'),
-      (2, 'Receitas e Rendimentos Financeiros', 'RECEITA'),
-      (3, 'Custo dos Produtos Vendidos', 'DESPESA'),
-      (4, 'Comissões Sobre Vendas', 'DESPESA'),
-      (5, 'Despesas Administrativas', 'DESPESA'),
-      (6, 'Despesas Operacionais', 'DESPESA'),
-      (7, 'Despesas Financeiras', 'DESPESA'),
-      (8, 'Impostos Sobre Vendas', 'DESPESA')
-  `);
+  INSERT OR IGNORE INTO categorias_financeiras (id, nome, tipo) VALUES 
+    (1, 'Receita de Vendas de Produtos e Serviços', 'RECEITA'),
+    (2, 'Receitas e Rendimentos Financeiros', 'RECEITA'),
+    (3, 'Custo dos Produtos Vendidos', 'DESPESA'),
+    (4, 'Comissões Sobre Vendas', 'DESPESA'),
+    (5, 'Despesas Administrativas', 'DESPESA'),
+    (6, 'Despesas Operacionais', 'DESPESA'),
+    (7, 'Despesas Financeiras', 'DESPESA'),
+    (8, 'Impostos Sobre Vendas', 'DESPESA'),
+    (9, 'Receita de Fretes e Entregas', 'RECEITA'),
+    (10, 'Descontos Incondicionais', 'DESPESA'),
+    (11, 'Devoluções de Vendas', 'DESPESA'),
+    (12, 'Custo das Vendas de Produtos', 'DESPESA'),
+    (13, 'Custo dos Serviços Prestados', 'DESPESA'),
+    (14, 'Despesas Comerciais', 'DESPESA'),
+    (15, 'Outras Receitas Não Operacionais', 'RECEITA'),
+    (16, 'Outras Despesas Não Operacionais', 'DESPESA'),
+    (17, 'Investimentos em Imobilizado', 'DESPESA'),
+    (18, 'Empréstimos e Dívidas', 'DESPESA')
+`);
 
   // Inserir formas de pagamento
   db.run(`

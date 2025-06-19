@@ -1,6 +1,6 @@
 <%- include('partials/header', {
   titulo: 'DRE - Demonstrativo de Resultado',
-  subtitulo: `Visão geral de receitas e despesas para o ano de ${ano}`,
+  subtitulo: `Visão geral para o ano de ${ano}`,
   user: locals.user
 }) %>
 
@@ -12,8 +12,6 @@
 
 <div class="card">
   <h2>📈 DRE - <%= ano %></h2>
-  <p>Este relatório resume as movimentações financeiras por categoria para apurar o resultado do exercício.</p>
-
   <div style="overflow-x: auto;">
     <table class="table mt-2">
       <thead>
@@ -25,34 +23,30 @@
           <th class="text-right">Total Ano</th>
         </tr>
       </thead>
-     <tbody>
-  <% relatorio.forEach(linha => { %>
-    <%
-      // A lógica de estilo foi desativada para o teste
-      const totalLinha = linha.valores.reduce((a, b) => a + b, 0);
-    %>
+      <tbody>
+        <% relatorio.forEach(linha => { %>
+          <% const totalLinha = linha.valores.reduce((a, b) => a + b, 0); %>
 
-    <tr>
-      <td>
-        <% if (linha.isHeader || linha.estilo === 'final-result') { %>
-          <strong><%= linha.nome %></strong>
-        <% } else { %>
-          <span style="padding-left: 20px;"><%= linha.nome %></span>
-        <% } %>
-      </td>
+          <tr class="<%= linha.classes %>">
+            <td>
+              <span class="<%= linha.isSubItem ? 'dre-sub-item' : '' %>">
+                <%= linha.nome %>
+              </span>
+            </td>
 
-      <% linha.valores.forEach(valor => { %>
-        <td class="text-right <%= valor < 0 ? 'saldo-negativo' : '' %>">
-          <%= valor !== 0 ? `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %>
-        </td>
-      <% }) %>
+            <% linha.valores.forEach(valor => { %>
+              <td class="text-right <%= valor < 0 ? 'saldo-negativo' : '' %>">
+                <%= valor !== 0 ? `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %>
+              </td>
+            <% }) %>
 
-      <td class="text-right <%= totalLinha < 0 ? 'saldo-negativo' : '' %>">
-        <strong><%= totalLinha !== 0 ? `R$ ${totalLinha.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %></strong>
-      </td>
-    </tr>
-  <% }) %>
-</tbody>
+            <td class="text-right <%= totalLinha < 0 ? 'saldo-negativo' : '' %>">
+              <strong><%= totalLinha !== 0 ? `R$ ${totalLinha.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %></strong>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
   </div>
 </div>
 
