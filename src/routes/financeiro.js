@@ -94,38 +94,90 @@ router.get('/faturamento', async (req, res) => {
   }
 });
 
-// ROTA DRE
 router.get('/dre', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
+
     try {
         const ano = new Date().getFullYear();
         const query = `
-            SELECT TO_CHAR(data_operacao, 'YYYY-MM') as mes, cf.nome as categoria_nome,
-                   cf.tipo as categoria_tipo, SUM(fc.valor) as total
+            SELECT 
+                TO_CHAR(data_operacao, 'MM') as mes_index,
+                cf.nome as categoria,
+                SUM(fc.valor) as total
             FROM fluxo_caixa fc
             JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
             WHERE EXTRACT(YEAR FROM data_operacao) = $1 AND fc.status = 'PAGO'
-            GROUP BY mes, cf.nome, cf.tipo
-            ORDER BY mes, cf.tipo
+            GROUP BY mes_index, cf.nome
         `;
         const result = await pool.query(query, [ano]);
-        
-        const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-        const dreData = {};
-        const totaisMensais = Array(12).fill(0).map(() => ({ receitas: 0, despesas: 0 }));
+        const dadosBrutos = result.rows;
 
-        result.rows.forEach(row => {
-            const mesIndex = parseInt(row.mes.split('-')[1]) - 1;
-            if (!dreData[row.categoria_nome]) {
-                dreData[row.categoria_nome] = { tipo: row.categoria_tipo, valores: Array(12).fill(0) };
+        // Define a estrutura da DRE, como na sua planilha
+        const estruturaDRE = [
+            { nome: 'Receita de Vendas e Serviços', tipo: 'receita', isHeader: false, categorias: ['Receita de Vendas de Produtos e Serviços'] },
+            { nome: 'Receita Bruta de Vendas', tipo: 'total_receita', isHeader: true },
+            { nome: 'Impostos Sobre Vendas', tipo: 'deducao', isHeader: false, categorias: ['Impostos Sobre Vendas'] },
+            { nome: 'Receita Líquida de Vendas', tipo: 'total_liquido', isHeader: true },
+            { nome: 'Custo dos Produtos Vendidos', tipo: 'custo', isHeader: false, categorias: ['Custo dos Produtos Vendidos'] },
+            { nome: 'Custos Operacionais', tipo: 'total_custo', isHeader: true },
+            { nome: 'Lucro Bruto', tipo: 'lucro_bruto', isHeader: true },
+            { nome: 'Despesas Administrativas', tipo: 'despesa', isHeader: false, categorias: ['Despesas Administrativas'] },
+            { nome: 'Despesas Operacionais', tipo: 'despesa', isHeader: false, categorias: ['Despesas Operacionais', 'Comissões Sobre Vendas'] },
+            { nome: 'Despesas Operacionais Total', tipo: 'total_despesa', isHeader: true },
+            { nome: 'Lucro / Prejuízo Operacional', tipo: 'resultado_final', isHeader: true, class: 'final-result' },
+        ];
+
+        const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        const relatorioFinal = [];
+
+        // Processa os dados para preencher a estrutura
+        estruturaDRE.forEach(linha => {
+            const valoresMensais = Array(12).fill(0);
+            if (linha.categorias) {
+                linha.categorias.forEach(catNome => {
+                    dadosBrutos.filter(d => d.categoria === catNome).forEach(dado => {
+                        const mesIndex = parseInt(d.mes_index) - 1;
+                        valoresMensais[mesIndex] += parseFloat(dado.total);
+                    });
+                });
             }
-            dreData[row.categoria_nome].valores[mesIndex] = row.total;
-            if (row.categoria_tipo === 'RECEITA') totaisMensais[mesIndex].receitas += parseFloat(row.total);
-            else if (row.categoria_tipo === 'DESPESA') totaisMensais[mesIndex].despesas += parseFloat(row.total);
+            relatorioFinal.push({ ...linha, valores: valoresMensais });
         });
 
-        res.render('dre', { user: res.locals.user, ano, meses, dreData, totaisMensais });
+        // Calcula os totais e subtotais
+        const receitaBruta = Array(12).fill(0);
+        const receitaLiquida = Array(12).fill(0);
+        const custoTotal = Array(12).fill(0);
+        const lucroBruto = Array(12).fill(0);
+        const despesaTotal = Array(12).fill(0);
+        const resultadoFinal = Array(12).fill(0);
+
+        for(let i=0; i<12; i++) {
+            receitaBruta[i] = relatorioFinal.filter(l => l.tipo === 'receita').reduce((sum, l) => sum + l.valores[i], 0);
+            const deducoes = relatorioFinal.filter(l => l.tipo === 'deducao').reduce((sum, l) => sum + l.valores[i], 0);
+            receitaLiquida[i] = receitaBruta[i] - deducoes;
+            custoTotal[i] = relatorioFinal.filter(l => l.tipo === 'custo').reduce((sum, l) => sum + l.valores[i], 0);
+            lucroBruto[i] = receitaLiquida[i] - custoTotal[i];
+            despesaTotal[i] = relatorioFinal.filter(l => l.tipo === 'despesa').reduce((sum, l) => sum + l.valores[i], 0);
+            resultadoFinal[i] = lucroBruto[i] - despesaTotal[i];
+        }
+
+        // Atribui os valores calculados às linhas corretas
+        relatorioFinal.find(l => l.tipo === 'total_receita').valores = receitaBruta;
+        relatorioFinal.find(l => l.tipo === 'total_liquido').valores = receitaLiquida;
+        relatorioFinal.find(l => l.tipo === 'total_custo').valores = custoTotal;
+        relatorioFinal.find(l => l.tipo === 'lucro_bruto').valores = lucroBruto;
+        relatorioFinal.find(l => l.tipo === 'total_despesa').valores = despesaTotal;
+        relatorioFinal.find(l => l.tipo === 'resultado_final').valores = resultadoFinal;
+
+        res.render('dre', {
+            user: res.locals.user,
+            ano,
+            meses,
+            relatorio: relatorioFinal
+        });
     } catch (err) {
+        console.error("Erro ao gerar DRE:", err);
         res.status(500).send('Erro ao gerar relatório DRE.');
     }
 });

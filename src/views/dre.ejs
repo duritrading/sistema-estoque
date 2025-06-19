@@ -4,6 +4,12 @@
   user: locals.user
 }) %>
 
+<div class="nav">
+    <a href="/financeiro/completo">📊 Fluxo de Caixa</a>
+    <a href="/financeiro/faturamento">🧾 Faturamento</a>
+    <a href="/financeiro/dre">📈 DRE</a>
+</div>
+
 <div class="card">
   <h2>📈 DRE - <%= ano %></h2>
   <p>Este relatório resume as movimentações financeiras por categoria para apurar o resultado do exercício.</p>
@@ -16,78 +22,37 @@
           <% meses.forEach(mes => { %>
             <th class="text-right"><%= mes %></th>
           <% }) %>
-          <th class="text-right">Total</th>
+          <th class="text-right">Total Ano</th>
         </tr>
       </thead>
-      <tbody>
-        <tr style="background-color: #f0f8ff;">
-          <td colspan="14"><strong>(+) Receitas Operacionais</strong></td>
-        </tr>
-        <% 
-          let totalReceitasAnual = 0;
-          Object.keys(dreData).filter(cat => dreData[cat].tipo === 'RECEITA').forEach(categoria => {
-            const item = dreData[categoria];
-            const totalCategoria = item.valores.reduce((a, b) => a + b, 0);
-            totalReceitasAnual += totalCategoria;
-        %>
-          <tr>
-            <td><%= categoria %></td>
-            <% item.valores.forEach(valor => { %>
-              <td class="text-right"><%= valor > 0 ? `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %></td>
-            <% }) %>
-            <td class="text-right"><strong>R$ <%= totalCategoria.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></strong></td>
-          </tr>
-        <% }) %>
-        <tr style="font-weight: bold; background-color: #e6f3ff;">
-          <td>Total de Receitas</td>
-          <% totaisMensais.forEach(total => { %>
-            <td class="text-right">R$ <%= total.receitas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
-          <% }) %>
-          <td class="text-right">R$ <%= totalReceitasAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
-        </tr>
+     <tbody>
+  <% relatorio.forEach(linha => { %>
+    <%
+      // A lógica de estilo foi desativada para o teste
+      const totalLinha = linha.valores.reduce((a, b) => a + b, 0);
+    %>
 
-        <tr style="background-color: #fff0f0;">
-          <td colspan="14"><strong>(-) Despesas Operacionais</strong></td>
-        </tr>
-        <% 
-          let totalDespesasAnual = 0;
-          Object.keys(dreData).filter(cat => dreData[cat].tipo === 'DESPESA').forEach(categoria => {
-            const item = dreData[categoria];
-            const totalCategoria = item.valores.reduce((a, b) => a + b, 0);
-            totalDespesasAnual += totalCategoria;
-        %>
-          <tr>
-            <td><%= categoria %></td>
-            <% item.valores.forEach(valor => { %>
-              <td class="text-right"><%= valor > 0 ? `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %></td>
-            <% }) %>
-            <td class="text-right"><strong>R$ <%= totalCategoria.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></strong></td>
-          </tr>
-        <% }) %>
-        <tr style="font-weight: bold; background-color: #ffe6e6;">
-          <td>Total de Despesas</td>
-          <% totaisMensais.forEach(total => { %>
-            <td class="text-right">R$ <%= total.despesas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
-          <% }) %>
-          <td class="text-right">R$ <%= totalDespesasAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
-        </tr>
+    <tr>
+      <td>
+        <% if (linha.isHeader || linha.estilo === 'final-result') { %>
+          <strong><%= linha.nome %></strong>
+        <% } else { %>
+          <span style="padding-left: 20px;"><%= linha.nome %></span>
+        <% } %>
+      </td>
 
-        <tr style="font-weight: bold; font-size: 1.1em; background-color: #e0e0e0;">
-          <td>(=) Lucro / Prejuízo</td>
-          <% totaisMensais.forEach(total => { 
-            const resultadoMes = total.receitas - total.despesas;
-          %>
-            <td class="text-right <%= resultadoMes >= 0 ? 'saldo-positivo' : 'saldo-negativo' %>">
-              R$ <%= resultadoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-            </td>
-          <% }) %>
-          <% const resultadoAnual = totalReceitasAnual - totalDespesasAnual; %>
-          <td class="text-right <%= resultadoAnual >= 0 ? 'saldo-positivo' : 'saldo-negativo' %>">
-            R$ <%= resultadoAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+      <% linha.valores.forEach(valor => { %>
+        <td class="text-right <%= valor < 0 ? 'saldo-negativo' : '' %>">
+          <%= valor !== 0 ? `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %>
+        </td>
+      <% }) %>
+
+      <td class="text-right <%= totalLinha < 0 ? 'saldo-negativo' : '' %>">
+        <strong><%= totalLinha !== 0 ? `R$ ${totalLinha.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %></strong>
+      </td>
+    </tr>
+  <% }) %>
+</tbody>
   </div>
 </div>
 
