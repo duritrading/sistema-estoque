@@ -28,13 +28,13 @@ router.get('/completo', async (req, res) => {
     const totais = totaisResult.rows[0];
     const saldoAtual = totais ? (parseFloat(totais.total_credito) - parseFloat(totais.total_debito)) : 0;
     
-    res.render('financeiro', {
-      user: res.locals.user,
-      lancamentos: lancamentosResult.rows || [],
-      totais: totais || { total_credito: 0, total_debito: 0 },
-      saldoAtual,
-      hoje
-    });
+res.render('financeiro', {
+  user: res.locals.user,
+  contas: lancamentosResult.rows || [], // <-- LINHA CORRIGIDA
+  totais: totais || { total_credito: 0, total_debito: 0 },
+  saldoAtual,
+  hoje
+});
   } catch (error) {
     console.error('Erro ao carregar página financeira:', error);
     return res.status(500).send('Erro ao carregar a página financeira.');
