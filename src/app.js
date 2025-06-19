@@ -617,6 +617,8 @@ const financeiroRoutes = require('./routes/financeiro'); // ADICIONE ESTA LINHA
 const gerenciarRoutes = require('./routes/gerenciar'); // ADICIONE ESTA LINHA
 const backupRoutes = require('./routes/backup'); // GARANTA QUE ESTA LINHA EXISTE
 const clientesRoutes = require('./routes/clientes');
+const rcaRoutes = require('./routes/rca'); // NOVO
+
 
 // ...
 app.use('/movimentacoes', movimentacoesRoutes);
@@ -626,6 +628,8 @@ app.use('/financeiro', financeiroRoutes); // ADICIONE ESTA LINHA
 app.use('/gerenciar', gerenciarRoutes); // ADICIONE ESTA LINHA
 app.use('/backup', backupRoutes); // GARANTA QUE ESTA LINHA EXISTE
 app.use('/clientes', clientesRoutes);
+app.use('/rca', rcaRoutes); // NOVO
+
 
 
 // Inicializar servidor
