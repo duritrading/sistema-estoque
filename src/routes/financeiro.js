@@ -9,15 +9,13 @@ router.get('/', (req, res) => {
 
 // ROTA FLUXO DE CAIXA: Mostra a página principal do financeiro
 router.get('/completo', async (req, res) => {
-  if (!pool) {
-    return res.status(500).send('Erro de configuração: Conexão com o banco de dados não disponível.');
-  }
+  if (!pool) return res.status(500).send('Erro de configuração: Conexão com o banco de dados não disponível.');
+
   try {
     const hoje = new Date().toISOString().split('T')[0];
     
     const queryLancamentos = `SELECT * FROM fluxo_caixa ORDER BY data_operacao DESC, created_at DESC LIMIT 20`;
     const lancamentosResult = await pool.query(queryLancamentos);
-    const lancamentos = lancamentosResult.rows || [];
     
     const queryTotais = `
       SELECT 
@@ -26,20 +24,17 @@ router.get('/completo', async (req, res) => {
       FROM fluxo_caixa WHERE status = 'PAGO'
     `;
     const totaisResult = await pool.query(queryTotais);
-    const totais = totaisResult.rows[0];
     
+    const totais = totaisResult.rows[0];
     const saldoAtual = totais ? (parseFloat(totais.total_credito) - parseFloat(totais.total_debito)) : 0;
     
-    // LINHA ADICIONADA: Calcula a soma dos lançamentos que estão sendo exibidos na página
-    const totalValor = lancamentos.reduce((sum, item) => sum + parseFloat(item.valor), 0);
-    
+    // O nome da variável aqui deve ser o mesmo que a view espera
     res.render('financeiro', {
       user: res.locals.user,
-      lancamentos: lancamentos,
+      contas: lancamentosResult.rows || [], // CORRIGIDO: Enviando como 'contas'
       totais: totais || { total_credito: 0, total_debito: 0 },
       saldoAtual,
-      hoje,
-      totalValor: totalValor // Variável agora sendo enviada para a view
+      hoje
     });
   } catch (error) {
     console.error('Erro ao carregar página financeira:', error);

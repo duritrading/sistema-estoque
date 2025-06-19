@@ -58,64 +58,34 @@
 
 <div class="card">
   <h2>📋 Últimos Lançamentos no Caixa</h2>
-  <table class="table mt-2">
-  <thead>
-    <tr>
-      <th>Cliente</th>
-      <th>Produto</th> <th>Vencimento</th>
-      <th>Parcela</th>
-      <th class="text-right">Valor</th>
-      <th>Status</th>
-      <th>Ações</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% if (contas.length === 0) { %>
+  <table class="table">
+    <thead>
       <tr>
-        <td colspan="7" class="text-center">Nenhuma conta a receber encontrada para o período selecionado.</td>
+        <th>Data</th>
+        <th>Tipo</th>
+        <th>Descrição</th>
+        <th class="text-right">Valor</th>
       </tr>
-    <% } else { %>
-      <% contas.forEach(conta => { %>
+    </thead>
+    <tbody>
+      <% if (contas.length > 0) { %>
+        <% contas.forEach(item => { %>
+          <tr>
+            <td><%= new Date(item.data_operacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
+            <td><span class="badge <%= item.tipo === 'CREDITO' ? 'badge-success' : 'badge-danger' %>"><%= item.tipo %></span></td>
+            <td><%= item.descricao %></td>
+            <td class="text-right <%= item.tipo === 'CREDITO' ? 'saldo-positivo' : 'saldo-negativo' %>">
+              <%= item.tipo === 'CREDITO' ? '+' : '-' %> R$ <%= parseFloat(item.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+            </td>
+          </tr>
+        <% }) %>
+      <% } else { %>
         <tr>
-          <td><%= conta.cliente_nome %></td>
-          <td><%= conta.produto_descricao %></td> <td><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
-          <td><%= conta.numero_parcela %> / <%= conta.total_parcelas %></td>
-          <td class="text-right">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></td>
-          <td>
-            <% if (conta.status === 'Pago') { %>
-              <span class="badge badge-success">Pago</span>
-            <% } else if (new Date(conta.data_vencimento) < new Date() && conta.status !== 'Pago') { %>
-              <span class="badge badge-danger">Atrasado</span>
-            <% } else { %>
-              <span class="badge badge-warning">Pendente</span>
-            <% } %>
-          </td>
-          <td>
-            <% if (conta.status !== 'Pago') { %>
-              <form action="/financeiro/faturamento/registrar-pagamento/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o recebimento desta parcela?');">
-                <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Registrar Pagamento</button>
-              </form>
-            <% } else { %>
-              -
-            <% } %>
-          </td>
+          <td colspan="4" class="text-center">Nenhum lançamento encontrado.</td>
         </tr>
-      <% }) %>
-    <% } %>
-  </tbody>
-  <tfoot>
-  <tr style="font-weight: bold; background-color: #f8f9fa;">
-      <td colspan="4" class="text-right">Total do Período:</td>
-      <td class="text-right">R$ <%= totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
-      <td colspan="2"></td>
-  </tr>
-  <tr style="font-weight: bold; background-color: #fff3cd;">
-      <td colspan="4" class="text-right">Total Pendente no Período:</td>
-      <td class="text-right">R$ <%= totalPendente.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
-      <td colspan="2"></td>
-  </tr>
-</tfoot>
-</table>
+      <% } %>
+    </tbody>
+  </table>
 </div>
 
 <%- include('partials/footer') %>
