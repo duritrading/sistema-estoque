@@ -560,29 +560,6 @@ try {
   }
 }
 
-// Produtos JSON
-app.get('/produtos', (req, res) => {
-  db.all(`
-    SELECT 
-      p.*,
-      COALESCE(SUM(
-        CASE WHEN m.tipo = 'ENTRADA' THEN m.quantidade 
-             WHEN m.tipo = 'SAIDA' THEN -m.quantidade 
-             ELSE 0 END
-      ), 0) as saldo_atual
-    FROM produtos p
-    LEFT JOIN movimentacoes m ON p.id = m.produto_id
-    GROUP BY p.id
-    ORDER BY p.codigo
-  `, [], (err, rows) => {
-    if (err) {
-      console.error('Erro em /produtos:', err);
-      return res.status(500).json({ erro: err.message });
-    }
-    return res.json(rows);
-  });
-});
-
 // Criar produto
 app.post('/produtos', (req, res) => {
   const { codigo, descricao, unidade, categoria, estoque_minimo, preco_custo } = req.body;
