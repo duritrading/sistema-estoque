@@ -94,6 +94,8 @@ router.get('/faturamento', async (req, res) => {
   }
 });
 
+// Em src/routes/financeiro.js
+
 router.get('/dre', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
 
@@ -112,7 +114,6 @@ router.get('/dre', async (req, res) => {
         const result = await pool.query(query, [ano]);
         const dadosBrutos = result.rows;
 
-        // Define a estrutura da DRE, como na sua planilha
         const estruturaDRE = [
             { nome: 'Receita de Vendas e Serviços', tipo: 'receita', isHeader: false, categorias: ['Receita de Vendas de Produtos e Serviços'] },
             { nome: 'Receita Bruta de Vendas', tipo: 'total_receita', isHeader: true },
@@ -124,19 +125,19 @@ router.get('/dre', async (req, res) => {
             { nome: 'Despesas Administrativas', tipo: 'despesa', isHeader: false, categorias: ['Despesas Administrativas'] },
             { nome: 'Despesas Operacionais', tipo: 'despesa', isHeader: false, categorias: ['Despesas Operacionais', 'Comissões Sobre Vendas'] },
             { nome: 'Despesas Operacionais Total', tipo: 'total_despesa', isHeader: true },
-            { nome: 'Lucro / Prejuízo Operacional', tipo: 'resultado_final', isHeader: true, class: 'final-result' },
+            { nome: 'Lucro / Prejuízo Operacional', tipo: 'resultado_final', isHeader: true, estilo: 'final-result' },
         ];
 
         const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
         const relatorioFinal = [];
 
-        // Processa os dados para preencher a estrutura
         estruturaDRE.forEach(linha => {
             const valoresMensais = Array(12).fill(0);
             if (linha.categorias) {
                 linha.categorias.forEach(catNome => {
                     dadosBrutos.filter(d => d.categoria === catNome).forEach(dado => {
-                        const mesIndex = parseInt(d.mes_index) - 1;
+                        // CORREÇÃO AQUI: Usando a variável 'dado' que é a correta para este loop
+                        const mesIndex = parseInt(dado.mes_index) - 1;
                         valoresMensais[mesIndex] += parseFloat(dado.total);
                     });
                 });
@@ -144,7 +145,7 @@ router.get('/dre', async (req, res) => {
             relatorioFinal.push({ ...linha, valores: valoresMensais });
         });
 
-        // Calcula os totais e subtotais
+        // ... (o restante da lógica para calcular os totais continua a mesma) ...
         const receitaBruta = Array(12).fill(0);
         const receitaLiquida = Array(12).fill(0);
         const custoTotal = Array(12).fill(0);
@@ -162,7 +163,6 @@ router.get('/dre', async (req, res) => {
             resultadoFinal[i] = lucroBruto[i] - despesaTotal[i];
         }
 
-        // Atribui os valores calculados às linhas corretas
         relatorioFinal.find(l => l.tipo === 'total_receita').valores = receitaBruta;
         relatorioFinal.find(l => l.tipo === 'total_liquido').valores = receitaLiquida;
         relatorioFinal.find(l => l.tipo === 'total_custo').valores = custoTotal;
