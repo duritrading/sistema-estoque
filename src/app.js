@@ -6,6 +6,7 @@ const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
 const path = require('path');
+const pool = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -564,29 +565,6 @@ try {
     console.error('❌ Erro ao inicializar banco:', error);
   }
 }
-// ========================================
-// SUAS ROTAS ATUAIS (TODAS PROTEGIDAS + HEADER ATUALIZADO)
-// ========================================
-
-// Página principal - Dashboard (COM HEADER DE USUÁRIO)
-app.get('/', (req, res) => {
-  db.all(`
-    SELECT 
-      p.*,
-      COALESCE(SUM(
-        CASE WHEN m.tipo = 'ENTRADA' THEN m.quantidade 
-             WHEN m.tipo = 'SAIDA' THEN -m.quantidade 
-             ELSE 0 END
-      ), 0) as saldo_atual
-    FROM produtos p
-    LEFT JOIN movimentacoes m ON p.id = m.produto_id
-    GROUP BY p.id
-    ORDER BY p.codigo
-  `, [], (err, produtos) => {
-    if (err) {
-      console.error('Erro na dashboard:', err);
-      return res.status(500).send('Erro: ' + err.message);
-    }
 
     const produtosSeguros = Array.isArray(produtos) ? produtos : [];
     const totalProdutos = produtosSeguros.length;
@@ -604,8 +582,6 @@ app.get('/', (req, res) => {
       alertas,
       categorias
     });
-  });
-});
 
 // Produtos JSON
 app.get('/produtos', (req, res) => {
@@ -656,6 +632,8 @@ const gerenciarRoutes = require('./routes/gerenciar'); // ADICIONE ESTA LINHA
 const backupRoutes = require('./routes/backup'); // GARANTA QUE ESTA LINHA EXISTE
 const clientesRoutes = require('./routes/clientes');
 const rcaRoutes = require('./routes/rcas');
+const dashboardRoutes = require('./routes/dashboard'); // ADICIONE ESTA LINHA
+const produtosRoutes = require('./routes/produtos');
 
 
 // ...
@@ -667,6 +645,8 @@ app.use('/gerenciar', gerenciarRoutes); // ADICIONE ESTA LINHA
 app.use('/backup', backupRoutes); // GARANTA QUE ESTA LINHA EXISTE
 app.use('/clientes', clientesRoutes);
 app.use('/rcas', rcaRoutes);
+app.use('/', dashboardRoutes); // ADICIONE ESTA LINHA
+app.use('/produtos', produtosRoutes);
 
 
 // Inicializar servidor

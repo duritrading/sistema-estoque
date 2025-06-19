@@ -1,0 +1,76 @@
+<%- include('partials/header', {
+  titulo: 'Produtos',
+  subtitulo: 'Cadastro e gestão de produtos',
+  user: locals.user
+}) %>
+
+<div class="card">
+  <h2>📝 Cadastrar Novo Produto</h2>
+  <form action="/produtos" method="POST">
+    <div class="form-row">
+        <div class="form-group">
+          <label for="codigo">Código *</label>
+          <input type="text" id="codigo" name="codigo" required>
+        </div>
+        <div class="form-group">
+          <label for="descricao">Descrição *</label>
+          <input type="text" id="descricao" name="descricao" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="unidade">Unidade</label>
+          <select id="unidade" name="unidade">
+            <option value="UN">Unidade</option>
+            <option value="KG">Quilograma</option>
+            <option value="LT">Litro</option>
+            <option value="MT">Metro</option>
+            <option value="CX">Caixa</option>
+            <option value="CT">Cartela</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="categoria">Categoria</label>
+          <input type="text" id="categoria" name="categoria" list="categorias">
+          <datalist id="categorias">
+            <% categorias.forEach(cat => { %>
+                <option value="<%= cat %>">
+            <% }) %>
+          </datalist>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="estoque_minimo">Estoque Mínimo</label>
+          <input type="number" id="estoque_minimo" name="estoque_minimo" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label for="preco_custo">Preço de Custo (R$)</label>
+          <input type="number" id="preco_custo" name="preco_custo" step="0.01" min="0">
+        </div>
+      </div>
+      <button type="submit" class="btn">Cadastrar Produto</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>📋 Produtos Cadastrados</h2>
+  <div class="produtos-grid">
+    <% produtos.forEach(produto => { %>
+      <div class="produto-card">
+        <div class="produto-header">
+          <div class="produto-codigo"><%= produto.codigo %></div>
+          <div class="produto-saldo <%= produto.saldo_atual > 0 ? 'saldo-positivo' : produto.saldo_atual == 0 ? 'saldo-zero' : 'saldo-negativo' %>"><%= parseFloat(produto.saldo_atual).toLocaleString('pt-BR') %></div>
+        </div>
+        <h3><%= produto.descricao %></h3>
+        <p><strong>Unidade:</strong> <%= produto.unidade || 'UN' %></p>
+        <% if (produto.categoria) { %><p><strong>Categoria:</strong> <%= produto.categoria %></p><% } %>
+        <p><strong>Estoque Mínimo:</strong> <%= produto.estoque_minimo || 0 %></p>
+        <% if (produto.preco_custo) { %><p><strong>Preço:</strong> R$ <%= parseFloat(produto.preco_custo).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p><% } %>
+        <% if (parseFloat(produto.saldo_atual) <= parseFloat(produto.estoque_minimo)) { %><span class="badge badge-warning">Estoque Baixo</span><% } %>
+      </div>
+    <% }) %>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
