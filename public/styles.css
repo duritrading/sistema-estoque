@@ -61,49 +61,34 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   .stats { grid-template-columns: 1fr; }
 }
 /* Estilos para a Tabela DRE */
-.dre-header-row {
-  font-weight: bold;
-  background-color: #f8f9fa;
-}
-
-.dre-final-result-row {
-  font-weight: bold;
-  font-size: 1.1em;
-  border-top: 2px solid #333;
-  background-color: #f0f0f0;
-}
-
 .dre-sub-item {
-  padding-left: 20px;
+    padding-left: 20px; /* Recuo para sub-itens */
 }
 
-/* Em public/styles.css */
-
-/* Estilos para a Tabela DRE */
-.dre-sub-item {
-  padding-left: 20px;
+.dre-header { /* Para títulos em negrito como "Receitas Operacionais" */
+    font-weight: bold;
+    background-color: #f8f9fa; /* Um cinza bem claro */
 }
 
-.dre-header-row {
+.dre-total-l1 { /* Cor 1 para subtotais como "Receita Bruta" */
+    font-weight: bold;
+    background-color: #e9ecef; /* Cinza um pouco mais escuro */
+}
+
+.dre-total-l2 { /* Cor 2 para "Lucro Bruto" */
+    font-weight: bold;
+    background-color: #cfe2ff; /* Azul claro */
+}
+
+.dre-total-l3 { /* Cor 3 para "Lucro Líquido" */
   font-weight: bold;
+  background-color: #fff3cd; /* Amarelo claro */
 }
 
-/* Cores para os diferentes níveis de totais */
-.dre-total-l1 { /* Cinza claro para totais primários */
-  background-color: #e9ecef;
-}
-
-.dre-total-l2 { /* Azul claro para lucro bruto */
-  background-color: #cfe2ff;
-}
-
-.dre-total-l3 { /* Amarelo claro para resultado antes dos impostos */
-  background-color: #fff3cd;
-}
-
-.dre-total-final { /* Verde claro para o resultado final */
-  background-color: #d4edda;
-  font-size: 1.1em;
-  border-top: 2px solid #333;
-  border-bottom: 2px solid #333;
+.dre-total-final { /* Cor final para "Lucro / Prejuízo Final" */
+    font-weight: bold;
+    font-size: 1.1em;
+    background-color: #d4edda; /* Verde claro */
+    border-top: 2px solid #333;
+    border-bottom: 2px solid #333;
 }
