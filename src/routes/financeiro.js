@@ -201,7 +201,7 @@ router.get('/dre', async (req, res) => {
         resultados['Empréstimos e Dívidas'] = -emprestimos;
         resultados['Lucro / Prejuízo Final'] = resultados['Lucro / Prejuízo Líquido'] - invest - emprestimos;
 
-        res.render('dre-final', { user: res.locals.user, ano, estrutura, resultados });
+        res.render('dre', { user: res.locals.user, ano, estrutura, resultados });
 
     } catch (err) {
         console.error("Erro ao gerar DRE:", err);
