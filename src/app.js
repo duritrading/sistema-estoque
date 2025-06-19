@@ -534,6 +534,18 @@ await pool.query(`
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )
 `);
+
+// ADICIONE ESTE BLOCO PARA ATUALIZAR A TABELA CASO AS COLUNAS NÃO EXISTAM
+try {
+  console.log('🔧 Verificando e atualizando tabela rcas...');
+  await pool.query('ALTER TABLE rcas ADD COLUMN IF NOT EXISTS praca VARCHAR(150)');
+  await pool.query('ALTER TABLE rcas ADD COLUMN IF NOT EXISTS cpf VARCHAR(20)');
+  await pool.query('ALTER TABLE rcas ADD COLUMN IF NOT EXISTS endereco TEXT');
+  await pool.query('ALTER TABLE rcas ADD COLUMN IF NOT EXISTS cep VARCHAR(10)');
+  console.log('✅ Tabela "rcas" atualizada com sucesso.');
+} catch (err) {
+  console.error('⚠️  Não foi possível atualizar a tabela rcas (pode já estar atualizada):', err.message);
+}
     // ==========================================================
 
     const countProdutos = await pool.query('SELECT COUNT(*) as count FROM produtos');
