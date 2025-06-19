@@ -161,13 +161,15 @@ db.run(`
   )
 `);
 
-// Tabela para RCAs
+// Tabela para RCAs (ATUALIZADA)
 db.run(`
   CREATE TABLE IF NOT EXISTS rcas (
     id INTEGER PRIMARY KEY,
     nome TEXT NOT NULL,
-    codigo TEXT UNIQUE,
     praca TEXT,
+    cpf TEXT,
+    endereco TEXT,
+    cep TEXT,
     telefone TEXT,
     email TEXT,
     observacao TEXT,

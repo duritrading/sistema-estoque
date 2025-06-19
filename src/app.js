@@ -518,14 +518,16 @@ async function initializeDatabase() {
       )
     `);
 
-    // Criar tabela rcas
-console.log('📝 Criando tabela rcas...');
+    // Criar tabela rcas (ATUALIZADA)
+console.log('📝 Criando/Verificando tabela rcas...');
 await pool.query(`
   CREATE TABLE IF NOT EXISTS rcas (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(200) NOT NULL,
-    codigo VARCHAR(50) UNIQUE,
     praca VARCHAR(150),
+    cpf VARCHAR(20),
+    endereco TEXT,
+    cep VARCHAR(10),
     telefone VARCHAR(20),
     email VARCHAR(150),
     observacao TEXT,

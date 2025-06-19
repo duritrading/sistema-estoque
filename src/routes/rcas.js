@@ -19,12 +19,13 @@ router.get('/', async (req, res) => {
 // Rota POST /rcas - Processa o cadastro de um novo RCA
 router.post('/', async (req, res) => {
   try {
-    const { nome, codigo, praca, telefone, email, observacao } = req.body;
+    // Campos atualizados para incluir os novos dados
+    const { nome, praca, cpf, endereco, cep, telefone, email, observacao } = req.body;
     const query = `
-        INSERT INTO rcas (nome, codigo, praca, telefone, email, observacao) 
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO rcas (nome, praca, cpf, endereco, cep, telefone, email, observacao) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `;
-    const params = [nome, codigo, praca, telefone, email, observacao];
+    const params = [nome, praca, cpf, endereco, cep, telefone, email, observacao];
     await pool.query(query, params);
     res.redirect('/rcas');
   } catch (err) {
