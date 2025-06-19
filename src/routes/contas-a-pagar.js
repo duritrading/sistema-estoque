@@ -79,11 +79,11 @@ router.post('/pagar/:id', async (req, res) => {
 });
 
 // NOVA ROTA PARA ESTORNAR UM PAGAMENTO
+
 router.post('/estornar/:id', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     const contaId = req.params.id;
     try {
-        // Primeiro, busca a conta para garantir que ela existe e está paga
         const contaResult = await pool.query('SELECT * FROM contas_a_pagar WHERE id = $1', [contaId]);
         const conta = contaResult.rows[0];
 
@@ -91,20 +91,19 @@ router.post('/estornar/:id', async (req, res) => {
             return res.render('error', { user: res.locals.user, titulo: 'Erro', mensagem: 'Conta a pagar não encontrada.'});
         }
         if (conta.status !== 'Pago') {
-            // Não se pode estornar algo que não foi pago
             return res.redirect('/contas-a-pagar');
         }
 
-        // Se a conta tem um lançamento no caixa associado, deleta ele
-        if (conta.fluxo_caixa_id) {
-            await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [conta.fluxo_caixa_id]);
-        }
-
-        // Atualiza a conta a pagar de volta para "Pendente"
+        // PASSO 1 (NOVO): Atualiza a conta a pagar PRIMEIRO, removendo a referência ao fluxo_caixa_id.
         await pool.query(
             `UPDATE contas_a_pagar SET status = 'Pendente', data_pagamento = NULL, fluxo_caixa_id = NULL WHERE id = $1`,
             [contaId]
         );
+
+        // PASSO 2 (NOVO): Se a conta tinha um lançamento no caixa associado, deleta ele DEPOIS.
+        if (conta.fluxo_caixa_id) {
+            await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [conta.fluxo_caixa_id]);
+        }
 
         res.redirect('/contas-a-pagar');
     } catch (err) {
@@ -112,5 +111,4 @@ router.post('/estornar/:id', async (req, res) => {
         res.status(500).send('Erro ao estornar pagamento.');
     }
 });
-
 module.exports = router;
