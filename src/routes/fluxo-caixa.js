@@ -12,9 +12,9 @@ router.get('/', async (req, res) => {
     const totais = totaisResult.rows[0];
     const saldoAtual = totais ? (parseFloat(totais.total_credito) - parseFloat(totais.total_debito)) : 0;
     
-    res.render('fluxo-caixa', {
+    res.render('financeiro', {
       user: res.locals.user,
-      lancamentos: lancamentosResult.rows || [],
+      contas: lancamentosResult.rows || [],
       totais: totais || { total_credito: 0, total_debito: 0 },
       saldoAtual,
       hoje

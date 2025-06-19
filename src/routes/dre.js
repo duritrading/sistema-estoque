@@ -2,9 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
-// ROTA DRE
-
-router.get('/dre', async (req, res) => {
+router.get('/', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
 
     try {
@@ -12,54 +10,57 @@ router.get('/dre', async (req, res) => {
         const query = `
             SELECT 
                 cf.nome as categoria,
-                cf.tipo as categoria_tipo,
                 SUM(fc.valor) as total
             FROM fluxo_caixa fc
-            JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
+            JOIN categorias_financeiras cf ON fc.categoria_id = fc.id
             WHERE EXTRACT(YEAR FROM data_operacao) = $1 AND fc.status = 'PAGO'
-            GROUP BY cf.nome, cf.tipo
+            GROUP BY cf.nome
         `;
         const result = await pool.query(query, [ano]);
-        const dadosBrutos = result.rows;
-
+        
         const dados = {};
-        dadosBrutos.forEach(d => {
+        result.rows.forEach(d => {
             dados[d.categoria] = parseFloat(d.total);
         });
 
         const get = (nome) => dados[nome] || 0;
 
-        // Estrutura da DRE com fórmulas
         const estrutura = [
+            { label: 'Receitas Operacionais', tipo: 'header' },
             { label: 'Receita de Vendas de Produtos e Serviços', tipo: 'item' },
             { label: 'Receita de Fretes e Entregas', tipo: 'item' },
             { label: 'Receita Bruta de Vendas', tipo: 'total', css: 'dre-total-l1' },
+            { label: 'Deduções da Receita Bruta', tipo: 'header' },
             { label: 'Impostos Sobre Vendas', tipo: 'item' },
             { label: 'Comissões Sobre Vendas', tipo: 'item' },
             { label: 'Descontos Incondicionais', tipo: 'item' },
             { label: 'Devoluções de Vendas', tipo: 'item' },
             { label: 'Receita Líquida de Vendas', tipo: 'total', css: 'dre-total-l1' },
+            { label: 'Custos Operacionais', tipo: 'header' },
             { label: 'Custo dos Produtos Vendidos', tipo: 'item' },
             { label: 'Custo das Vendas de Produtos', tipo: 'item' },
             { label: 'Custo dos Serviços Prestados', tipo: 'item' },
             { label: 'Lucro Bruto', tipo: 'total', css: 'dre-total-l2' },
+            { label: 'Despesas Operacionais', tipo: 'header' },
             { label: 'Despesas Comerciais', tipo: 'item' },
             { label: 'Despesas Administrativas', tipo: 'item' },
             { label: 'Despesas Operacionais', tipo: 'item' },
             { label: 'Lucro / Prejuízo Operacional', tipo: 'total', css: 'dre-total-l1' },
+            { label: 'Receitas e Despesas Financeiras', tipo: 'header' },
             { label: 'Receitas e Rendimentos Financeiros', tipo: 'item' },
             { label: 'Despesas Financeiras', tipo: 'item' },
+            { label: 'Outras Receitas e Despesas Não Operacionais', tipo: 'header' },
             { label: 'Outras Receitas Não Operacionais', tipo: 'item' },
             { label: 'Outras Despesas Não Operacionais', tipo: 'item' },
             { label: 'Lucro / Prejuízo Líquido', tipo: 'total', css: 'dre-total-l3' },
+            { label: 'Despesas com Investimentos e Empréstimos', tipo: 'header' },
             { label: 'Investimentos em Imobilizado', tipo: 'item' },
             { label: 'Empréstimos e Dívidas', tipo: 'item' },
             { label: 'Lucro / Prejuízo Final', tipo: 'total', css: 'dre-total-final' },
         ];
 
         const resultados = {};
-
-        // Calcula os valores de forma sequencial e segura
+        
         const recVendas = get('Receita de Vendas de Produtos e Serviços');
         const recFretes = get('Receita de Fretes e Entregas');
         resultados['Receita de Vendas de Produtos e Serviços'] = recVendas;
@@ -68,14 +69,12 @@ router.get('/dre', async (req, res) => {
 
         const impVendas = get('Impostos Sobre Vendas');
         const comissoes = get('Comissões Sobre Vendas');
-        const descontos = get('Descontos Incondicionais');
-        const devolucoes = get('Devoluções de Vendas');
         resultados['Impostos Sobre Vendas'] = -impVendas;
         resultados['Comissões Sobre Vendas'] = -comissoes;
-        resultados['Descontos Incondicionais'] = -descontos;
-        resultados['Devoluções de Vendas'] = -devolucoes;
-        resultados['Receita Líquida de Vendas'] = resultados['Receita Bruta de Vendas'] - impVendas - comissoes - descontos - devolucoes;
-
+        resultados['Descontos Incondicionais'] = -get('Descontos Incondicionais');
+        resultados['Devoluções de Vendas'] = -get('Devoluções de Vendas');
+        resultados['Receita Líquida de Vendas'] = resultados['Receita Bruta de Vendas'] - impVendas - comissoes - get('Descontos Incondicionais') - get('Devoluções de Vendas');
+        
         const custoProdutos = get('Custo dos Produtos Vendidos');
         const custoVendas = get('Custo das Vendas de Produtos');
         const custoServicos = get('Custo dos Serviços Prestados');
@@ -110,7 +109,6 @@ router.get('/dre', async (req, res) => {
         resultados['Lucro / Prejuízo Final'] = resultados['Lucro / Prejuízo Líquido'] - invest - emprestimos;
 
         res.render('dre', { user: res.locals.user, ano, estrutura, resultados });
-
     } catch (err) {
         console.error("Erro ao gerar DRE:", err);
         res.status(500).send('Erro ao gerar relatório DRE.');
