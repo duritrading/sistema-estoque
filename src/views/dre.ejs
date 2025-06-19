@@ -4,6 +4,8 @@
   user: locals.user
 }) %>
 
+</div>
+
 <div class="card">
   <h2>📈 DRE Gerencial - <%= ano %></h2>
   <div style="overflow-x: auto;">
@@ -17,14 +19,18 @@
       <tbody>
         <% estrutura.forEach(linha => { %>
           <% const valorFinal = resultados[linha.label] || 0; %>
-          <tr class="<%= linha.css %>">
+          <tr class="<%= linha.css %> <%= linha.tipo === 'header' ? 'dre-header-row' : '' %>">
             <td>
-              <span class="<%= linha.tipo === 'item' ? 'dre-sub-item' : 'dre-header-row' %>">
+              <span class="<%= linha.tipo === 'item' ? 'dre-sub-item' : '' %>">
                 <%= linha.label %>
               </span>
             </td>
             <td class="text-right <%= valorFinal < 0 ? 'saldo-negativo' : '' %>">
-              <%= valorFinal !== 0 ? `R$ ${valorFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %>
+              <% if (linha.tipo === 'total' || linha.tipo === 'header') { %>
+                <strong><%= valorFinal !== 0 ? `R$ ${valorFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %></strong>
+              <% } else { %>
+                <%= valorFinal !== 0 ? `R$ ${valorFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %>
+              <% } %>
             </td>
           </tr>
         <% }) %>

@@ -8,9 +8,7 @@ router.get('/', async (req, res) => {
     try {
         const ano = new Date().getFullYear();
         const query = `
-            SELECT 
-                cf.nome as categoria,
-                SUM(fc.valor) as total
+            SELECT cf.nome as categoria, SUM(fc.valor) as total
             FROM fluxo_caixa fc
             JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
             WHERE EXTRACT(YEAR FROM data_operacao) = $1 AND fc.status = 'PAGO'
@@ -25,6 +23,7 @@ router.get('/', async (req, res) => {
 
         const get = (nome) => dados[nome] || 0;
 
+        // Estrutura FINAL da DRE, com tipos corretos
         const estrutura = [
             { label: 'Receitas Operacionais', tipo: 'header' },
             { label: 'Receita de Vendas de Produtos e Serviços', tipo: 'item' },
@@ -67,9 +66,10 @@ router.get('/', async (req, res) => {
 
         const resultados = {};
 
-        // Calcula os valores de forma sequencial e segura
+        // Lógica de cálculo sequencial
         const recVendas = get('Receita de Vendas de Produtos e Serviços');
         const recFretes = get('Receita de Fretes e Entregas');
+        resultados['Receitas Operacionais'] = recVendas + recFretes;
         resultados['Receita de Vendas de Produtos e Serviços'] = recVendas;
         resultados['Receita de Fretes e Entregas'] = recFretes;
         resultados['Receita Bruta de Vendas'] = recVendas + recFretes;
@@ -78,44 +78,50 @@ router.get('/', async (req, res) => {
         const comissoes = get('Comissões Sobre Vendas');
         const descontos = get('Descontos Incondicionais');
         const devolucoes = get('Devoluções de Vendas');
+        resultados['Deduções da Receita Bruta'] = -(impVendas + comissoes + descontos + devolucoes);
         resultados['Impostos Sobre Vendas'] = -impVendas;
         resultados['Comissões Sobre Vendas'] = -comissoes;
         resultados['Descontos Incondicionais'] = -descontos;
         resultados['Devoluções de Vendas'] = -devolucoes;
-        resultados['Receita Líquida de Vendas'] = resultados['Receita Bruta de Vendas'] - impVendas - comissoes - descontos - devolucoes;
+        resultados['Receita Líquida de Vendas'] = resultados['Receita Bruta de Vendas'] + resultados['Deduções da Receita Bruta'];
 
         const custoProdutos = get('Custo dos Produtos Vendidos');
         const custoVendas = get('Custo das Vendas de Produtos');
         const custoServicos = get('Custo dos Serviços Prestados');
+        resultados['Custos Operacionais'] = -(custoProdutos + custoVendas + custoServicos);
         resultados['Custo dos Produtos Vendidos'] = -custoProdutos;
         resultados['Custo das Vendas de Produtos'] = -custoVendas;
         resultados['Custo dos Serviços Prestados'] = -custoServicos;
-        resultados['Lucro Bruto'] = resultados['Receita Líquida de Vendas'] - custoProdutos - custoVendas - custoServicos;
+        resultados['Lucro Bruto'] = resultados['Receita Líquida de Vendas'] + resultados['Custos Operacionais'];
 
         const despComerciais = get('Despesas Comerciais');
         const despAdmin = get('Despesas Administrativas');
         const despOperacionais = get('Despesas Operacionais');
+        resultados['Despesas Operacionais'] = -(despComerciais + despAdmin + despOperacionais);
         resultados['Despesas Comerciais'] = -despComerciais;
         resultados['Despesas Administrativas'] = -despAdmin;
         resultados['Despesas Operacionais'] = -despOperacionais;
-        resultados['Lucro / Prejuízo Operacional'] = resultados['Lucro Bruto'] - despComerciais - despAdmin - despOperacionais;
+        resultados['Lucro / Prejuízo Operacional'] = resultados['Lucro Bruto'] + resultados['Despesas Operacionais'];
 
         const recFinanceiras = get('Receitas e Rendimentos Financeiros');
         const despFinanceiras = get('Despesas Financeiras');
+        resultados['Receitas e Despesas Financeiras'] = recFinanceiras - despFinanceiras;
         resultados['Receitas e Rendimentos Financeiros'] = recFinanceiras;
         resultados['Despesas Financeiras'] = -despFinanceiras;
 
         const outrasRec = get('Outras Receitas Não Operacionais');
         const outrasDesp = get('Outras Despesas Não Operacionais');
+        resultados['Outras Receitas e Despesas Não Operacionais'] = outrasRec - outrasDesp;
         resultados['Outras Receitas Não Operacionais'] = outrasRec;
         resultados['Outras Despesas Não Operacionais'] = -outrasDesp;
-        resultados['Lucro / Prejuízo Líquido'] = resultados['Lucro / Prejuízo Operacional'] + (recFinanceiras - despFinanceiras) + (outrasRec - outrasDesp);
+        resultados['Lucro / Prejuízo Líquido'] = resultados['Lucro / Prejuízo Operacional'] + resultados['Receitas e Despesas Financeiras'] + resultados['Outras Receitas e Despesas Não Operacionais'];
 
         const invest = get('Investimentos em Imobilizado');
         const emprestimos = get('Empréstimos e Dívidas');
+        resultados['Despesas com Investimentos e Empréstimos'] = -(invest + emprestimos);
         resultados['Investimentos em Imobilizado'] = -invest;
         resultados['Empréstimos e Dívidas'] = -emprestimos;
-        resultados['Lucro / Prejuízo Final'] = resultados['Lucro / Prejuízo Líquido'] - invest - emprestimos;
+        resultados['Lucro / Prejuízo Final'] = resultados['Lucro / Prejuízo Líquido'] + resultados['Despesas com Investimentos e Empréstimos'];
 
         res.render('dre', { user: res.locals.user, ano, estrutura, resultados });
     } catch (err) {
