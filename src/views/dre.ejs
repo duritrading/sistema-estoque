@@ -16,15 +16,15 @@
       </thead>
       <tbody>
         <% estrutura.forEach(linha => { %>
-          <% const valorFinal = resultados[linha.label]; %>
-          <tr class="<%= linha.css %> <%= linha.isHeader ? 'dre-header-row' : '' %>">
+          <% const valorFinal = resultados[linha.label] || 0; %>
+          <tr class="<%= linha.css %>">
             <td>
-              <span class="<%= linha.isSubItem ? 'dre-sub-item' : '' %>">
+              <span class="<%= linha.tipo === 'item' ? 'dre-sub-item' : 'dre-header-row' %>">
                 <%= linha.label %>
               </span>
             </td>
             <td class="text-right <%= valorFinal < 0 ? 'saldo-negativo' : '' %>">
-              <strong><%= valorFinal !== 0 ? `R$ ${valorFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %></strong>
+              <%= valorFinal !== 0 ? `R$ ${valorFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %>
             </td>
           </tr>
         <% }) %>
