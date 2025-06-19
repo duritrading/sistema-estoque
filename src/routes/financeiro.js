@@ -35,14 +35,15 @@ router.get('/completo', async (req, res) => {
     // LINHA ADICIONADA: Calcula a soma dos lançamentos exibidos na página
     const totalValor = lancamentos.reduce((sum, item) => sum + parseFloat(item.valor), 0);
     
-    res.render('financeiro', {
-      user: res.locals.user,
-      lancamentos: lancamentos,
-      totais: totais || { total_credito: 0, total_debito: 0 },
-      saldoAtual,
-      hoje,
-      totalValor: totalValor // Variável agora sendo enviada para a view
-    });
+    // Dentro da rota router.get('/completo', ...) em src/routes/financeiro.js
+
+res.render('financeiro', {
+  user: res.locals.user,
+  contas: lancamentosResult.rows || [], // <-- LINHA CORRIGIDA
+  totais: totais || { total_credito: 0, total_debito: 0 },
+  saldoAtual,
+  hoje
+});
   } catch (error) {
     console.error('Erro ao carregar página financeira:', error);
     return res.status(500).send('Erro ao carregar a página financeira.');
