@@ -408,15 +408,16 @@ function getSaldoProduto(produtoId) {
   });
 }
 
-// Inicializar banco de dados (SUA FUNÇÃO + USUÁRIOS)
+// Dentro de src/app.js
+
 async function initializeDatabase() {
   try {
     console.log('🔧 Inicializando banco PostgreSQL...');
-    
+
     // Criar tabela de usuários PRIMEIRO
     await createUsersTable();
-    
-    // Suas tabelas atuais
+
+    // Suas tabelas originais
     await pool.query(`
       CREATE TABLE IF NOT EXISTS produtos (
         id SERIAL PRIMARY KEY,
@@ -479,22 +480,44 @@ async function initializeDatabase() {
         valor DECIMAL(10,2) NOT NULL,
         descricao TEXT,
         categoria_id INTEGER REFERENCES categorias_financeiras(id),
+        status VARCHAR(20) DEFAULT 'PAGO',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Inserir categorias padrão se não existirem
-    const checkCategorias = await pool.query('SELECT COUNT(*) as count FROM categorias_financeiras');
-    if (checkCategorias.rows[0].count == 0) {
-      await pool.query(`
-        INSERT INTO categorias_financeiras (nome, tipo) VALUES 
-        ('Vendas', 'CREDITO'),
-        ('Recebimentos', 'CREDITO'), 
-        ('Despesas Operacionais', 'DEBITO'),
-        ('Compras', 'DEBITO'),
-        ('Outros', 'CREDITO')
-      `);
-    }
+    console.log('📝 Criando tabela clientes...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS clientes (
+        id SERIAL PRIMARY KEY,
+        codigo VARCHAR(50) UNIQUE,
+        nome VARCHAR(200) NOT NULL,
+        contato VARCHAR(150),
+        telefone VARCHAR(20),
+        email VARCHAR(150),
+        endereco TEXT,
+        cpf_cnpj VARCHAR(20),
+        observacao TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    console.log('📝 Criando tabela contas_a_receber...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contas_a_receber (
+        id SERIAL PRIMARY KEY,
+        movimentacao_id INTEGER NOT NULL REFERENCES movimentacoes(id) ON DELETE CASCADE,
+        cliente_nome VARCHAR(200),
+        numero_parcela INTEGER NOT NULL,
+        total_parcelas INTEGER NOT NULL,
+        valor DECIMAL(10,2) NOT NULL,
+        data_vencimento DATE NOT NULL,
+        data_pagamento DATE,
+        status VARCHAR(20) NOT NULL DEFAULT 'Pendente',
+        fluxo_caixa_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    // ==========================================================
 
     const countProdutos = await pool.query('SELECT COUNT(*) as count FROM produtos');
     console.log(`✅ Banco PostgreSQL inicializado! Produtos: ${countProdutos.rows[0].count}`);
@@ -503,7 +526,6 @@ async function initializeDatabase() {
     console.error('❌ Erro ao inicializar banco:', error);
   }
 }
-
 // ========================================
 // SUAS ROTAS ATUAIS (TODAS PROTEGIDAS + HEADER ATUALIZADO)
 // ========================================
