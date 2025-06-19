@@ -32,12 +32,6 @@ app.use(session({
   name: 'sessionId' // Nome personalizado para o cookie
 }));
 
-// Configuração PostgreSQL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
 // Função para executar SQL (compatível com seu código atual)
 const db = {
   all: (query, params, callback) => {
