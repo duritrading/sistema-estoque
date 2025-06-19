@@ -8,8 +8,6 @@ router.get('/', (req, res) => {
 });
 
 // ROTA FLUXO DE CAIXA: Mostra a página principal do financeiro
-// Em src/routes/financeiro.js
-
 router.get('/completo', async (req, res) => {
   if (!pool) {
     return res.status(500).send('Erro de configuração: Conexão com o banco de dados não disponível.');
@@ -32,18 +30,17 @@ router.get('/completo', async (req, res) => {
     
     const saldoAtual = totais ? (parseFloat(totais.total_credito) - parseFloat(totais.total_debito)) : 0;
     
-    // LINHA ADICIONADA: Calcula a soma dos lançamentos exibidos na página
+    // LINHA ADICIONADA: Calcula a soma dos lançamentos que estão sendo exibidos na página
     const totalValor = lancamentos.reduce((sum, item) => sum + parseFloat(item.valor), 0);
     
-    // Dentro da rota router.get('/completo', ...) em src/routes/financeiro.js
-
-res.render('financeiro', {
-  user: res.locals.user,
-  contas: lancamentosResult.rows || [], // <-- LINHA CORRIGIDA
-  totais: totais || { total_credito: 0, total_debito: 0 },
-  saldoAtual,
-  hoje
-});
+    res.render('financeiro', {
+      user: res.locals.user,
+      lancamentos: lancamentos,
+      totais: totais || { total_credito: 0, total_debito: 0 },
+      saldoAtual,
+      hoje,
+      totalValor: totalValor // Variável agora sendo enviada para a view
+    });
   } catch (error) {
     console.error('Erro ao carregar página financeira:', error);
     return res.status(500).send('Erro ao carregar a página financeira.');
