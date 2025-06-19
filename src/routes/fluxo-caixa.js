@@ -8,8 +8,9 @@ router.get('/', async (req, res) => {
   try {
     const hoje = new Date().toISOString().split('T')[0];
 
+    // Buscas em paralelo: lançamentos, totais e agora também as categorias
     const [lancamentosResult, totaisResult, categoriasResult] = await Promise.all([
-        pool.query(`SELECT * FROM fluxo_caixa ORDER BY data_operacao DESC, created_at DESC LIMIT 20`),
+        pool.query(`SELECT fc.*, cf.nome as categoria_nome FROM fluxo_caixa fc LEFT JOIN categorias_financeiras cf ON fc.categoria_id = cf.id ORDER BY fc.data_operacao DESC, fc.created_at DESC LIMIT 20`),
         pool.query(`SELECT COALESCE(SUM(CASE WHEN tipo = 'CREDITO' THEN valor ELSE 0 END), 0) as total_credito, COALESCE(SUM(CASE WHEN tipo = 'DEBITO' THEN valor ELSE 0 END), 0) as total_debito FROM fluxo_caixa WHERE status = 'PAGO'`),
         pool.query(`SELECT * FROM categorias_financeiras ORDER BY nome`)
     ]);
@@ -19,11 +20,11 @@ router.get('/', async (req, res) => {
 
     res.render('fluxo-caixa', {
       user: res.locals.user,
-      lancamentos: lancamentosResult.rows || [], // Enviando como 'lancamentos'
+      lancamentos: lancamentosResult.rows || [],
       totais: totais || { total_credito: 0, total_debito: 0 },
       saldoAtual,
       hoje,
-      categorias: categoriasResult.rows || []
+      categorias: categoriasResult.rows || [] // Enviando categorias para a view
     });
   } catch (error) {
     console.error("Erro ao carregar fluxo de caixa:", error);
@@ -35,6 +36,7 @@ router.get('/', async (req, res) => {
 router.post('/lancamento', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     try {
+        // Captura o categoria_id do formulário
         const { data_operacao, tipo, valor, descricao, categoria_id } = req.body;
         await pool.query(`INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id, status) VALUES ($1, $2, $3, $4, $5, 'PAGO')`, [data_operacao, tipo, parseFloat(valor), descricao, categoria_id]);
         res.redirect('/fluxo-caixa');
