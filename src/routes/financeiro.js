@@ -168,7 +168,7 @@ router.get('/dre', async (req, res) => {
             }
         });
 
-        res.render('dre-final', { user: res.locals.user, ano, estrutura, resultados });
+        res.render('dre', { user: res.locals.user, ano, estrutura, resultados });
     } catch (err) {
         console.error("Erro ao gerar DRE:", err);
         res.status(500).send('Erro ao gerar relatório DRE.');
