@@ -97,7 +97,7 @@ router.get('/faturamento', async (req, res) => {
 // Em src/routes/financeiro.js
 
 router.get('/dre', async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração.');
+    if (!pool) return res.status(500).send('Erro de configuração: Conexão com o banco de dados não disponível.');
 
     try {
         const ano = new Date().getFullYear();
@@ -105,64 +105,64 @@ router.get('/dre', async (req, res) => {
             SELECT 
                 TO_CHAR(data_operacao, 'MM') as mes_index,
                 cf.nome as categoria,
+                cf.tipo as categoria_tipo,
                 SUM(fc.valor) as total
             FROM fluxo_caixa fc
             JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
             WHERE EXTRACT(YEAR FROM data_operacao) = $1 AND fc.status = 'PAGO'
-            GROUP BY mes_index, cf.nome
+            GROUP BY mes_index, cf.nome, cf.tipo
         `;
         const result = await pool.query(query, [ano]);
         const dadosBrutos = result.rows;
 
-        const dadosPorCategoria = {};
-        dadosBrutos.forEach(dado => {
-            if (!dadosPorCategoria[dado.categoria]) dadosPorCategoria[dado.categoria] = Array(12).fill(0);
-            dadosPorCategoria[dado.categoria][parseInt(dado.mes_index) - 1] = parseFloat(dado.total);
-        });
-
+        // Define a estrutura da DRE
         const estruturaDRE = [
-            { id: 'rec_vendas', nome: 'Receita de Vendas de Produtos e Serviços', tipo: 'receita' },
-            { id: 'rec_fretes', nome: 'Receita de Fretes e Entregas', tipo: 'receita' },
-            { id: 'rec_bruta', nome: 'Receita Bruta de Vendas', tipo: 'subtotal', isHeader: true, formula: (r) => r.receitas },
-
-            { id: 'ded_impostos', nome: 'Impostos Sobre Vendas', tipo: 'deducao' },
-            { id: 'ded_comissoes', nome: 'Comissões Sobre Vendas', tipo: 'deducao' },
-            { id: 'rec_liquida', nome: 'Receita Líquida de Vendas', tipo: 'subtotal', isHeader: true, formula: (r) => r.receitas - r.deducoes },
-
-            { id: 'custo_produtos', nome: 'Custo dos Produtos Vendidos', tipo: 'custo' },
-            { id: 'custo_total', nome: 'Custos Operacionais', tipo: 'subtotal', isHeader: true, formula: (r) => r.custos },
-
-            { id: 'lucro_bruto', nome: 'Lucro Bruto', tipo: 'subtotal', isHeader: true, formula: (r) => (r.receitas - r.deducoes) - r.custos },
-
-            { id: 'desp_comerciais', nome: 'Despesas Comerciais', tipo: 'despesa' },
-            { id: 'desp_administrativas', nome: 'Despesas Administrativas', tipo: 'despesa' },
-            { id: 'desp_operacionais', nome: 'Despesas Operacionais', tipo: 'despesa' },
-            { id: 'lucro_operacional', nome: 'Lucro / Prejuízo Operacional', tipo: 'subtotal', isHeader: true, style: 'final-result', formula: (r) => ((r.receitas - r.deducoes) - r.custos) - r.despesas },
+            { nome: 'Receita de Vendas e Serviços', tipo: 'receita', isSubItem: true },
+            { nome: 'Receita Bruta de Vendas', tipo: 'subtotal', isHeader: true, formula: (totais) => totais.receitas },
+            { nome: 'Impostos Sobre Vendas', tipo: 'deducao', isSubItem: true },
+            { nome: 'Comissões Sobre Vendas', tipo: 'deducao', isSubItem: true },
+            { nome: 'Receita Líquida de Vendas', tipo: 'subtotal', isHeader: true, formula: (totais) => totais.receitas - totais.deducoes },
+            { nome: 'Custo dos Produtos Vendidos', tipo: 'custo', isSubItem: true },
+            { nome: 'Custos Operacionais', tipo: 'subtotal', isHeader: true, formula: (totais) => totais.custos },
+            { nome: 'Lucro Bruto', tipo: 'subtotal', isHeader: true, formula: (totais) => (totais.receitas - totais.deducoes) - totais.custos },
+            { nome: 'Despesas Comerciais', tipo: 'despesa', isSubItem: true },
+            { nome: 'Despesas Administrativas', tipo: 'despesa', isSubItem: true },
+            { nome: 'Despesas Operacionais', tipo: 'despesa', isSubItem: true },
+            { nome: 'Lucro / Prejuízo Operacional', tipo: 'subtotal', isHeader: true, style: 'final-result', formula: (totais) => ((totais.receitas - totais.deducoes) - totais.custos) - totais.despesas },
         ];
 
+        // Monta o relatório final
         const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-        const relatorioFinal = [];
         const totaisPorTipo = { receitas: Array(12).fill(0), deducoes: Array(12).fill(0), custos: Array(12).fill(0), despesas: Array(12).fill(0) };
 
-        estruturaDRE.forEach(linha => {
-            let valoresMensais = dadosPorCategoria[linha.nome] || Array(12).fill(0);
+        // Agrupa os dados brutos por tipo
+        dadosBrutos.forEach(dado => {
+            const mesIndex = parseInt(dado.mes_index) - 1;
+            const tipoLinha = estruturaDRE.find(e => e.nome === dado.categoria)?.tipo;
+            if (tipoLinha && totaisPorTipo[tipoLinha]) {
+                totaisPorTipo[tipoLinha][mesIndex] += parseFloat(dado.total);
+            }
+        });
+
+        // Prepara cada linha do relatório para a view
+        const relatorioFinal = estruturaDRE.map(linha => {
+            let valoresMensais = Array(12).fill(0);
             if (linha.tipo !== 'subtotal') {
-                for(let i=0; i<12; i++) {
-                    totaisPorTipo[linha.tipo][i] += valoresMensais[i];
-                }
+                const dadosDaCategoria = dadosBrutos.filter(d => d.categoria === linha.nome);
+                dadosDaCategoria.forEach(d => {
+                    valoresMensais[parseInt(d.mes_index) - 1] = parseFloat(d.total);
+                });
             } else {
                 for(let i=0; i<12; i++) {
-                    // CORREÇÃO AQUI: Verificamos se o item da fórmula existe antes de somar
-                    const totaisDoMes = {
-                        receitas: totaisPorTipo.receitas[i] || 0,
-                        deducoes: totaisPorTipo.deducoes[i] || 0,
-                        custos: totaisPorTipo.custos[i] || 0,
-                        despesas: totaisPorTipo.despesas[i] || 0
-                    };
-                    valoresMensais[i] = linha.formula(totaisDoMes);
+                    valoresMensais[i] = linha.formula({
+                        receitas: totaisPorTipo.receitas[i],
+                        deducoes: totaisPorTipo.deducoes[i],
+                        custos: totaisPorTipo.custos[i],
+                        despesas: totaisPorTipo.despesas[i]
+                    });
                 }
             }
-            relatorioFinal.push({ ...linha, valores: valoresMensais });
+            return { ...linha, valores: valoresMensais };
         });
 
         res.render('dre', {
