@@ -560,23 +560,6 @@ try {
   }
 }
 
-    const produtosSeguros = Array.isArray(produtos) ? produtos : [];
-    const totalProdutos = produtosSeguros.length;
-    const totalEmEstoque = produtosSeguros.reduce((sum, p) => sum + (p.saldo_atual || 0), 0);
-    const valorEstoque = produtosSeguros.reduce((sum, p) => sum + ((p.saldo_atual || 0) * (p.preco_custo || 0)), 0);
-    const alertas = produtosSeguros.filter(p => (p.saldo_atual || 0) <= (p.estoque_minimo || 0));
-    const categorias = [...new Set(produtosSeguros.map(p => p.categoria).filter(c => c))];
-
-    res.render('dashboard', {
-      user: res.locals.user,
-      produtos: produtosSeguros,
-      totalProdutos,
-      totalEmEstoque,
-      valorEstoque,
-      alertas,
-      categorias
-    });
-
 // Produtos JSON
 app.get('/produtos', (req, res) => {
   db.all(`
