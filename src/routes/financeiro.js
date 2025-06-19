@@ -94,83 +94,54 @@ router.get('/faturamento', async (req, res) => {
   }
 });
 
-// Em src/routes/financeiro.js
-
+// ROTA DA DRE
 router.get('/dre', async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração: Conexão com o banco de dados não disponível.');
+    if (!pool) return res.status(500).send('Erro de configuração.');
 
     try {
         const ano = new Date().getFullYear();
         const query = `
             SELECT 
                 TO_CHAR(data_operacao, 'MM') as mes_index,
-                cf.nome as categoria,
                 cf.tipo as categoria_tipo,
                 SUM(fc.valor) as total
             FROM fluxo_caixa fc
             JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
             WHERE EXTRACT(YEAR FROM data_operacao) = $1 AND fc.status = 'PAGO'
-            GROUP BY mes_index, cf.nome, cf.tipo
+            GROUP BY mes_index, cf.tipo
         `;
         const result = await pool.query(query, [ano]);
         const dadosBrutos = result.rows;
 
-        // Define a estrutura da DRE
-        const estruturaDRE = [
-            { nome: 'Receita de Vendas e Serviços', tipo: 'receita', isSubItem: true },
-            { nome: 'Receita Bruta de Vendas', tipo: 'subtotal', isHeader: true, formula: (totais) => totais.receitas },
-            { nome: 'Impostos Sobre Vendas', tipo: 'deducao', isSubItem: true },
-            { nome: 'Comissões Sobre Vendas', tipo: 'deducao', isSubItem: true },
-            { nome: 'Receita Líquida de Vendas', tipo: 'subtotal', isHeader: true, formula: (totais) => totais.receitas - totais.deducoes },
-            { nome: 'Custo dos Produtos Vendidos', tipo: 'custo', isSubItem: true },
-            { nome: 'Custos Operacionais', tipo: 'subtotal', isHeader: true, formula: (totais) => totais.custos },
-            { nome: 'Lucro Bruto', tipo: 'subtotal', isHeader: true, formula: (totais) => (totais.receitas - totais.deducoes) - totais.custos },
-            { nome: 'Despesas Comerciais', tipo: 'despesa', isSubItem: true },
-            { nome: 'Despesas Administrativas', tipo: 'despesa', isSubItem: true },
-            { nome: 'Despesas Operacionais', tipo: 'despesa', isSubItem: true },
-            { nome: 'Lucro / Prejuízo Operacional', tipo: 'subtotal', isHeader: true, style: 'final-result', formula: (totais) => ((totais.receitas - totais.deducoes) - totais.custos) - totais.despesas },
-        ];
+        const totais = { receita: Array(12).fill(0), deducao: Array(12).fill(0), custo: Array(12).fill(0), despesa_operacional: Array(12).fill(0), receita_financeira: Array(12).fill(0), despesa_financeira: Array(12).fill(0), outras_receitas: Array(12).fill(0), outras_despesas: Array(12).fill(0), imposto_lucro: Array(12).fill(0) };
 
-        // Monta o relatório final
+        dadosBrutos.forEach(d => {
+            if (totais[d.categoria_tipo]) {
+                totais[d.categoria_tipo][parseInt(d.mes_index) - 1] = parseFloat(d.total);
+            }
+        });
+
+        const relatorio = [];
+        for (let i = 0; i < 12; i++) {
+            const r = {}; // Resultados do mês
+            r.receitaBruta = totais.receita[i];
+            r.deducoes = totais.deducao[i];
+            r.receitaLiquida = r.receitaBruta - r.deducoes;
+            r.custos = totais.custo[i];
+            r.lucroBruto = r.receitaLiquida - r.custos;
+            r.despesasOperacionais = totais.despesa_operacional[i];
+            r.lucroOperacional = r.lucroBruto - r.despesasOperacionais;
+            r.resultadoFinanceiro = totais.receita_financeira[i] - totais.despesa_financeira[i];
+            r.resultadoNaoOperacional = totais.outras_receitas[i] - totais.outras_despesas[i];
+            r.resultadoAntesImpostos = r.lucroOperacional + r.resultadoFinanceiro + r.resultadoNaoOperacional;
+            r.impostoLucro = totais.imposto_lucro[i];
+            r.lucroLiquido = r.resultadoAntesImpostos - r.impostoLucro;
+            relatorio.push(r);
+        }
+
         const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-        const totaisPorTipo = { receitas: Array(12).fill(0), deducoes: Array(12).fill(0), custos: Array(12).fill(0), despesas: Array(12).fill(0) };
 
-        // Agrupa os dados brutos por tipo
-        dadosBrutos.forEach(dado => {
-            const mesIndex = parseInt(dado.mes_index) - 1;
-            const tipoLinha = estruturaDRE.find(e => e.nome === dado.categoria)?.tipo;
-            if (tipoLinha && totaisPorTipo[tipoLinha]) {
-                totaisPorTipo[tipoLinha][mesIndex] += parseFloat(dado.total);
-            }
-        });
-
-        // Prepara cada linha do relatório para a view
-        const relatorioFinal = estruturaDRE.map(linha => {
-            let valoresMensais = Array(12).fill(0);
-            if (linha.tipo !== 'subtotal') {
-                const dadosDaCategoria = dadosBrutos.filter(d => d.categoria === linha.nome);
-                dadosDaCategoria.forEach(d => {
-                    valoresMensais[parseInt(d.mes_index) - 1] = parseFloat(d.total);
-                });
-            } else {
-                for(let i=0; i<12; i++) {
-                    valoresMensais[i] = linha.formula({
-                        receitas: totaisPorTipo.receitas[i],
-                        deducoes: totaisPorTipo.deducoes[i],
-                        custos: totaisPorTipo.custos[i],
-                        despesas: totaisPorTipo.despesas[i]
-                    });
-                }
-            }
-            return { ...linha, valores: valoresMensais };
-        });
-
-        res.render('dre', {
-            user: res.locals.user,
-            ano,
-            meses,
-            relatorio: relatorioFinal
-        });
+        res.render('dre', { user: res.locals.user, ano, meses, totais, relatorio });
     } catch (err) {
         console.error("Erro ao gerar DRE:", err);
         res.status(500).send('Erro ao gerar relatório DRE.');

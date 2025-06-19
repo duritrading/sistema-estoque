@@ -76,3 +76,34 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .dre-sub-item {
   padding-left: 20px;
 }
+
+/* Em public/styles.css */
+
+/* Estilos para a Tabela DRE */
+.dre-sub-item {
+  padding-left: 20px;
+}
+
+.dre-header-row {
+  font-weight: bold;
+}
+
+/* Cores para os diferentes níveis de totais */
+.dre-total-l1 { /* Cinza claro para totais primários */
+  background-color: #e9ecef;
+}
+
+.dre-total-l2 { /* Azul claro para lucro bruto */
+  background-color: #cfe2ff;
+}
+
+.dre-total-l3 { /* Amarelo claro para resultado antes dos impostos */
+  background-color: #fff3cd;
+}
+
+.dre-total-final { /* Verde claro para o resultado final */
+  background-color: #d4edda;
+  font-size: 1.1em;
+  border-top: 2px solid #333;
+  border-bottom: 2px solid #333;
+}

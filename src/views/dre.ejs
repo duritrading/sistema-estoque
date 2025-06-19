@@ -11,40 +11,47 @@
 </div>
 
 <div class="card">
-  <h2>📈 DRE - <%= ano %></h2>
+  <h2>📈 DRE Gerencial - <%= ano %></h2>
   <div style="overflow-x: auto;">
     <table class="table mt-2">
       <thead>
         <tr>
-          <th>Categoria</th>
-          <% meses.forEach(mes => { %>
-            <th class="text-right"><%= mes %></th>
-          <% }) %>
+          <th>Descrição</th>
+          <% meses.forEach(mes => { %><th class="text-right"><%= mes %></th><% }) %>
           <th class="text-right">Total Ano</th>
         </tr>
       </thead>
       <tbody>
-        <% relatorio.forEach(linha => { %>
-          <% const totalLinha = linha.valores.reduce((a, b) => a + b, 0); %>
-
-          <tr class="<%= linha.classes %>">
-            <td>
-              <span class="<%= linha.isSubItem ? 'dre-sub-item' : '' %>">
-                <%= linha.nome %>
-              </span>
-            </td>
-
-            <% linha.valores.forEach(valor => { %>
-              <td class="text-right <%= valor < 0 ? 'saldo-negativo' : '' %>">
-                <%= valor !== 0 ? `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %>
+        <%
+          const renderRow = (label, values, isHeader = false, cssClass = '', isSubItem = false) => {
+            const total = values.reduce((a, b) => a + b, 0);
+        %>
+          <tr class=" <%= isHeader ? 'dre-header-row' : '' %> <%= cssClass %> ">
+            <td><span class=" <%= isSubItem ? 'dre-sub-item' : '' %> "><%= label %></span></td>
+            <% for (let i = 0; i < 12; i++) { %>
+              <td class="text-right <%= values[i] < 0 ? 'saldo-negativo' : '' %>">
+                <%= values[i] !== 0 ? `R$ ${values[i].toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %>
               </td>
-            <% }) %>
-
-            <td class="text-right <%= totalLinha < 0 ? 'saldo-negativo' : '' %>">
-              <strong><%= totalLinha !== 0 ? `R$ ${totalLinha.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %></strong>
+            <% } %>
+            <td class="text-right <%= total < 0 ? 'saldo-negativo' : '' %>">
+              <strong><%= total !== 0 ? `R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-' %></strong>
             </td>
           </tr>
-        <% }) %>
+        <% } %>
+
+        <%- renderRow('Receita Bruta de Vendas', relatorio.map(r => r.receitaBruta), true, 'dre-total-l1') %>
+        <%- renderRow('Deduções da Receita Bruta', relatorio.map(r => -r.deducoes), false, '', true) %>
+        <%- renderRow('Receita Líquida de Vendas', relatorio.map(r => r.receitaLiquida), true, 'dre-total-l1') %>
+        <%- renderRow('Custos Operacionais', relatorio.map(r => -r.custos), false, '', true) %>
+        <%- renderRow('Lucro Bruto', relatorio.map(r => r.lucroBruto), true, 'dre-total-l2') %>
+        <%- renderRow('Despesas Operacionais', relatorio.map(r => -r.despesasOperacionais), false, '', true) %>
+        <%- renderRow('Lucro / Prejuízo Operacional', relatorio.map(r => r.lucroOperacional), true, 'dre-total-l1') %>
+        <%- renderRow('Resultado Financeiro', relatorio.map(r => r.resultadoFinanceiro), false, '', true) %>
+        <%- renderRow('Resultado Não Operacional', relatorio.map(r => r.resultadoNaoOperacional), false, '', true) %>
+        <%- renderRow('Resultado Antes dos Impostos', relatorio.map(r => r.resultadoAntesImpostos), true, 'dre-total-l3') %>
+        <%- renderRow('Imposto de Renda e Contribuição Social', relatorio.map(r => -r.impostoLucro), false, '', true) %>
+        <%- renderRow('Lucro / Prejuízo Final', relatorio.map(r => r.lucroLiquido), true, 'dre-total-final') %>
+
       </tbody>
     </table>
   </div>
