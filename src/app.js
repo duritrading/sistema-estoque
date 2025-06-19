@@ -618,26 +618,30 @@ app.post('/produtos', (req, res) => {
 const movimentacoesRoutes = require('./routes/movimentacoes');
 const fornecedoresRoutes = require('./routes/fornecedores'); // ADICIONE ESTA LINHA
 const usuariosRoutes = require('./routes/usuarios'); // ADICIONE ESTA LINHA
-const financeiroRoutes = require('./routes/financeiro'); // ADICIONE ESTA LINHA
 const gerenciarRoutes = require('./routes/gerenciar'); // ADICIONE ESTA LINHA
 const backupRoutes = require('./routes/backup'); // GARANTA QUE ESTA LINHA EXISTE
 const clientesRoutes = require('./routes/clientes');
 const rcaRoutes = require('./routes/rcas');
 const dashboardRoutes = require('./routes/dashboard'); // ADICIONE ESTA LINHA
 const produtosRoutes = require('./routes/produtos');
+const fluxoCaixaRoutes = require('./routes/fluxo-caixa');
+const dreRoutes = require('./routes/dre');
+const faturamentoRoutes = require('./routes/faturamento');
 
 
 // ...
 app.use('/movimentacoes', movimentacoesRoutes);
 app.use('/fornecedores', fornecedoresRoutes); // ADICIONE ESTA LINHA
 app.use('/usuarios', usuariosRoutes); // ADICIONE ESTA LINHA
-app.use('/financeiro', financeiroRoutes); // ADICIONE ESTA LINHA
 app.use('/gerenciar', gerenciarRoutes); // ADICIONE ESTA LINHA
 app.use('/backup', backupRoutes); // GARANTA QUE ESTA LINHA EXISTE
 app.use('/clientes', clientesRoutes);
 app.use('/rcas', rcaRoutes);
 app.use('/', dashboardRoutes); // ADICIONE ESTA LINHA
 app.use('/produtos', produtosRoutes);
+app.use('/fluxo-caixa', fluxoCaixaRoutes);
+app.use('/dre', dreRoutes);
+app.use('/faturamento', faturamentoRoutes);
 
 
 // Inicializar servidor
