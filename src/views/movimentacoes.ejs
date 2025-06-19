@@ -95,28 +95,32 @@
   <h2>📋 Últimas Movimentações</h2>
   <table class="table">
     <thead>
-        <tr>
-            <th>Data</th>
-            <th>Produto</th>
-            <th>Tipo</th>
-            <th>Quantidade</th>
-            <th>Cliente/Fornecedor</th>
-            <th>Documento</th>
-            <th>Parcelas</th> </tr>
-
-        </tr>
+      <tr>
+        <th>Data</th>
+        <th>Produto</th>
+        <th>Tipo</th>
+        <th>Quantidade</th>
+        <th>Cliente/Fornecedor</th>
+        <th>Documento</th>
+        <th>Parcelas</th>
+        <th>Ações</th> </tr>
     </thead>
     <tbody>
-        <% movimentacoes.forEach(m => { %>
-            <tr>
-                <td><%= new Date(m.created_at).toLocaleDateString('pt-BR') %></td>
-                <td><%= m.codigo %> - <%= m.descricao %></td>
-                <td><span class="badge <%= m.tipo === 'ENTRADA' ? 'badge-success' : 'badge-danger' %>"><%= m.tipo %></span></td>
-                <td><%= m.quantidade %></td>
-                <td><%= m.tipo === 'ENTRADA' ? (m.fornecedor_nome || '-') : (m.cliente_nome || '-') %></td>
-                <td><%= m.documento || '-' %></td>
-                <td><%= m.total_parcelas || '-' %></td> </tr>
-        <% }) %>
+      <% movimentacoes.forEach(m => { %>
+        <tr>
+          <td><%= new Date(m.created_at).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
+          <td><%= m.codigo %> - <%= m.descricao %></td>
+          <td><span class="badge <%= m.tipo === 'ENTRADA' ? 'badge-success' : 'badge-danger' %>"><%= m.tipo %></span></td>
+          <td><%= m.quantidade %></td>
+          <td><%= m.tipo === 'ENTRADA' ? (m.fornecedor_nome || '-') : (m.cliente_nome || '-') %></td>
+          <td><%= m.documento || '-' %></td>
+          <td><%= m.total_parcelas || '-' %></td>
+          <td> <form action="/movimentacoes/delete/<%= m.id %>" method="POST" onsubmit="return confirm('ATENÇÃO: Excluir uma movimentação é uma ação irreversível e irá apagar também todas as parcelas de faturamento associadas a ela. Deseja continuar?');">
+              <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
     </tbody>
   </table>
 </div>
