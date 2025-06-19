@@ -72,14 +72,16 @@
               </span>
             </td>
             <td>
-              <% if (conta.status !== 'Pago') { %>
-                <form action="/contas-a-pagar/pagar/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o pagamento desta conta?');">
-                    <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Registrar Pagamento</button>
-                </form>
-              <% } else { %>
-                -
-              <% } %>
-            </td>
+  <% if (conta.status === 'Pendente' || conta.status === 'Atrasado') { %>
+    <form action="/contas-a-pagar/pagar/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o pagamento desta conta?');">
+        <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Registrar Pagamento</button>
+    </form>
+  <% } else { %>
+    <form action="/contas-a-pagar/estornar/<%= conta.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja estornar este pagamento? A saída do caixa será removida.');">
+        <button type="submit" class="btn btn-warning" style="padding: 5px 10px; font-size: 12px;">Estornar</button>
+    </form>
+  <% } %>
+</td>
           </tr>
         <% }) %>
       <% } else { %>
