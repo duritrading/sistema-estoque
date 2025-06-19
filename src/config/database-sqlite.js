@@ -145,6 +145,23 @@ db.run(`
       (7, 'Cheque', 'CHQ')
   `);
 
+// Tabela para clientes
+db.run(`
+  CREATE TABLE IF NOT EXISTS clientes (
+    id INTEGER PRIMARY KEY,
+    codigo TEXT UNIQUE,
+    nome TEXT NOT NULL,
+    contato TEXT,
+    telefone TEXT,
+    email TEXT,
+    endereco TEXT,
+    cpf_cnpj TEXT,
+    observacao TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+//...
+
   // Dados de exemplo existentes
   db.run(`
     INSERT OR IGNORE INTO produtos (codigo, descricao, unidade, categoria, estoque_minimo, preco_custo)
