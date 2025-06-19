@@ -45,4 +45,30 @@ router.post('/', async (req, res) => {
   }
 });
 
+// NOVA ROTA PARA EXCLUIR UM PRODUTO
+router.post('/delete/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Primeiro, verifica se o produto tem movimentações associadas
+    const check = await pool.query('SELECT COUNT(*) as count FROM movimentacoes WHERE produto_id = $1', [id]);
+
+    if (check.rows[0].count > 0) {
+      return res.render('error', {
+          user: res.locals.user,
+          titulo: 'Ação Bloqueada',
+          mensagem: `Este produto não pode ser excluído pois está associado a ${check.rows[0].count} movimentação(ões) de estoque.`,
+          voltar_url: '/produtos'
+      });
+    }
+
+    // Se não estiver em uso, exclui o produto
+    await pool.query('DELETE FROM produtos WHERE id = $1', [id]);
+    res.redirect('/produtos');
+  } catch (err) {
+    console.error("Erro ao excluir produto:", err);
+    res.status(500).send('Erro ao excluir produto.');
+  }
+});
+
 module.exports = router;

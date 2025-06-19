@@ -56,21 +56,29 @@
 <div class="card">
   <h2>📋 Produtos Cadastrados</h2>
   <div class="produtos-grid">
-    <% produtos.forEach(produto => { %>
-      <div class="produto-card">
-        <div class="produto-header">
-          <div class="produto-codigo"><%= produto.codigo %></div>
-          <div class="produto-saldo <%= produto.saldo_atual > 0 ? 'saldo-positivo' : produto.saldo_atual == 0 ? 'saldo-zero' : 'saldo-negativo' %>"><%= parseFloat(produto.saldo_atual).toLocaleString('pt-BR') %></div>
+  <% produtos.forEach(produto => { %>
+    <div class="produto-card">
+      <div class="produto-header">
+        <div class="produto-codigo"><%= produto.codigo %></div>
+        <div class="produto-saldo <%= parseFloat(produto.saldo_atual) > 0 ? 'saldo-positivo' : parseFloat(produto.saldo_atual) === 0 ? 'saldo-zero' : 'saldo-negativo' %>">
+          <%= parseFloat(produto.saldo_atual).toLocaleString('pt-BR') %>
         </div>
-        <h3><%= produto.descricao %></h3>
-        <p><strong>Unidade:</strong> <%= produto.unidade || 'UN' %></p>
-        <% if (produto.categoria) { %><p><strong>Categoria:</strong> <%= produto.categoria %></p><% } %>
-        <p><strong>Estoque Mínimo:</strong> <%= produto.estoque_minimo || 0 %></p>
-        <% if (produto.preco_custo) { %><p><strong>Preço:</strong> R$ <%= parseFloat(produto.preco_custo).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p><% } %>
-        <% if (parseFloat(produto.saldo_atual) <= parseFloat(produto.estoque_minimo)) { %><span class="badge badge-warning">Estoque Baixo</span><% } %>
       </div>
-    <% }) %>
-  </div>
-</div>
+      <h3><%= produto.descricao %></h3>
+      <p><strong>Unidade:</strong> <%= produto.unidade || 'UN' %></p>
+      <% if (produto.categoria) { %><p><strong>Categoria:</strong> <%= produto.categoria %></p><% } %>
+      <p><strong>Estoque Mínimo:</strong> <%= produto.estoque_minimo || 0 %></p>
+      <% if (produto.preco_custo) { %><p><strong>Preço:</strong> R$ <%= parseFloat(produto.preco_custo).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p><% } %>
+      <% if (parseFloat(produto.saldo_atual) <= parseFloat(produto.estoque_minimo || 0)) { %><span class="badge badge-warning">Estoque Baixo</span><% } %>
+
+      <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+        <form action="/produtos/delete/<%= produto.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este produto? Esta ação é irreversível.');">
+          <button type="submit" class="btn btn-danger" style="width: 100%; padding: 8px; font-size: 14px;">Excluir Produto</button>
+        </form>
+      </div>
+
+    </div>
+  <% }) %>
+</div>    
 
 <%- include('partials/footer') %>
