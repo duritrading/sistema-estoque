@@ -32,6 +32,15 @@
             <input type="date" id="data_vencimento" name="data_vencimento" required>
         </div>
     </div>
+    <div class="form-group">
+        <label for="categoria_id">Categoria da Despesa *</label>
+        <select id="categoria_id" name="categoria_id" required>
+            <option value="" disabled selected>Selecione uma categoria</option>
+            <% categorias.forEach(cat => { %>
+                <option value="<%= cat.id %>"><%= cat.nome %></option>
+            <% }) %>
+        </select>
+    </div>
     <button type="submit" class="btn">Adicionar Conta</button>
   </form>
 </div>
@@ -43,7 +52,7 @@
       <tr>
         <th>Descrição</th>
         <th>Fornecedor</th>
-        <th>Vencimento</th>
+        <th>Categoria</th> <th>Vencimento</th>
         <th class="text-right">Valor</th>
         <th>Status</th>
         <th>Ações</th>
@@ -55,7 +64,7 @@
           <tr>
             <td><%= conta.descricao %></td>
             <td><%= conta.fornecedor_nome || '-' %></td>
-            <td><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
+            <td><%= conta.categoria_nome || '-' %></td> <td><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
             <td class="text-right">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
             <td>
               <span class="badge <%= conta.status === 'Pago' ? 'badge-success' : 'badge-danger' %>">
@@ -63,9 +72,9 @@
               </span>
             </td>
             <td>
-              <% if (conta.status === 'Pendente') { %>
-                <form action="/contas-a-pagar/pagar/<%= conta.id %>" method="POST">
-                    <button type="submit" class="btn">Registrar Pagamento</button>
+              <% if (conta.status !== 'Pago') { %>
+                <form action="/contas-a-pagar/pagar/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o pagamento desta conta?');">
+                    <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Registrar Pagamento</button>
                 </form>
               <% } else { %>
                 -
@@ -75,7 +84,7 @@
         <% }) %>
       <% } else { %>
         <tr>
-          <td colspan="6" class="text-center">Nenhuma conta a pagar encontrada.</td>
+          <td colspan="7" class="text-center">Nenhuma conta a pagar encontrada.</td>
         </tr>
       <% } %>
     </tbody>

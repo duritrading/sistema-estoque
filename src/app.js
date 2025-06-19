@@ -441,6 +441,14 @@ await pool.query(`
   )
 `);
 
+try {
+  console.log('🔧 Verificando e atualizando tabela contas_a_pagar...');
+  await pool.query('ALTER TABLE contas_a_pagar ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorias_financeiras(id)');
+  console.log('✅ Tabela "contas_a_pagar" atualizada com sucesso.');
+} catch (err) {
+  console.error('⚠️  Não foi possível atualizar a tabela contas_a_pagar:', err.message);
+}
+
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS fornecedores (
