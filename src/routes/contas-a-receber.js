@@ -1,4 +1,6 @@
-// Em src/routes/contas-a-receber.js
+const express = require('express');
+const router = express.Router();
+const pool = require('../config/database');
 
 router.get('/', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
