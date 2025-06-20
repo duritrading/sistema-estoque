@@ -650,7 +650,7 @@ const dashboardRoutes = require('./routes/dashboard'); // ADICIONE ESTA LINHA
 const produtosRoutes = require('./routes/produtos');
 const fluxoCaixaRoutes = require('./routes/fluxo-caixa');
 const dreRoutes = require('./routes/dre');
-const faturamentoRoutes = require('./routes/faturamento');
+const contasAReceberRoutes = require('./routes/contas-a-receber');
 const contasAPagarRoutes = require('./routes/contas-a-pagar');
 
 
@@ -667,7 +667,7 @@ app.use('/', dashboardRoutes); // ADICIONE ESTA LINHA
 app.use('/produtos', produtosRoutes);
 app.use('/fluxo-caixa', fluxoCaixaRoutes);
 app.use('/dre', dreRoutes);
-app.use('/faturamento', faturamentoRoutes);
+app.use('/contas-a-receber', contasAReceberRoutes);
 app.use('/contas-a-pagar', contasAPagarRoutes);
 
 

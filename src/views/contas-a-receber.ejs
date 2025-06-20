@@ -1,0 +1,47 @@
+<%- include('partials/header', {
+  titulo: 'Contas a Receber',
+  subtitulo: 'Gerencie seus recebimentos futuros',
+  user: locals.user
+}) %>
+
+<div class="card">
+  <h2>🧾 Nova Conta a Receber</h2>
+  <form action="/contas-a-receber" method="POST">
+    <div class="form-row">
+        <div class="form-group">
+            <label for="descricao">Descrição *</label>
+            <input type="text" id="descricao" name="descricao" required>
+        </div>
+        <div class="form-group">
+            <label for="cliente_nome">Cliente (Opcional)</label>
+            <input type="text" id="cliente_nome" name="cliente_nome">
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <label for="valor">Valor (R$) *</label>
+            <input type="number" id="valor" name="valor" step="0.01" min="0.01" required>
+        </div>
+        <div class="form-group">
+            <label for="data_vencimento">Data de Vencimento *</label>
+            <input type="date" id="data_vencimento" name="data_vencimento" required>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="categoria_id">Categoria da Receita *</label>
+        <select id="categoria_id" name="categoria_id" required>
+            <option value="" disabled selected>Selecione uma categoria</option>
+            <% categorias.forEach(cat => { %>
+                <option value="<%= cat.id %>"><%= cat.nome %></option>
+            <% }) %>
+        </select>
+    </div>
+    <button type="submit" class="btn">Adicionar Conta</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>📊 Lista de Contas a Receber</h2>
+    </div>
+
+<%- include('partials/footer') %>
