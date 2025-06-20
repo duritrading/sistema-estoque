@@ -42,11 +42,110 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ROTA POST COMPLETA
 router.post('/', async (req, res) => {
-    // ... (código do POST para criar movimentação continua o mesmo) ...
+  if (!pool) return res.status(500).send('Erro de configuração.');
+  
+  try {
+    const {
+      produto_id,
+      tipo,
+      quantidade,
+      preco_unitario,
+      fornecedor_id,
+      cliente_nome,
+      rca,
+      documento,
+      observacao,
+      total_parcelas,
+      vencimentos
+    } = req.body;
+
+    // Validações básicas
+    if (!produto_id || !tipo || !quantidade) {
+      return res.status(400).send('Dados obrigatórios faltando.');
+    }
+
+    // Se for SAÍDA, verifica saldo disponível
+    if (tipo === 'SAIDA') {
+      const saldoAtual = await getSaldoProduto(produto_id);
+      if (saldoAtual < parseFloat(quantidade)) {
+        return res.render('error', {
+          user: res.locals.user,
+          titulo: 'Saldo Insuficiente',
+          mensagem: `Saldo insuficiente. Saldo atual: ${saldoAtual}`,
+          voltar_url: '/movimentacoes'
+        });
+      }
+    }
+
+    // Calcula valor total
+    const valor_total = preco_unitario ? parseFloat(quantidade) * parseFloat(preco_unitario) : null;
+
+    // Insere a movimentação
+    const movimentacaoResult = await pool.query(`
+      INSERT INTO movimentacoes (
+        produto_id, tipo, quantidade, preco_unitario, valor_total,
+        fornecedor_id, cliente_nome, rca, documento, observacao
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id
+    `, [
+      produto_id,
+      tipo,
+      quantidade,
+      preco_unitario || null,
+      valor_total,
+      fornecedor_id || null,
+      cliente_nome || null,
+      rca || null,
+      documento || null,
+      observacao || null
+    ]);
+
+    const movimentacaoId = movimentacaoResult.rows[0].id;
+
+    // Se for SAÍDA com parcelas, cria as contas a receber
+    if (tipo === 'SAIDA' && total_parcelas && parseInt(total_parcelas) > 0 && vencimentos) {
+      const numParcelas = parseInt(total_parcelas);
+      const valorParcela = valor_total ? (valor_total / numParcelas).toFixed(2) : 0;
+      
+      // Garante que vencimentos seja um array
+      const vencimentosArray = Array.isArray(vencimentos) ? vencimentos : [vencimentos];
+      
+      for (let i = 0; i < numParcelas && i < vencimentosArray.length; i++) {
+        await pool.query(`
+          INSERT INTO contas_a_receber (
+            movimentacao_id, cliente_nome, numero_parcela, total_parcelas,
+            valor, data_vencimento, status
+          ) VALUES ($1, $2, $3, $4, $5, $6, 'Pendente')
+        `, [
+          movimentacaoId,
+          cliente_nome,
+          i + 1,
+          numParcelas,
+          valorParcela,
+          vencimentosArray[i]
+        ]);
+      }
+    }
+
+    // Se for ENTRADA, pode registrar no fluxo de caixa
+    if (tipo === 'ENTRADA' && valor_total) {
+      await pool.query(`
+        INSERT INTO fluxo_caixa (
+          data_operacao, tipo, valor, categoria_id, descricao, status
+        ) VALUES (CURRENT_DATE, 'DEBITO', $1, 3, $2, 'PAGO')
+      `, [valor_total, `Compra de produtos - Doc: ${documento || 'S/N'}`]);
+    }
+
+    res.redirect('/movimentacoes');
+  } catch (error) {
+    console.error('Erro ao criar movimentação:', error);
+    res.status(500).send('Erro ao criar movimentação: ' + error.message);
+  }
 });
 
-// NOVA ROTA PARA EXCLUIR UMA MOVIMENTAÇÃO
+// ROTA PARA EXCLUIR UMA MOVIMENTAÇÃO
 router.post('/delete/:id', async (req, res) => {
   try {
     const { id } = req.params;
