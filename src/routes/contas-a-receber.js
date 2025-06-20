@@ -47,21 +47,41 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Rota POST - Cria uma nova conta a receber (manual)
+// Em src/routes/contas-a-receber.js
+
 router.post('/', async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração.');
+    if (!pool) return res.status(500).send('Erro de configuração: Pool do banco de dados não disponível.');
+
     try {
         const { descricao, cliente_nome, valor, data_vencimento, categoria_id } = req.body;
-        // movimentacao_id é nulo para lançamentos manuais
         const params = [null, cliente_nome, 1, 1, parseFloat(valor), data_vencimento, 'Pendente', categoria_id];
-        await pool.query(
-            'INSERT INTO contas_a_receber (movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, status, categoria_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-            params
-        );
+
+        const query = 'INSERT INTO contas_a_receber (movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, status, categoria_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)';
+
+        console.log("--- DEBUG CONTAS A RECEBER ---");
+        console.log("Query a ser executada:", query);
+        console.log("Parâmetros enviados:", params);
+
+        await pool.query(query, params);
+
+        console.log("--- SUCESSO: Conta a receber inserida ---");
         res.redirect('/contas-a-receber');
+
     } catch(err) {
-        console.error("Erro ao criar conta a receber:", err);
-        res.status(500).send('Erro ao criar conta a receber.');
+        // AQUI ESTÁ A MUDANÇA MAIS IMPORTANTE
+        console.error("### ERRO DETALHADO AO CRIAR CONTA A RECEBER ###:", err);
+        // Vamos enviar o erro detalhado para a página para podermos vê-lo
+        res.status(500).send(`
+            <h1>Erro Detalhado do Banco de Dados</h1>
+            <p>Ocorreu um erro ao tentar salvar no banco. Por favor, envie um print desta tela.</p>
+            <pre>
+                <strong>Código do Erro:</strong> ${err.code}
+                <strong>Mensagem:</strong> ${err.message}
+                <strong>Detalhes:</strong> ${err.detail}
+                <strong>Tabela:</strong> ${err.table}
+                <strong>Coluna:</strong> ${err.column}
+            </pre>
+        `);
     }
 });
 
