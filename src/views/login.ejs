@@ -1,36 +1,287 @@
-<%- include('partials/header', {
-  titulo: 'Login',
-  subtitulo: 'Faça login para acessar o sistema',
-  user: null
-}) %>
-
-<div class="login-container">
-
-  <% if (locals.error) { %>
-    <div class="alert alert-danger"><%= error %></div>
-  <% } %>
-  <% if (locals.success) { %>
-    <div class="alert alert-success"><%= success %></div>
-  <% } %>
-
-  <form action="/login" method="POST">
-    <input type="hidden" name="redirect" value="<%= redirectUrl %>">
-
-    <div class="form-group">
-      <label for="username">Usuário</label>
-      <input type="text" id="username" name="username" required autocomplete="username">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - OF Distribuidora</title>
+  <style>
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
+    
+    :root {
+      --primary-blue: #1e3a5f;
+      --primary-gold: #c9a961;
+      --primary-gold-hover: #b89751;
+      --light-gray: #f5f7fa;
+      --text-gray: #6c757d;
+      --error-red: #dc3545;
+      --success-green: #28a745;
+    }
+    
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      background: linear-gradient(135deg, var(--primary-blue) 0%, #2d5a8e 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* Padrão decorativo de fundo */
+    body::before {
+      content: '';
+      position: absolute;
+      width: 200%;
+      height: 200%;
+      background-image: 
+        radial-gradient(circle at 20% 50%, rgba(201, 169, 97, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(201, 169, 97, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 40% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+      animation: float 20s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      33% { transform: translate(-20px, -20px) rotate(1deg); }
+      66% { transform: translate(20px, -10px) rotate(-1deg); }
+    }
+    
+    .login-container {
+      background: white;
+      padding: 3rem;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .logo-container {
+      margin-bottom: 2rem;
+      animation: fadeInDown 0.8s ease-out;
+    }
+    
+    .logo {
+      width: 150px;
+      height: auto;
+      margin: 0 auto 1.5rem;
+      display: block;
+    }
+    
+    .company-name {
+      color: var(--primary-blue);
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 0.5rem;
+    }
+    
+    .tagline {
+      color: var(--text-gray);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+      text-align: left;
+      animation: fadeInUp 0.8s ease-out;
+      animation-fill-mode: both;
+    }
+    
+    .form-group:nth-child(1) { animation-delay: 0.1s; }
+    .form-group:nth-child(2) { animation-delay: 0.2s; }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: var(--primary-blue);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: var(--light-gray);
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary-gold);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(201, 169, 97, 0.1);
+    }
+    
+    .btn-login {
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-hover) 100%);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      animation: fadeInUp 0.8s ease-out 0.3s;
+      animation-fill-mode: both;
+    }
+    
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(201, 169, 97, 0.3);
+    }
+    
+    .btn-login:active {
+      transform: translateY(0);
+    }
+    
+    .alert {
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+      font-size: 0.9rem;
+      animation: shake 0.5s ease-out;
+    }
+    
+    .alert-danger {
+      background: #fee;
+      color: var(--error-red);
+      border: 1px solid #fcc;
+    }
+    
+    .alert-success {
+      background: #efe;
+      color: var(--success-green);
+      border: 1px solid #cfc;
+    }
+    
+    .footer-info {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+      color: var(--text-gray);
+      font-size: 0.85rem;
+      animation: fadeIn 1s ease-out 0.5s;
+      animation-fill-mode: both;
+    }
+    
+    .footer-info a {
+      color: var(--primary-gold);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    
+    .footer-info a:hover {
+      text-decoration: underline;
+    }
+    
+    /* Animações */
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    /* Responsividade */
+    @media (max-width: 480px) {
+      .login-container {
+        margin: 1rem;
+        padding: 2rem 1.5rem;
+      }
+      
+      .logo {
+        width: 120px;
+      }
+      
+      .company-name {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo-container">
+      <!-- Logo OF Distribuidora -->
+      <img src="/logo-of.png" alt="OF Distribuidora" class="logo">
+      
+      <h1 class="company-name">OF DISTRIBUIDORA</h1>
+      <p class="tagline">Sistema de Gestão Integrada</p>
     </div>
 
-    <div class="form-group">
-      <label for="password">Senha</label>
-      <input type="password" id="password" name="password" required autocomplete="current-password">
+    <% if (locals.error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+    <% } %>
+    <% if (locals.success) { %>
+      <div class="alert alert-success"><%= success %></div>
+    <% } %>
+
+    <form action="/login" method="POST">
+      <input type="hidden" name="redirect" value="<%= locals.redirectUrl || '/' %>">
+
+      <div class="form-group">
+        <label for="username">Usuário</label>
+        <input type="text" id="username" name="username" required autocomplete="username" placeholder="Digite seu usuário">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Digite sua senha">
+      </div>
+
+      <button type="submit" class="btn-login">Entrar no Sistema</button>
+    </form>
+
+    <div class="footer-info">
+      <p>&copy; 2024 OF Distribuidora. Todos os direitos reservados.</p>
+      <p>Problemas para acessar? Entre em contato com o <a href="#">suporte</a></p>
     </div>
-
-    <button type="submit" class="btn btn-login">Entrar no Sistema</button>
-  </form>
-
-  <div class="footer-info">
   </div>
-</div>
-
-<%- include('partials/footer') %>
+</body>
+</html>

@@ -1,16 +1,54 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<link rel="icon" type="image/png" href="/logo-of.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= locals.titulo || 'Sistema de Estoque' %> - OF Distribuidora</title>
   <link rel="stylesheet" href="/styles.css">
+  <style>
+    :root {
+      --primary-blue: #1e3a5f;
+      --primary-gold: #c9a961;
+      --primary-gold-hover: #b89751;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, var(--primary-blue) 0%, #2d5a8e 100%);
+    }
+    
+    .logo-header {
+      width: 50px;
+      height: auto;
+      margin-right: 15px;
+      vertical-align: middle;
+    }
+    
+    .nav a:hover {
+      color: var(--primary-gold);
+      border-color: var(--primary-gold);
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-hover) 100%);
+    }
+    
+    .header h1 a {
+      display: flex;
+      align-items: center;
+    }
+  </style>
 </head>
 <body>
   <div class="header">
     <div class="header-content">
       <div>
-        <h1><a href="/" style="color:white; text-decoration: none;">🏪 Sistema da OF Distribuidora</a></h1>
+        <h1>
+          <a href="/" style="color:white; text-decoration: none;">
+            <img src="/logo-of.png" alt="OF Distribuidora" class="logo-header">
+            Sistema OF Distribuidora
+          </a>
+        </h1>
         <% if (locals.subtitulo) { %>
           <p><%= subtitulo %></p>
         <% } else { %>
