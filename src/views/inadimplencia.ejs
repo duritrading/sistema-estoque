@@ -48,13 +48,18 @@
               <td><%= conta.numero_parcela %> / <%= conta.total_parcelas %></td>
               <td class="text-right saldo-negativo">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></td>
               <td>
-                <form action="/contas-a-receber/registrar-pagamento/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o recebimento desta parcela em atraso?');">
-                  <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Receber</button>
-                </form>
-              </td>
-            </tr>
-          <% }) %>
-        <% } %>
+  <div style="display: flex; gap: 5px; justify-content: flex-end;">
+    <form action="/contas-a-receber/registrar-pagamento/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o recebimento desta parcela em atraso?');">
+      <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Receber</button>
+    </form>
+    
+    <% if (!conta.movimentacao_id) { %>
+      <form action="/contas-a-receber/delete/<%= conta.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este lançamento manual?');">
+          <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
+      </form>
+    <% } %>
+  </div>
+</td>
       </tbody>
       <tfoot>
         <tr style="font-weight: bold; background-color: #f8f9fa;">

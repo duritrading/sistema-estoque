@@ -11,17 +11,17 @@ router.get('/', async (req, res) => {
 
         // Query que busca apenas contas com status Pendente e data de vencimento no passado
         const query = `
-            SELECT 
-                cr.id, cr.cliente_nome, cr.numero_parcela, cr.total_parcelas, cr.valor, 
-                cr.data_vencimento, p.descricao as produto_descricao
-            FROM contas_a_receber cr
-            LEFT JOIN movimentacoes m ON cr.movimentacao_id = m.id
-            LEFT JOIN produtos p ON m.produto_id = p.id
-            WHERE 
-                cr.status = 'Pendente' 
-                AND cr.data_vencimento < $1
-            ORDER BY cr.data_vencimento ASC
-        `;
+    SELECT 
+        cr.id, cr.cliente_nome, cr.numero_parcela, cr.total_parcelas, cr.valor, 
+        cr.data_vencimento, cr.movimentacao_id, p.descricao as produto_descricao
+    FROM contas_a_receber cr
+    LEFT JOIN movimentacoes m ON cr.movimentacao_id = m.id
+    LEFT JOIN produtos p ON m.produto_id = p.id
+    WHERE 
+        cr.status = 'Pendente' 
+        AND cr.data_vencimento < $1
+    ORDER BY cr.data_vencimento ASC
+`;
 
         const result = await pool.query(query, [hoje]);
         const contasVencidas = result.rows;

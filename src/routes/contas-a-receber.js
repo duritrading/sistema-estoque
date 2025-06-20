@@ -95,6 +95,26 @@ router.post('/registrar-pagamento/:id', async (req, res) => {
     }
 });
 
+// ROTA POST para criar conta manual
+router.post('/', async (req, res) => {
+    if (!pool) return res.status(500).send('Erro de configuração.');
+    try {
+        const { cliente_nome, valor, data_vencimento, descricao } = req.body;
+        
+        await pool.query(`
+            INSERT INTO contas_a_receber (
+                cliente_nome, numero_parcela, total_parcelas, 
+                valor, data_vencimento, status
+            ) VALUES ($1, 1, 1, $2, $3, 'Pendente')
+        `, [cliente_nome, valor, data_vencimento]);
+        
+        res.redirect('/contas-a-receber');
+    } catch (err) {
+        console.error("Erro ao criar conta a receber:", err);
+        res.status(500).send('Erro ao criar conta a receber.');
+    }
+});
+
 // NOVA ROTA PARA EXCLUIR
 router.post('/delete/:id', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');

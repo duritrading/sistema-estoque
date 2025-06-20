@@ -12,6 +12,33 @@
     <strong>ℹ️ Atenção:</strong> Esta tela mostra apenas as parcelas que ainda não venceram. 
     Parcelas vencidas e não pagas estão na aba <a href="/inadimplencia">Inadimplência</a>.
   </div>
+  
+  <div class="card">
+  <h2>➕ Nova Conta a Receber Manual</h2>
+  <form action="/contas-a-receber" method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="cliente_nome">Cliente *</label>
+        <input type="text" id="cliente_nome" name="cliente_nome" required>
+      </div>
+      <div class="form-group">
+        <label for="valor">Valor (R$) *</label>
+        <input type="number" id="valor" name="valor" step="0.01" min="0.01" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="data_vencimento">Data de Vencimento *</label>
+        <input type="date" id="data_vencimento" name="data_vencimento" required>
+      </div>
+      <div class="form-group">
+        <label for="descricao">Descrição</label>
+        <input type="text" id="descricao" name="descricao">
+      </div>
+    </div>
+    <button type="submit" class="btn">Adicionar Conta Manual</button>
+  </form>
+</div>
 
   <form method="GET" action="/contas-a-receber" class="filter-section">
     <div class="form-row">
@@ -29,6 +56,7 @@
     </div>
   </form>
 
+  
   <div style="overflow-x: auto;">
     <table class="table mt-2">
         <thead>
