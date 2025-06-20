@@ -91,14 +91,23 @@
                             <% } %>
                         </td>
                         <td>
-                            <% if (conta.status !== 'Pago') { %>
-                                <form action="/contas-a-receber/registrar-pagamento/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o recebimento desta parcela?');">
-                                    <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Receber</button>
-                                </form>
-                            <% } else { %>
-                                -
-                            <% } %>
-                        </td>
+  <div style="display: flex; gap: 5px; justify-content: flex-end;">
+    <% if (conta.status !== 'Pago') { %>
+      <form action="/contas-a-receber/registrar-pagamento/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o recebimento desta parcela?');">
+          <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Receber</button>
+      </form>
+
+      <% if (!conta.movimentacao_id) { %>
+        <form action="/contas-a-receber/delete/<%= conta.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este lançamento manual?');">
+            <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
+        </form>
+      <% } %>
+
+    <% } else { %>
+      -
+    <% } %>
+  </div>
+</td>
                     </tr>
                 <% }) %>
             <% } else { %>

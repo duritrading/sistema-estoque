@@ -126,4 +126,25 @@ router.post('/registrar-pagamento/:id', async (req, res) => {
     }
 });
 
+// NOVA ROTA PARA EXCLUIR UMA CONTA A RECEBER
+router.post('/delete/:id', async (req, res) => {
+    if (!pool) return res.status(500).send('Erro de configuração.');
+    try {
+        const { id } = req.params;
+
+        // Medida de segurança: só permite excluir contas que ainda estão pendentes.
+        const conta = (await pool.query('SELECT status FROM contas_a_receber WHERE id = $1', [id])).rows[0];
+        if (conta && conta.status === 'Pago') {
+            return res.render('error', { user: res.locals.user, titulo: 'Ação Bloqueada', mensagem: 'Não é possível excluir uma conta que já foi paga. Você deve estornar o pagamento primeiro.' });
+        }
+
+        // Exclui apenas se não estiver paga.
+        await pool.query('DELETE FROM contas_a_receber WHERE id = $1', [id]);
+        res.redirect('/contas-a-receber');
+    } catch (err) {
+        console.error("Erro ao excluir conta a receber:", err);
+        res.status(500).send('Erro ao excluir conta a receber.');
+    }
+});
+
 module.exports = router;
