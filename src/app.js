@@ -653,13 +653,13 @@ app.post('/produtos', (req, res) => {
 
 // ... outras importações de rotas
 const movimentacoesRoutes = require('./routes/movimentacoes');
-const fornecedoresRoutes = require('./routes/fornecedores'); // ADICIONE ESTA LINHA
-const usuariosRoutes = require('./routes/usuarios'); // ADICIONE ESTA LINHA
-const gerenciarRoutes = require('./routes/gerenciar'); // ADICIONE ESTA LINHA
-const backupRoutes = require('./routes/backup'); // GARANTA QUE ESTA LINHA EXISTE
+const fornecedoresRoutes = require('./routes/fornecedores');
+const usuariosRoutes = require('./routes/usuarios'); 
+const gerenciarRoutes = require('./routes/gerenciar'); 
+const backupRoutes = require('./routes/backup'); 
 const clientesRoutes = require('./routes/clientes');
 const rcaRoutes = require('./routes/rcas');
-const dashboardRoutes = require('./routes/dashboard'); // ADICIONE ESTA LINHA
+const dashboardRoutes = require('./routes/dashboard'); 
 const produtosRoutes = require('./routes/produtos');
 const fluxoCaixaRoutes = require('./routes/fluxo-caixa');
 const dreRoutes = require('./routes/dre');
@@ -672,13 +672,13 @@ const inadimplenciaRoutes = require('./routes/inadimplencia');
 
 // ...
 app.use('/movimentacoes', movimentacoesRoutes);
-app.use('/fornecedores', fornecedoresRoutes); // ADICIONE ESTA LINHA
-app.use('/usuarios', usuariosRoutes); // ADICIONE ESTA LINHA
-app.use('/gerenciar', gerenciarRoutes); // ADICIONE ESTA LINHA
-app.use('/backup', backupRoutes); // GARANTA QUE ESTA LINHA EXISTE
+app.use('/fornecedores', fornecedoresRoutes);
+app.use('/usuarios', usuariosRoutes);
+app.use('/gerenciar', gerenciarRoutes);
+app.use('/backup', backupRoutes); 
 app.use('/clientes', clientesRoutes);
 app.use('/rcas', rcaRoutes);
-app.use('/', dashboardRoutes); // ADICIONE ESTA LINHA
+app.use('/', dashboardRoutes); 
 app.use('/produtos', produtosRoutes);
 app.use('/fluxo-caixa', fluxoCaixaRoutes);
 app.use('/dre', dreRoutes);
