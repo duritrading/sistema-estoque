@@ -51,25 +51,38 @@
       </div>
     </div>
 
-    <div id="saida-fields" style="display: none;">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="cliente_nome">Cliente *</label>
-          <input type="text" id="cliente_nome" name="cliente_nome">
-        </div>
-        <div class="form-group">
-          <label for="rca">RCA</label>
-          <input type="text" id="rca" name="rca">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-            <label for="total_parcelas">Nº de Parcelas</label>
-            <input type="number" id="total_parcelas" name="total_parcelas" min="1" value="1">
-        </div>
-      </div>
-      <div id="vencimentos-container" class="form-row"></div>
+  <div id="saida-fields" style="display: none;">
+  <div class="form-row">
+    <div class="form-group">
+      <label for="cliente_nome">Cliente *</label>
+      <select id="cliente_nome" name="cliente_nome" class="form-control">
+        <option value="">Selecione um cliente</option>
+        <% clientes.forEach(cliente => { %>
+          <option value="<%= cliente.nome %>"><%= cliente.nome %></option>
+        <% }) %>
+      </select>
+      <small style="display: block; margin-top: 5px;">
+        <a href="/clientes" target="_blank">+ Cadastrar novo cliente</a>
+      </small>
     </div>
+    <div class="form-group">
+      <label for="rca">RCA</label>
+      <select id="rca" name="rca" class="form-control">
+        <option value="">Selecione um RCA</option>
+        <% rcas.forEach(rca => { %>
+          <option value="<%= rca.nome %>"><%= rca.nome %></option>
+        <% }) %>
+      </select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+        <label for="total_parcelas">Nº de Parcelas</label>
+        <input type="number" id="total_parcelas" name="total_parcelas" min="1" value="1">
+    </div>
+  </div>
+  <div id="vencimentos-container" class="form-row"></div>
+</div>
 
     <div class="form-row">
       <div class="form-group">
@@ -144,10 +157,10 @@
     const tipoSelect = document.getElementById('tipo');
     const entradaFields = document.getElementById('entrada-fields');
     const saidaFields = document.getElementById('saida-fields');
-    const clienteNomeInput = document.getElementById('cliente_nome');
+    const clienteNomeSelect = document.getElementById('cliente_nome'); // MUDANÇA: agora é select
     const parcelasInput = document.getElementById('total_parcelas');
 
-    function mostrarUnidade() {
+function mostrarUnidade() {
       if (!produtoSelect || !spanUnidade) return;
       const produtoId = produtoSelect.value;
       spanUnidade.textContent = '';
@@ -162,32 +175,6 @@
       const quantidade = parseFloat(quantidadeInput.value) || 0;
       const precoUnitario = parseFloat(precoUnitarioInput.value) || 0;
       valorTotalInput.value = (quantidade * precoUnitario).toFixed(2);
-    }
-
-    function gerarCamposDeVencimento() {
-      if (!parcelasInput) return;
-      const numParcelas = parseInt(parcelasInput.value) || 0;
-      const container = document.getElementById('vencimentos-container');
-      if (!container) return;
-      container.innerHTML = '';
-
-      if (numParcelas > 0) {
-          const hoje = new Date();
-          for (let i = 1; i <= numParcelas; i++) {
-              const dataVencimento = new Date(hoje);
-              dataVencimento.setDate(hoje.getDate() + (i * 30));
-              const dataFormatada = dataVencimento.toISOString().split('T')[0];
-              
-              const formGroup = document.createElement('div');
-              formGroup.className = 'form-group';
-              formGroup.innerHTML = `
-                <label for="vencimento_parcela_${i}">Vencimento Parcela ${i}</label>
-                <input type="date" id="vencimento_parcela_${i}" name="vencimentos[]" value="${dataFormatada}" required class="form-control">
-              `;
-              container.appendChild(formGroup);
-          }
-      }
-    }
 
     function toggleFields() {
         if (!tipoSelect) return;
@@ -195,19 +182,19 @@
         if (tipo === 'ENTRADA') {
             entradaFields.style.display = 'block';
             saidaFields.style.display = 'none';
-            clienteNomeInput.required = false;
+            if (clienteNomeSelect) clienteNomeSelect.required = false;
         } else if (tipo === 'SAIDA') {
             entradaFields.style.display = 'none';
             saidaFields.style.display = 'block';
-            clienteNomeInput.required = true;
+            if (clienteNomeSelect) clienteNomeSelect.required = true;
             gerarCamposDeVencimento();
         } else {
             entradaFields.style.display = 'none';
             saidaFields.style.display = 'none';
-            clienteNomeInput.required = false;
+            if (clienteNomeSelect) clienteNomeSelect.required = false;
         }
     }
-
+  }
     // Adiciona os "escutadores" de evento
     if (quantidadeInput) quantidadeInput.addEventListener('input', calcularValorTotal);
     if (precoUnitarioInput) precoUnitarioInput.addEventListener('input', calcularValorTotal);

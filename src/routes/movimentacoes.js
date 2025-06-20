@@ -14,7 +14,7 @@ async function getSaldoProduto(produtoId) {
 router.get('/', async (req, res) => {
   if (!pool) return res.status(500).send('Erro de configuração.');
   try {
-    const [produtosResult, fornecedoresResult, movimentacoesResult, rcasResult] = await Promise.all([
+    const [produtosResult, fornecedoresResult, movimentacoesResult, rcasResult, clientesResult] = await Promise.all([
       pool.query('SELECT * FROM produtos ORDER BY codigo'),
       pool.query('SELECT * FROM fornecedores ORDER BY nome'),
       pool.query(`
@@ -26,7 +26,8 @@ router.get('/', async (req, res) => {
         ORDER BY m.created_at DESC
         LIMIT 20
       `),
-      pool.query('SELECT nome FROM rcas ORDER BY nome')
+      pool.query('SELECT nome FROM rcas ORDER BY nome'),
+      pool.query('SELECT id, nome FROM clientes ORDER BY nome') // NOVA LINHA
     ]);
 
     res.render('movimentacoes', {
@@ -34,7 +35,8 @@ router.get('/', async (req, res) => {
       produtos: produtosResult.rows || [],
       fornecedores: fornecedoresResult.rows || [],
       movimentacoes: movimentacoesResult.rows || [],
-      rcas: rcasResult.rows || []
+      rcas: rcasResult.rows || [],
+      clientes: clientesResult.rows || [] // NOVA LINHA
     });
   } catch (error) {
     console.error("Erro ao carregar página de movimentações:", error);
@@ -42,7 +44,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ROTA POST COMPLETA
+// ROTA POST COM VALIDAÇÕES
 router.post('/', async (req, res) => {
   if (!pool) return res.status(500).send('Erro de configuração.');
   
@@ -66,23 +68,55 @@ router.post('/', async (req, res) => {
       return res.status(400).send('Dados obrigatórios faltando.');
     }
 
+    // VALIDAÇÕES DE LIMITES NUMÉRICOS
+    const qtd = parseFloat(quantidade);
+    const preco = preco_unitario ? parseFloat(preco_unitario) : 0;
+    
+    // Verificar limites
+    if (qtd > 9999999.999) {
+      return res.render('error', {
+        user: res.locals.user,
+        titulo: 'Erro de Validação',
+        mensagem: 'Quantidade muito grande. Máximo permitido: 9.999.999,999',
+        voltar_url: '/movimentacoes'
+      });
+    }
+    
+    if (preco > 99999999.99) {
+      return res.render('error', {
+        user: res.locals.user,
+        titulo: 'Erro de Validação',
+        mensagem: 'Preço unitário muito grande. Máximo permitido: R$ 99.999.999,99',
+        voltar_url: '/movimentacoes'
+      });
+    }
+
+    // Calcular valor total
+    const valor_total = preco > 0 ? (qtd * preco) : null;
+    
+    if (valor_total && valor_total > 99999999.99) {
+      return res.render('error', {
+        user: res.locals.user,
+        titulo: 'Erro de Validação',
+        mensagem: 'Valor total muito grande. Máximo permitido: R$ 99.999.999,99',
+        voltar_url: '/movimentacoes'
+      });
+    }
+
     // Se for SAÍDA, verifica saldo disponível
     if (tipo === 'SAIDA') {
       const saldoAtual = await getSaldoProduto(produto_id);
-      if (saldoAtual < parseFloat(quantidade)) {
+      if (saldoAtual < qtd) {
         return res.render('error', {
           user: res.locals.user,
           titulo: 'Saldo Insuficiente',
-          mensagem: `Saldo insuficiente. Saldo atual: ${saldoAtual}`,
+          mensagem: `Saldo insuficiente. Saldo atual: ${saldoAtual.toLocaleString('pt-BR')}`,
           voltar_url: '/movimentacoes'
         });
       }
     }
 
-    // Calcula valor total
-    const valor_total = preco_unitario ? parseFloat(quantidade) * parseFloat(preco_unitario) : null;
-
-    // Insere a movimentação
+    // Insere a movimentação com valores validados
     const movimentacaoResult = await pool.query(`
       INSERT INTO movimentacoes (
         produto_id, tipo, quantidade, preco_unitario, valor_total,
@@ -92,8 +126,8 @@ router.post('/', async (req, res) => {
     `, [
       produto_id,
       tipo,
-      quantidade,
-      preco_unitario || null,
+      qtd,
+      preco > 0 ? preco : null,
       valor_total,
       fornecedor_id || null,
       cliente_nome || null,
@@ -105,9 +139,9 @@ router.post('/', async (req, res) => {
     const movimentacaoId = movimentacaoResult.rows[0].id;
 
     // Se for SAÍDA com parcelas, cria as contas a receber
-    if (tipo === 'SAIDA' && total_parcelas && parseInt(total_parcelas) > 0 && vencimentos) {
+    if (tipo === 'SAIDA' && total_parcelas && parseInt(total_parcelas) > 0 && vencimentos && valor_total) {
       const numParcelas = parseInt(total_parcelas);
-      const valorParcela = valor_total ? (valor_total / numParcelas).toFixed(2) : 0;
+      const valorParcela = parseFloat((valor_total / numParcelas).toFixed(2));
       
       // Garante que vencimentos seja um array
       const vencimentosArray = Array.isArray(vencimentos) ? vencimentos : [vencimentos];
@@ -145,14 +179,11 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ROTA PARA EXCLUIR UMA MOVIMENTAÇÃO
+// ROTA PARA EXCLUIR
 router.post('/delete/:id', async (req, res) => {
   try {
     const { id } = req.params;
-
-    // A cláusula ON DELETE CASCADE no banco de dados cuidará de apagar as contas_a_receber associadas.
     await pool.query('DELETE FROM movimentacoes WHERE id = $1', [id]);
-
     res.redirect('/movimentacoes');
   } catch (err) {
     console.error("Erro ao excluir movimentação:", err);
