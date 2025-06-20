@@ -115,3 +115,108 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   color: #0c5460;
   border: 1px solid #bee5eb;
 }
+ /* Estrutura básica do header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--of-primary);
+  padding: 0.5rem 1rem;
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  color: #fff;
+  text-decoration: none;
+}
+
+.brand-text {
+  font-size: 1.25rem;
+  margin-left: 0.75rem;
+}
+
+/* Navegação principal */
+.main-nav .nav-list {
+  display: flex;
+  list-style: none;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-link,
+.dropdown-toggle {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+}
+
+.nav-link:hover,
+.dropdown-toggle:hover {
+  color: var(--of-secondary);
+}
+
+/* Dropdown */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #fff;
+  border: 1px solid var(--of-primary);
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  border-radius: 4px;
+  min-width: 10rem;
+  z-index: 1000;
+}
+
+.dropdown-menu .dropdown-link {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: var(--of-primary);
+  text-decoration: none;
+}
+
+.dropdown-menu .dropdown-link:hover {
+  background: var(--of-accent);
+}
+
+.dropdown:hover .dropdown-menu {
+  display: block;
+}
+
+/* User info */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-name {
+  color: #fff;
+  font-weight: 500;
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid #fff;
+  color: #fff;
+  padding: 0.3rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-logout:hover {
+  background: #fff;
+  color: var(--of-primary);
+}
