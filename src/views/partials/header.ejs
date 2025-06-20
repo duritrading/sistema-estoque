@@ -1,68 +1,59 @@
-<header class="header">
-  <div class="header-content">
-    <!-- Marca e logo -->
-    <div class="brand">
-      <a href="/" class="brand-link">
-        <img src="/logo-of.png" alt="OF Distribuidora" class="logo-header">
-        <span class="brand-text">Sistema OF Distribuidora</span>
-      </a>
-    </div>
+/* Navegação principal */
+.main-nav {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
 
-    <% if (locals.user) { %>
-    <!-- Navegação principal com dropdowns -->
-    <nav class="main-nav">
-      <ul class="nav-list">
-        <!-- Dashboard -->
-        <li class="nav-item">
-          <a href="/" class="nav-link">Dashboard</a>
-        </li>
+/* Links simples */
+.nav-link {
+  color: #fff;
+  text-decoration: none;
+  padding: .5rem .75rem;
+}
+.nav-link:hover {
+  color: var(--of-secondary);
+}
 
-        <!-- Movimentações -->
-        <li class="nav-item dropdown">
-          <button type="button" class="dropdown-toggle">Movimentações</button>
-          <ul class="dropdown-menu">
-            <li><a href="/movimentacoes" class="dropdown-link">Todas as Movimentações</a></li>
-          </ul>
-        </li>
+/* Dropdown container */
+.dropdown {
+  position: relative;
+}
+.dropdown-toggle {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: .5rem .75rem;
+}
+.dropdown-toggle:hover {
+  color: var(--of-secondary);
+}
 
-        <!-- Financeiro -->
-        <li class="nav-item dropdown">
-          <button type="button" class="dropdown-toggle">Financeiro</button>
-          <ul class="dropdown-menu">
-            <li><a href="/fluxo-caixa" class="dropdown-link">Fluxo de Caixa</a></li>
-            <li><a href="/contas-a-receber" class="dropdown-link">Contas a Receber</a></li>
-            <li><a href="/contas-a-pagar" class="dropdown-link">Contas a Pagar</a></li>
-            <li><a href="/inadimplencia" class="dropdown-link">Inadimplência</a></li>
-            <li><a href="/dre" class="dropdown-link">DRE</a></li>
-          </ul>
-        </li>
+/* Dropdown menu */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #fff;
+  border: 1px solid var(--of-primary);
+  border-radius: 4px;
+  margin-top: .25rem;
+  min-width: 10rem;
+  z-index: 100;
+}
+.dropdown-item {
+  display: block;
+  padding: .5rem 1rem;
+  color: var(--of-primary);
+  text-decoration: none;
+}
+.dropdown-item:hover {
+  background: var(--of-accent);
+}
 
-        <!-- Gerenciar -->
-        <li class="nav-item dropdown">
-          <button type="button" class="dropdown-toggle">Gerenciar</button>
-          <ul class="dropdown-menu">
-            <li><a href="/produtos" class="dropdown-link">Produtos</a></li>
-            <li><a href="/usuarios" class="dropdown-link">Usuários</a></li>
-            <li><a href="/clientes" class="dropdown-link">Clientes</a></li>
-            <li><a href="/fornecedores" class="dropdown-link">Fornecedores</a></li>
-            <li><a href="/rcas" class="dropdown-link">RCAs</a></li>
-          </ul>
-        </li>
-
-        <!-- Backup -->
-        <li class="nav-item">
-          <a href="/backup" class="nav-link">Backup</a>
-        </li>
-      </ul>
-    </nav>
-
-    <!-- Informações do usuário e logout -->
-    <div class="user-info">
-      <span class="user-name"><%= user.nomeCompleto || user.username %></span>
-      <form action="/logout" method="get" class="logout-form">
-        <button type="submit" class="btn-logout">Sair</button>
-      </form>
-    </div>
-    <% } %>
-  </div>
-</header>
+/* Mostrar menu on hover */
+.dropdown:hover .dropdown-menu {
+  display: block;
+}
