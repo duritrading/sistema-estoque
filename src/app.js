@@ -450,6 +450,7 @@ try {
 }
 
 
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS fornecedores (
         id SERIAL PRIMARY KEY,
