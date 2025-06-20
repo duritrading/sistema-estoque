@@ -118,6 +118,8 @@
         <th>Produto</th>
         <th>Tipo</th>
         <th>Quantidade</th>
+        <th>Valor Unit.</th>
+        <th>Valor Total</th>
         <th>Cliente/Fornecedor</th>
         <th>Documento</th>
         <th>Parcelas</th>
@@ -130,7 +132,21 @@
           <td><%= new Date(m.created_at).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
           <td><%= m.codigo %> - <%= m.descricao %></td>
           <td><span class="badge <%= m.tipo === 'ENTRADA' ? 'badge-success' : 'badge-danger' %>"><%= m.tipo %></span></td>
-          <td><%= m.quantidade %></td>
+          <td><%= parseFloat(m.quantidade).toLocaleString('pt-BR') %></td>
+          <td>
+            <% if (m.preco_unitario) { %>
+              R$ <%= parseFloat(m.preco_unitario).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+            <% } else { %>
+              -
+            <% } %>
+          </td>
+          <td>
+            <% if (m.valor_total) { %>
+              <strong>R$ <%= parseFloat(m.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></strong>
+            <% } else { %>
+              -
+            <% } %>
+          </td>
           <td><%= m.tipo === 'ENTRADA' ? (m.fornecedor_nome || '-') : (m.cliente_nome || '-') %></td>
           <td><%= m.documento || '-' %></td>
           <td><%= m.total_parcelas || '-' %></td>

@@ -18,8 +18,14 @@ router.get('/', async (req, res) => {
       pool.query('SELECT * FROM produtos ORDER BY codigo'),
       pool.query('SELECT * FROM fornecedores ORDER BY nome'),
       pool.query(`
-        SELECT m.*, p.codigo, p.descricao, f.nome as fornecedor_nome, 
-               (SELECT MAX(cr.total_parcelas) FROM contas_a_receber cr WHERE cr.movimentacao_id = m.id) as total_parcelas
+        SELECT 
+          m.*, 
+          p.codigo, 
+          p.descricao, 
+          f.nome as fornecedor_nome,
+          m.preco_unitario,
+          m.valor_total,
+          (SELECT MAX(cr.total_parcelas) FROM contas_a_receber cr WHERE cr.movimentacao_id = m.id) as total_parcelas
         FROM movimentacoes m
         JOIN produtos p ON m.produto_id = p.id
         LEFT JOIN fornecedores f ON m.fornecedor_id = f.id
@@ -27,7 +33,7 @@ router.get('/', async (req, res) => {
         LIMIT 20
       `),
       pool.query('SELECT nome FROM rcas ORDER BY nome'),
-      pool.query('SELECT id, nome FROM clientes ORDER BY nome') // NOVA LINHA
+      pool.query('SELECT id, nome FROM clientes ORDER BY nome')
     ]);
 
     res.render('movimentacoes', {
@@ -36,7 +42,7 @@ router.get('/', async (req, res) => {
       fornecedores: fornecedoresResult.rows || [],
       movimentacoes: movimentacoesResult.rows || [],
       rcas: rcasResult.rows || [],
-      clientes: clientesResult.rows || [] // NOVA LINHA
+      clientes: clientesResult.rows || []
     });
   } catch (error) {
     console.error("Erro ao carregar página de movimentações:", error);

@@ -10,37 +10,37 @@
     <div class="form-row">
       <div class="form-group">
         <label for="nome">Nome/Razão Social *</label>
-        <input type="text" id="nome" name="nome" required>
+        <input type="text" id="nome" name="nome" class="form-control" required>
       </div>
       <div class="form-group">
         <label for="cpf_cnpj">CPF/CNPJ</label>
-        <input type="text" id="cpf_cnpj" name="cpf_cnpj">
+        <input type="text" id="cpf_cnpj" name="cpf_cnpj" class="form-control">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label for="endereco">Endereço</label>
-        <input type="text" id="endereco" name="endereco">
+        <input type="text" id="endereco" name="endereco" class="form-control">
       </div>
       <div class="form-group">
         <label for="cep">CEP</label>
-        <input type="text" id="cep" name="cep">
+        <input type="text" id="cep" name="cep" class="form-control">
       </div>
     </div>
     <div class="form-row">
         <div class="form-group">
             <label for="telefone">Telefone</label>
-            <input type="text" id="telefone" name="telefone">
+            <input type="text" id="telefone" name="telefone" class="form-control">
         </div>
         <div class="form-group">
             <label for="email">E-mail</label>
-            <input type="email" id="email" name="email">
+            <input type="email" id="email" name="email" class="form-control">
         </div>
     </div>
 
     <div class="form-group">
         <label for="rca_id">RCA Associado</label>
-        <select id="rca_id" name="rca_id">
+        <select id="rca_id" name="rca_id" class="form-control">
             <option value="">Nenhum</option>
             <% rcas.forEach(rca => { %>
                 <option value="<%= rca.id %>"><%= rca.nome %></option>
@@ -50,7 +50,7 @@
 
     <div class="form-group">
       <label for="observacao">Observações</label>
-      <textarea id="observacao" name="observacao" rows="3"></textarea>
+      <textarea id="observacao" name="observacao" rows="3" class="form-control"></textarea>
     </div>
     <button type="submit" class="btn">Cadastrar Cliente</button>
   </form>
@@ -62,19 +62,23 @@
     <thead>
       <tr>
         <th>Nome</th>
-        <th>RCA Associado</th> <th>CPF/CNPJ</th>
+        <th>RCA Associado</th>
+        <th>CPF/CNPJ</th>
         <th>Telefone</th>
         <th>E-mail</th>
-        <th>Ações</th> </tr>
+        <th>Ações</th>
+      </tr>
     </thead>
     <tbody>
       <% clientes.forEach(c => { %>
         <tr>
           <td><strong><%= c.nome %></strong></td>
-          <td><%= c.rca_nome || '-' %></td> <td><%= c.cpf_cnpj || '-' %></td>
+          <td><%= c.rca_nome || '-' %></td>
+          <td><%= c.cpf_cnpj || '-' %></td>
           <td><%= c.telefone || '-' %></td>
           <td><%= c.email || '-' %></td>
-          <td> <form action="/clientes/delete/<%= c.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este cliente?');">
+          <td>
+            <form action="/clientes/delete/<%= c.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este cliente?');">
               <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
             </form>
           </td>

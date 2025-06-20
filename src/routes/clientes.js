@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
-// Rota GET /clientes - Agora busca clientes, seus RCAs associados e a lista de todos os RCAs
+// Rota GET /clientes - Busca clientes e RCAs
 router.get('/', async (req, res) => {
   try {
     // Busca clientes e o nome do RCA associado usando um LEFT JOIN
@@ -31,21 +31,39 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Rota POST /clientes - Agora salva também o rca_id
+// Rota POST /clientes - Corrigida
 router.post('/', async (req, res) => {
   try {
-    const { nome, cpf, endereco, cep, telefone, email, observacao, rca_id } = req.body;
+    const { nome, cpf_cnpj, endereco, cep, telefone, email, observacao, rca_id } = req.body;
+    
+    // Log para debug
+    console.log('Dados recebidos:', { nome, cpf_cnpj, endereco, cep, telefone, email, observacao, rca_id });
+    
     const query = `
-        INSERT INTO clientes (nome, cpf, endereco, cep, telefone, email, observacao, rca_id) 
+        INSERT INTO clientes (nome, cpf_cnpj, endereco, cep, telefone, email, observacao, rca_id) 
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id
     `;
-    // rca_id pode ser nulo se nenhum for selecionado
-    const params = [nome, cpf, endereco, cep, telefone, email, observacao, rca_id || null];
-    await pool.query(query, params);
+    
+    // Valores tratados (campos vazios como null)
+    const params = [
+      nome, 
+      cpf_cnpj || null, 
+      endereco || null, 
+      cep || null, 
+      telefone || null, 
+      email || null, 
+      observacao || null, 
+      rca_id || null
+    ];
+    
+    const result = await pool.query(query, params);
+    console.log('Cliente criado com ID:', result.rows[0].id);
+    
     res.redirect('/clientes');
   } catch (err) {
     console.error("Erro ao criar cliente:", err);
-    res.status(500).send('Erro ao criar cliente.');
+    res.status(500).send('Erro ao criar cliente: ' + err.message);
   }
 });
 
