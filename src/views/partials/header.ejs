@@ -24,9 +24,127 @@
       vertical-align: middle;
     }
     
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    
+    .nav > a,
+    .nav .dropdown {
+      flex: 1;
+      min-width: 150px;
+    }
+    
+    .nav a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      background: white;
+      color: #333;
+      text-decoration: none;
+      border: 1px solid #ddd;
+      border-right: none;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    
     .nav a:hover {
       color: var(--primary-gold);
       border-color: var(--primary-gold);
+      background: #fafafa;
+    }
+    
+    .nav > a:first-child,
+    .nav .dropdown:first-child > a {
+      border-radius: 5px 0 0 5px;
+    }
+    
+    .nav > a:last-child,
+    .nav .dropdown:last-child > a {
+      border-right: 1px solid #ddd;
+      border-radius: 0 5px 5px 0;
+    }
+    
+    /* Dropdown Styles */
+    .dropdown {
+      position: relative;
+      display: flex;
+    }
+    
+    .dropdown > a {
+      width: 100%;
+      position: relative;
+      padding-right: 35px;
+    }
+    
+    .dropdown > a::after {
+      content: '▼';
+      position: absolute;
+      right: 15px;
+      font-size: 12px;
+      transition: transform 0.3s ease;
+    }
+    
+    .dropdown:hover > a::after {
+      transform: rotate(180deg);
+    }
+    
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 200px;
+      background: white;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border-radius: 0 0 5px 5px;
+      z-index: 1000;
+      border: 1px solid #ddd;
+      border-top: none;
+    }
+    
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+    
+    .dropdown-content a {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      color: #333;
+      text-decoration: none;
+      border: none;
+      border-bottom: 1px solid #eee;
+      transition: all 0.3s ease;
+      width: 100%;
+      justify-content: flex-start;
+    }
+    
+    .dropdown-content a:last-child {
+      border-bottom: none;
+      border-radius: 0 0 5px 5px;
+    }
+    
+    .dropdown-content a:hover {
+      background: #f5f5f5;
+      color: var(--primary-gold);
+      padding-left: 25px;
+    }
+    
+    /* Ativo no menu */
+    .nav a.active,
+    .dropdown.active > a {
+      background: var(--primary-gold);
+      color: white;
+      border-color: var(--primary-gold);
+    }
+    
+    .dropdown.active > a::after {
+      color: white;
     }
     
     .btn {
@@ -36,6 +154,41 @@
     .header h1 a {
       display: flex;
       align-items: center;
+    }
+    
+    /* Responsivo */
+    @media (max-width: 768px) {
+      .nav {
+        flex-direction: column;
+      }
+      
+      .nav > a,
+      .nav .dropdown {
+        width: 100%;
+        border-radius: 0 !important;
+        border-right: 1px solid #ddd !important;
+      }
+      
+      .dropdown-content {
+        position: relative;
+        top: 0;
+        width: 100%;
+        box-shadow: none;
+        border: none;
+        background: #f9f9f9;
+      }
+      
+      .dropdown:hover .dropdown-content {
+        display: none;
+      }
+      
+      .dropdown.open .dropdown-content {
+        display: block;
+      }
+      
+      .dropdown > a::after {
+        cursor: pointer;
+      }
     }
   </style>
 </head>
@@ -67,18 +220,63 @@
   <div class="container">
     <% if (locals.user) { %>
       <div class="nav">
-        <a href="/">📊 Dashboard</a>
-        <a href="/produtos">📦 Produtos</a>
-        <a href="/movimentacoes">📦 Movimentações</a>
-        <a href="/clientes">👤 Clientes</a>
-        <a href="/rcas">📈 RCA</a>
-        <a href="/fornecedores">🏭 Fornecedores</a>
-        <a href="/fluxo-caixa">💰 Fluxo de Caixa</a>
-        <a href="/contas-a-pagar">💸 Contas a Pagar</a>
-        <a href="/contas-a-receber">🧾 Contas a Receber</a>
-        <a href="/inadimplencia">🚨 Inadimplência </a>
-        <a href="/dre">📈 DRE</a>
-        <a href="/usuarios">👥 Usuários</a>
-        <a href="/backup">📦 Backup</a>
+        <a href="/dashboard" class="<%= locals.currentPage === 'dashboard' ? 'active' : '' %>">📊 Dashboard</a>
+        <a href="/movimentacoes" class="<%= locals.currentPage === 'movimentacoes' ? 'active' : '' %>">📦 Movimentações</a>
+        
+        <div class="dropdown <%= ['fluxo-caixa', 'contas-receber', 'contas-pagar', 'inadimplencia', 'dre'].includes(locals.currentPage) ? 'active' : '' %>">
+          <a href="#">💰 Financeiro</a>
+          <div class="dropdown-content">
+            <a href="/fluxo-caixa">💰 Fluxo de Caixa</a>
+            <a href="/contas-receber">🧾 Contas a Receber</a>
+            <a href="/contas-pagar">💸 Contas a Pagar</a>
+            <a href="/inadimplencia">🚨 Inadimplência</a>
+            <a href="/dre">📈 DRE</a>
+          </div>
+        </div>
+        
+        <div class="dropdown <%= ['produtos', 'usuarios', 'clientes', 'fornecedores', 'rcas'].includes(locals.currentPage) ? 'active' : '' %>">
+          <a href="#">⚙️ Gerenciar</a>
+          <div class="dropdown-content">
+            <a href="/produtos">📦 Produtos</a>
+            <a href="/usuarios">👥 Usuários</a>
+            <a href="/clientes">👤 Clientes</a>
+            <a href="/fornecedores">🏭 Fornecedores</a>
+            <a href="/rcas">📈 RCA</a>
+          </div>
+        </div>
+        
+        <a href="/backup" class="<%= locals.currentPage === 'backup' ? 'active' : '' %>">💾 Backup</a>
       </div>
     <% } %>
+
+    <!-- Script para mobile -->
+    <script>
+      // Para dispositivos móveis, tornar os dropdowns clicáveis
+      if (window.innerWidth <= 768) {
+        document.querySelectorAll('.dropdown > a').forEach(link => {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const dropdown = this.parentElement;
+            
+            // Fechar outros dropdowns
+            document.querySelectorAll('.dropdown').forEach(d => {
+              if (d !== dropdown) {
+                d.classList.remove('open');
+              }
+            });
+            
+            // Toggle o dropdown atual
+            dropdown.classList.toggle('open');
+          });
+        });
+        
+        // Fechar dropdowns ao clicar fora
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest('.dropdown')) {
+            document.querySelectorAll('.dropdown').forEach(d => {
+              d.classList.remove('open');
+            });
+          }
+        });
+      }
+    </script>
