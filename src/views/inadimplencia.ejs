@@ -15,6 +15,7 @@
           <th>Cliente</th>
           <th>Produto</th>
           <th>Vencimento</th>
+          <th>Dias em Atraso</th> <!-- NOVA COLUNA -->
           <th>Parcela</th>
           <th class="text-right">Valor Atrasado</th>
           <th>Ações</th>
@@ -23,14 +24,27 @@
       <tbody>
         <% if (contas.length === 0) { %>
           <tr>
-            <td colspan="6" class="text-center">Nenhuma conta em atraso encontrada.</td>
+            <td colspan="7" class="text-center">Nenhuma conta em atraso encontrada.</td>
           </tr>
         <% } else { %>
-          <% contas.forEach(conta => { %>
+          <% 
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+            contas.forEach(conta => { 
+              const vencimento = new Date(conta.data_vencimento);
+              vencimento.setHours(0, 0, 0, 0);
+              const diasAtraso = Math.floor((hoje - vencimento) / (1000 * 60 * 60 * 24));
+          %>
             <tr>
               <td><%= conta.cliente_nome %></td>
               <td><%= conta.produto_descricao || 'Lançamento Manual' %></td>
               <td><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
+              <td>
+                <span class="badge <%= diasAtraso > 30 ? 'badge-danger' : 'badge-warning' %>">
+                  <%= diasAtraso %> <%= diasAtraso === 1 ? 'dia' : 'dias' %>
+                </span>
+              </td> <!-- NOVA COLUNA COM DIAS -->
               <td><%= conta.numero_parcela %> / <%= conta.total_parcelas %></td>
               <td class="text-right saldo-negativo">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></td>
               <td>
@@ -44,7 +58,7 @@
       </tbody>
       <tfoot>
         <tr style="font-weight: bold; background-color: #f8f9fa;">
-            <td colspan="4" class="text-right">Total em Atraso:</td>
+            <td colspan="5" class="text-right">Total em Atraso:</td>
             <td class="text-right saldo-negativo">R$ <%= totalInadimplencia.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
             <td></td>
         </tr>
