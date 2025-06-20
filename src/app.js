@@ -774,7 +774,10 @@ app.get('/debug/test-login', async (req, res) => {
 
 async function startServer() {
   await initializeDatabase();
-  
+   // ADICIONE ESTAS 3 LINHAS PARA DEPURAR AS ROTAS
+  console.log('--- ROTAS REGISTRADAS ---');
+  app._router.stack.forEach(r => { if (r.route && r.route.path) console.log(r.route.path, r.route.methods) });
+  console.log('-------------------------');
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Sistema rodando na porta ${PORT}`);
     console.log(`🔐 Login: http://localhost:${PORT}/login`);
