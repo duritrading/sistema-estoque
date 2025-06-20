@@ -4,6 +4,17 @@ const pool = require('../config/database');
 
 router.get('/', async (req, res) => {
     try {
+        // Primeiro, vamos verificar as colunas das tabelas
+        const checkColumns = await pool.query(`
+            SELECT table_name, column_name 
+            FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name IN ('movimentacoes', 'fluxo_caixa', 'produtos', 'contas_a_receber')
+            ORDER BY table_name, ordinal_position
+        `);
+        
+        console.log('Colunas disponíveis:', checkColumns.rows);
+
         const hoje = new Date();
         const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
         const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
@@ -12,13 +23,13 @@ router.get('/', async (req, res) => {
         const trintaDiasAtras = new Date(hoje.getTime() - (30 * 24 * 60 * 60 * 1000));
 
         // 1. INDICADORES FINANCEIROS
-        // Faturamento do mês atual
+        // Faturamento do mês atual - usando created_at como fallback
         const faturamentoMesResult = await pool.query(`
             SELECT COALESCE(SUM(valor_total), 0) as total
             FROM movimentacoes
             WHERE tipo = 'saida'
-            AND data >= $1
-            AND data <= $2
+            AND created_at >= $1
+            AND created_at <= $2
         `, [inicioMes, fimMes]);
         const faturamentoMes = parseFloat(faturamentoMesResult.rows[0].total);
 
@@ -27,8 +38,8 @@ router.get('/', async (req, res) => {
             SELECT COALESCE(SUM(valor_total), 0) as total
             FROM movimentacoes
             WHERE tipo = 'saida'
-            AND data >= $1
-            AND data <= $2
+            AND created_at >= $1
+            AND created_at <= $2
         `, [inicioMesPassado, fimMesPassado]);
         const faturamentoMesPassado = parseFloat(faturamentoMesPassadoResult.rows[0].total);
 
@@ -45,8 +56,8 @@ router.get('/', async (req, res) => {
             FROM movimentacoes m
             JOIN produtos p ON m.produto_id = p.id
             WHERE m.tipo = 'saida'
-            AND m.data >= $1
-            AND m.data <= $2
+            AND m.created_at >= $1
+            AND m.created_at <= $2
         `, [inicioMes, fimMes]);
         const lucroMes = parseFloat(lucroMesResult.rows[0].vendas) - parseFloat(lucroMesResult.rows[0].custo);
 
@@ -64,15 +75,29 @@ router.get('/', async (req, res) => {
             total: parseFloat(contasVencidasResult.rows[0].total)
         };
 
-        // Fluxo de caixa do mês
-        const fluxoCaixaResult = await pool.query(`
-            SELECT 
-                COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END), 0) as entradas,
-                COALESCE(SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END), 0) as saidas
-            FROM fluxo_caixa
-            WHERE data >= $1
-            AND data <= $2
-        `, [inicioMes, fimMes]);
+        // Fluxo de caixa do mês - verificando se tem coluna data ou created_at
+        let fluxoCaixaResult;
+        try {
+            fluxoCaixaResult = await pool.query(`
+                SELECT 
+                    COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END), 0) as entradas,
+                    COALESCE(SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END), 0) as saidas
+                FROM fluxo_caixa
+                WHERE data >= $1
+                AND data <= $2
+            `, [inicioMes, fimMes]);
+        } catch (err) {
+            // Se falhar, tenta com created_at
+            fluxoCaixaResult = await pool.query(`
+                SELECT 
+                    COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END), 0) as entradas,
+                    COALESCE(SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END), 0) as saidas
+                FROM fluxo_caixa
+                WHERE created_at >= $1
+                AND created_at <= $2
+            `, [inicioMes, fimMes]);
+        }
+        
         const fluxoCaixa = {
             entradas: parseFloat(fluxoCaixaResult.rows[0].entradas),
             saidas: parseFloat(fluxoCaixaResult.rows[0].saidas),
@@ -89,8 +114,8 @@ router.get('/', async (req, res) => {
             FROM movimentacoes m
             JOIN produtos p ON m.produto_id = p.id
             WHERE m.tipo = 'saida'
-            AND m.data >= $1
-            AND m.data <= $2
+            AND m.created_at >= $1
+            AND m.created_at <= $2
             GROUP BY p.id, p.nome
             ORDER BY quantidade_vendida DESC
             LIMIT 5
@@ -102,13 +127,13 @@ router.get('/', async (req, res) => {
             SELECT 
                 p.nome,
                 p.quantidade_estoque,
-                p.preco_custo * p.quantidade_estoque as valor_parado,
-                MAX(m.data) as ultima_venda
+                COALESCE(p.preco_custo * p.quantidade_estoque, 0) as valor_parado,
+                MAX(m.created_at) as ultima_venda
             FROM produtos p
             LEFT JOIN movimentacoes m ON p.id = m.produto_id AND m.tipo = 'saida'
             WHERE p.quantidade_estoque > 0
             GROUP BY p.id, p.nome, p.quantidade_estoque, p.preco_custo
-            HAVING MAX(m.data) < $1 OR MAX(m.data) IS NULL
+            HAVING MAX(m.created_at) < $1 OR MAX(m.created_at) IS NULL
             ORDER BY valor_parado DESC
             LIMIT 5
         `, [trintaDiasAtras]);
@@ -117,12 +142,12 @@ router.get('/', async (req, res) => {
         // Vendas dos últimos 7 dias (para gráfico)
         const vendasDiariasResult = await pool.query(`
             SELECT 
-                DATE(data) as dia,
+                DATE(created_at) as dia,
                 COALESCE(SUM(valor_total), 0) as total
             FROM movimentacoes
             WHERE tipo = 'saida'
-            AND data >= CURRENT_DATE - INTERVAL '7 days'
-            GROUP BY DATE(data)
+            AND created_at >= CURRENT_DATE - INTERVAL '7 days'
+            GROUP BY DATE(created_at)
             ORDER BY dia
         `);
         const vendasDiarias = vendasDiariasResult.rows;
