@@ -665,6 +665,8 @@ const fluxoCaixaRoutes = require('./routes/fluxo-caixa');
 const dreRoutes = require('./routes/dre');
 const contasAReceberRoutes = require('./routes/contas-a-receber');
 const contasAPagarRoutes = require('./routes/contas-a-pagar');
+const inadimplenciaRoutes = require('./routes/inadimplencia');
+
 
 
 
@@ -682,6 +684,7 @@ app.use('/fluxo-caixa', fluxoCaixaRoutes);
 app.use('/dre', dreRoutes);
 app.use('/contas-a-receber', contasAReceberRoutes);
 app.use('/contas-a-pagar', contasAPagarRoutes);
+app.use('/inadimplencia', inadimplenciaRoutes);
 
 
 // Inicializar servidor

@@ -1,0 +1,56 @@
+<%- include('partials/header', {
+  titulo: 'Controle de Inadimplência',
+  subtitulo: 'Gestão de contas a receber vencidas',
+  user: locals.user
+}) %>
+
+<div class="card">
+  <h2>🚨 Relatório de Inadimplência</h2>
+  <p>Abaixo estão todas as parcelas com pagamento atrasado.</p>
+
+  <div style="overflow-x: auto;">
+    <table class="table mt-2">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Produto</th>
+          <th>Vencimento</th>
+          <th>Parcela</th>
+          <th class="text-right">Valor Atrasado</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (contas.length === 0) { %>
+          <tr>
+            <td colspan="6" class="text-center">Nenhuma conta em atraso encontrada.</td>
+          </tr>
+        <% } else { %>
+          <% contas.forEach(conta => { %>
+            <tr>
+              <td><%= conta.cliente_nome %></td>
+              <td><%= conta.produto_descricao || 'Lançamento Manual' %></td>
+              <td><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
+              <td><%= conta.numero_parcela %> / <%= conta.total_parcelas %></td>
+              <td class="text-right saldo-negativo">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></td>
+              <td>
+                <form action="/contas-a-receber/registrar-pagamento/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o recebimento desta parcela em atraso?');">
+                  <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Receber</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        <% } %>
+      </tbody>
+      <tfoot>
+        <tr style="font-weight: bold; background-color: #f8f9fa;">
+            <td colspan="4" class="text-right">Total em Atraso:</td>
+            <td class="text-right saldo-negativo">R$ <%= totalInadimplencia.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+            <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
