@@ -1,60 +1,84 @@
-<header class="header">
-  <div class="header-content">
-    <div class="brand">
-      <a href="/" class="brand-link">
-        <img src="/logo-of.png" alt="OF Distribuidora" class="logo-header">
-        <span class="brand-text">Sistema OF Distribuidora</span>
-      </a>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<link rel="icon" type="image/png" href="/logo-of.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= locals.titulo || 'Sistema de Estoque' %> - OF Distribuidora</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    :root {
+      --primary-blue: #1e3a5f;
+      --primary-gold: #c9a961;
+      --primary-gold-hover: #b89751;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, var(--primary-blue) 0%, #2d5a8e 100%);
+    }
+    
+    .logo-header {
+      width: 50px;
+      height: auto;
+      margin-right: 15px;
+      vertical-align: middle;
+    }
+    
+    .nav a:hover {
+      color: var(--primary-gold);
+      border-color: var(--primary-gold);
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-hover) 100%);
+    }
+    
+    .header h1 a {
+      display: flex;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div>
+        <h1>
+          <a href="/" style="color:white; text-decoration: none;">
+            <img src="/logo-of.png" alt="OF Distribuidora" class="logo-header">
+            Sistema OF Distribuidora
+          </a>
+        </h1>
+        <% if (locals.subtitulo) { %>
+          <p><%= subtitulo %></p>
+        <% } else { %>
+          <p>Gestão completa de estoque e finanças</p>
+        <% } %>
+      </div>
+      <% if (locals.user) { %>
+        <div class="user-info">
+          <div class="user-name">👤 <%= user.nomeCompleto || user.username %></div>
+          <a href="/logout" class="btn-logout">Sair</a>
+        </div>
+      <% } %>
     </div>
-
-    <% if (locals.user) { %>
-    <nav class="main-nav">
-      <ul class="nav-list">
-        <li class="nav-item">
-          <a href="/" class="nav-link">Dashboard</a>
-        </li>
-
-        <li class="nav-item dropdown">
-          <button class="dropdown-toggle">Movimentações</button>
-          <ul class="dropdown-menu">
-            <li><a href="/movimentacoes" class="dropdown-link">Todas as Movimentações</a></li>
-          </ul>
-        </li>
-
-        <li class="nav-item dropdown">
-          <button class="dropdown-toggle">Financeiro</button>
-          <ul class="dropdown-menu">
-            <li><a href="/fluxo-caixa"       class="dropdown-link">Fluxo de Caixa</a></li>
-            <li><a href="/contas-a-receber"  class="dropdown-link">Contas a Receber</a></li>
-            <li><a href="/contas-a-pagar"    class="dropdown-link">Contas a Pagar</a></li>
-            <li><a href="/inadimplencia"     class="dropdown-link">Inadimplência</a></li>
-            <li><a href="/dre"               class="dropdown-link">DRE</a></li>
-          </ul>
-        </li>
-
-        <li class="nav-item dropdown">
-          <button class="dropdown-toggle">Gerenciar</button>
-          <ul class="dropdown-menu">
-            <li><a href="/produtos"       class="dropdown-link">Produtos</a></li>
-            <li><a href="/usuarios"       class="dropdown-link">Usuários</a></li>
-            <li><a href="/clientes"       class="dropdown-link">Clientes</a></li>
-            <li><a href="/fornecedores"   class="dropdown-link">Fornecedores</a></li>
-            <li><a href="/rcas"           class="dropdown-link">RCAs</a></li>
-          </ul>
-        </li>
-
-        <li class="nav-item">
-          <a href="/backup" class="nav-link">Backup</a>
-        </li>
-      </ul>
-    </nav>
-
-    <div class="user-info">
-      <span class="user-name"><%= user.nomeCompleto || user.username %></span>
-      <form action="/logout" method="get" class="logout-form">
-        <button type="submit" class="btn-logout">Sair</button>
-      </form>
-    </div>
-    <% } %>
   </div>
-</header>
+
+  <div class="container">
+    <% if (locals.user) { %>
+      <div class="nav">
+        <a href="/">📊 Dashboard</a>
+        <a href="/produtos">📦 Produtos</a>
+        <a href="/movimentacoes">📦 Movimentações</a>
+        <a href="/clientes">👤 Clientes</a>
+        <a href="/rcas">📈 RCAs</a>
+        <a href="/fornecedores">🏭 Fornecedores</a>
+        <a href="/fluxo-caixa">💰 Fluxo de Caixa</a>
+        <a href="/contas-a-pagar">💸 Contas a Pagar</a>
+        <a href="/contas-a-receber">🧾 Contas a Receber</a>
+        <a href="/inadimplencia">🚨 Inadimplência </a>
+        <a href="/dre">📈 DRE</a>
+        <a href="/usuarios">👥 Usuários</a>
+        <a href="/backup">📦 Backup</a>
+      </div>
+    <% } %>
