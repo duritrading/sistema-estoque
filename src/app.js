@@ -584,7 +584,7 @@ try {
       )
     `);
 
-    try {
+try {
   console.log('🔧 Verificando e atualizando tabela contas_a_receber...');
   await pool.query('ALTER TABLE contas_a_receber ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorias_financeiras(id)');
   console.log('✅ Tabela "contas_a_receber" atualizada com sucesso.');

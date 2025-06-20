@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
-// Rota GET /contas-a-receber - Mostra o relatório e o formulário
+// Rota GET - Mostra a página
 router.get('/', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     try {
@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
             const hoje = new Date();
             data_fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
         }
-
+        
         const queryContas = `
             SELECT cr.*, p.descricao as produto_descricao
             FROM contas_a_receber cr
@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
             WHERE cr.data_vencimento >= $1 AND cr.data_vencimento <= $2
             ORDER BY cr.data_vencimento ASC
         `;
-
+        
         const [contasResult, categoriasResult] = await Promise.all([
             pool.query(queryContas, [data_inicio, data_fim]),
             pool.query(`SELECT * FROM categorias_financeiras WHERE tipo = 'RECEITA' ORDER BY nome`)
@@ -47,12 +47,12 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Rota POST /contas-a-receber - Cria uma nova conta a receber MANUALMENTE
+// Rota POST - Cria uma nova conta a receber (manual)
 router.post('/', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     try {
         const { descricao, cliente_nome, valor, data_vencimento, categoria_id } = req.body;
-        // Para lançamentos manuais, movimentacao_id é nulo e é sempre 1 parcela.
+        // movimentacao_id é nulo para lançamentos manuais
         const params = [null, cliente_nome, 1, 1, parseFloat(valor), data_vencimento, 'Pendente', categoria_id];
         await pool.query(
             'INSERT INTO contas_a_receber (movimentacao_id, cliente_nome, numero_parcela, total_parcelas, valor, data_vencimento, status, categoria_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
