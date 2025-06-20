@@ -557,6 +557,16 @@ try {
       )
     `);
 
+     // ADICIONE ESTE BLOCO PARA ATUALIZAR A TABELA 'clientes'
+try {
+  console.log('🔧 Verificando e atualizando tabela clientes...');
+  // Adiciona a coluna rca_id se ela não existir, com uma referência à tabela rcas
+  await pool.query('ALTER TABLE clientes ADD COLUMN IF NOT EXISTS rca_id INTEGER REFERENCES rcas(id)');
+  console.log('✅ Tabela "clientes" atualizada com sucesso.');
+} catch (err) {
+  console.error('⚠️  Não foi possível atualizar a tabela clientes (pode já estar atualizada):', err.message);
+}
+
     console.log('📝 Criando tabela contas_a_receber...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS contas_a_receber (
@@ -574,15 +584,14 @@ try {
       )
     `);
 
-    // ADICIONE ESTE BLOCO PARA ATUALIZAR A TABELA 'clientes'
-try {
-  console.log('🔧 Verificando e atualizando tabela clientes...');
-  // Adiciona a coluna rca_id se ela não existir, com uma referência à tabela rcas
-  await pool.query('ALTER TABLE clientes ADD COLUMN IF NOT EXISTS rca_id INTEGER REFERENCES rcas(id)');
-  console.log('✅ Tabela "clientes" atualizada com sucesso.');
+    try {
+  console.log('🔧 Verificando e atualizando tabela contas_a_receber...');
+  await pool.query('ALTER TABLE contas_a_receber ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorias_financeiras(id)');
+  console.log('✅ Tabela "contas_a_receber" atualizada com sucesso.');
 } catch (err) {
-  console.error('⚠️  Não foi possível atualizar a tabela clientes (pode já estar atualizada):', err.message);
+  console.error('⚠️  Não foi possível atualizar a tabela contas_a_receber:', err.message);
 }
+
     // Criar tabela rcas (ATUALIZADA)
 console.log('📝 Criando/Verificando tabela rcas...');
 await pool.query(`
