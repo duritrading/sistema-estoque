@@ -655,7 +655,6 @@ app.post('/produtos', (req, res) => {
 const movimentacoesRoutes = require('./routes/movimentacoes');
 const fornecedoresRoutes = require('./routes/fornecedores');
 const usuariosRoutes = require('./routes/usuarios'); 
-const gerenciarRoutes = require('./routes/gerenciar'); 
 const backupRoutes = require('./routes/backup'); 
 const clientesRoutes = require('./routes/clientes');
 const rcaRoutes = require('./routes/rcas');
@@ -674,7 +673,6 @@ const inadimplenciaRoutes = require('./routes/inadimplencia');
 app.use('/movimentacoes', movimentacoesRoutes);
 app.use('/fornecedores', fornecedoresRoutes);
 app.use('/usuarios', usuariosRoutes);
-app.use('/gerenciar', gerenciarRoutes);
 app.use('/backup', backupRoutes); 
 app.use('/clientes', clientesRoutes);
 app.use('/rcas', rcaRoutes);
