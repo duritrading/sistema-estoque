@@ -540,32 +540,33 @@ try {
     console.error('⚠️  Não foi possível inserir/atualizar categorias:', err.message);
 }
 
-// ... (o resto da função initializeDatabase continua aqui)
-
-    console.log('📝 Criando tabela clientes...');
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS clientes (
-        id SERIAL PRIMARY KEY,
-        codigo VARCHAR(50) UNIQUE,
-        nome VARCHAR(200) NOT NULL,
-        contato VARCHAR(150),
-        telefone VARCHAR(20),
-        email VARCHAR(150),
-        endereco TEXT,
-        cpf_cnpj VARCHAR(20),
-        observacao TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-     // ADICIONE ESTE BLOCO PARA ATUALIZAR A TABELA 'clientes'
+console.log('📝 Criando tabela clientes...');
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS clientes (
+    id SERIAL PRIMARY KEY,
+    codigo VARCHAR(50) UNIQUE,
+    nome VARCHAR(200) NOT NULL,
+    contato VARCHAR(150),
+    telefone VARCHAR(20),
+    email VARCHAR(150),
+    endereco TEXT,
+    cep VARCHAR(10),
+    cpf_cnpj VARCHAR(20),
+    rca_id INTEGER REFERENCES rcas(id),
+    observacao TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+  // ADICIONE ESTE BLOCO PARA ATUALIZAR A TABELA 'clientes'
 try {
   console.log('🔧 Verificando e atualizando tabela clientes...');
-  // Adiciona a coluna rca_id se ela não existir, com uma referência à tabela rcas
+  // Adiciona a coluna rca_id se ela não existir
   await pool.query('ALTER TABLE clientes ADD COLUMN IF NOT EXISTS rca_id INTEGER REFERENCES rcas(id)');
+  // Adiciona a coluna cep se ela não existir
+  await pool.query('ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cep VARCHAR(10)');
   console.log('✅ Tabela "clientes" atualizada com sucesso.');
 } catch (err) {
-  console.error('⚠️  Não foi possível atualizar a tabela clientes (pode já estar atualizada):', err.message);
+  console.error('⚠️  Não foi possível atualizar a tabela clientes:', err.message);
 }
 
     console.log('📝 Criando tabela contas_a_receber...');
@@ -585,15 +586,15 @@ try {
       )
     `);
 
+    // Após criar a tabela contas_a_receber
 try {
-    console.log('🔧 Modificando a coluna movimentacao_id em contas_a_receber...');
+    console.log('🔧 Verificando e atualizando tabela contas_a_receber...');
+    await pool.query('ALTER TABLE contas_a_receber ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorias_financeiras(id)');
+    await pool.query('ALTER TABLE contas_a_receber ADD COLUMN IF NOT EXISTS descricao TEXT');
     await pool.query('ALTER TABLE contas_a_receber ALTER COLUMN movimentacao_id DROP NOT NULL');
-    console.log('✅ Coluna movimentacao_id atualizada para permitir valores nulos.');
+    console.log('✅ Tabela "contas_a_receber" atualizada com sucesso.');
 } catch (err) {
-    // Ignora o erro se a coluna já for nula, o que é esperado nas execuções futuras
-    if (err.code !== '42704') { // '42704' é o código para "object not found" que pode acontecer se a constraint não existir
-        console.error('⚠️  Não foi possível alterar a coluna movimentacao_id (pode já estar correta):', err.message);
-    }
+    console.error('⚠️  Não foi possível atualizar a tabela contas_a_receber:', err.message);
 }
 
     // Criar tabela rcas (ATUALIZADA)

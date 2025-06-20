@@ -36,13 +36,13 @@ router.get('/', async (req, res) => {
             pool.query(`SELECT * FROM categorias_financeiras WHERE tipo = 'RECEITA' ORDER BY nome`)
         ]);
 
-        const contas = contasResult.rows;
-        const totalValor = contas.reduce((sum, conta) => sum + parseFloat(conta.valor), 0);
-        const totalPendente = contas.filter(c => c.status !== 'Pago').reduce((sum, c) => sum + parseFloat(c.valor), 0);
+        const contas = contasResult.rows || [];
+        const totalValor = contas.reduce((sum, conta) => sum + parseFloat(conta.valor || 0), 0);
+        const totalPendente = contas.filter(c => c.status !== 'Pago').reduce((sum, c) => sum + parseFloat(c.valor || 0), 0);
 
         res.render('contas-a-receber', {
             user: res.locals.user,
-            contas: contas || [],
+            contas: contas,
             categorias: categoriasResult.rows || [],
             filtros: { data_inicio, data_fim },
             totalValor,
@@ -50,7 +50,7 @@ router.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('Erro ao carregar contas a receber:', error);
-        res.status(500).send('Erro ao carregar contas a receber.');
+        res.status(500).send('Erro ao carregar contas a receber: ' + error.message);
     }
 });
 
@@ -91,7 +91,7 @@ router.post('/registrar-pagamento/:id', async (req, res) => {
         res.redirect('/contas-a-receber');
     } catch (err) {
         console.error("Erro ao registrar pagamento:", err);
-        return res.render('error', { user: res.locals.user, titulo: 'Erro', mensagem: 'Não foi possível registrar o pagamento.' });
+        return res.render('error', { user: res.locals.user, titulo: 'Erro', mensagem: 'Não foi possível registrar o pagamento: ' + err.message });
     }
 });
 
@@ -101,17 +101,38 @@ router.post('/', async (req, res) => {
     try {
         const { cliente_nome, valor, data_vencimento, categoria_id, descricao } = req.body;
         
+        // Validações
+        if (!cliente_nome || !valor || !data_vencimento || !categoria_id) {
+            return res.status(400).send('Dados obrigatórios faltando.');
+        }
+        
+        // Converte valor para número
+        const valorNumerico = parseFloat(valor);
+        
+        if (isNaN(valorNumerico) || valorNumerico <= 0) {
+            return res.status(400).send('Valor inválido.');
+        }
+        
+        if (valorNumerico > 99999999.99) {
+            return res.render('error', {
+                user: res.locals.user,
+                titulo: 'Erro de Validação',
+                mensagem: 'Valor muito grande. Máximo permitido: R$ 99.999.999,99',
+                voltar_url: '/contas-a-receber'
+            });
+        }
+        
         await pool.query(`
             INSERT INTO contas_a_receber (
                 cliente_nome, numero_parcela, total_parcelas, 
                 valor, data_vencimento, status, categoria_id, descricao
             ) VALUES ($1, 1, 1, $2, $3, 'Pendente', $4, $5)
-        `, [cliente_nome, valor, data_vencimento, categoria_id, descricao || null]);
+        `, [cliente_nome, valorNumerico, data_vencimento, parseInt(categoria_id), descricao || null]);
         
         res.redirect('/contas-a-receber');
     } catch (err) {
         console.error("Erro ao criar conta a receber:", err);
-        res.status(500).send('Erro ao criar conta a receber.');
+        res.status(500).send('Erro ao criar conta a receber: ' + err.message);
     }
 });
 
@@ -122,7 +143,7 @@ router.post('/delete/:id', async (req, res) => {
         const { id } = req.params;
         
         // Verifica se é um lançamento manual (sem movimentacao_id)
-        const conta = await pool.query('SELECT movimentacao_id FROM contas_a_receber WHERE id = $1', [id]);
+        const conta = await pool.query('SELECT movimentacao_id, status FROM contas_a_receber WHERE id = $1', [id]);
         
         if (conta.rows.length === 0) {
             return res.render('error', { user: res.locals.user, titulo: 'Erro', mensagem: 'Conta não encontrada.' });
@@ -133,6 +154,14 @@ router.post('/delete/:id', async (req, res) => {
                 user: res.locals.user, 
                 titulo: 'Ação Bloqueada', 
                 mensagem: 'Esta conta está vinculada a uma movimentação e não pode ser excluída diretamente.' 
+            });
+        }
+        
+        if (conta.rows[0].status === 'Pago') {
+            return res.render('error', { 
+                user: res.locals.user, 
+                titulo: 'Ação Bloqueada', 
+                mensagem: 'Não é possível excluir uma conta que já foi paga.' 
             });
         }
         
