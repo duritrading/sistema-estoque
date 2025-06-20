@@ -585,11 +585,14 @@ try {
     `);
 
 try {
-  console.log('🔧 Verificando e atualizando tabela contas_a_receber...');
-  await pool.query('ALTER TABLE contas_a_receber ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorias_financeiras(id)');
-  console.log('✅ Tabela "contas_a_receber" atualizada com sucesso.');
+    console.log('🔧 Modificando a coluna movimentacao_id em contas_a_receber...');
+    await pool.query('ALTER TABLE contas_a_receber ALTER COLUMN movimentacao_id DROP NOT NULL');
+    console.log('✅ Coluna movimentacao_id atualizada para permitir valores nulos.');
 } catch (err) {
-  console.error('⚠️  Não foi possível atualizar a tabela contas_a_receber:', err.message);
+    // Ignora o erro se a coluna já for nula, o que é esperado nas execuções futuras
+    if (err.code !== '42704') { // '42704' é o código para "object not found" que pode acontecer se a constraint não existir
+        console.error('⚠️  Não foi possível alterar a coluna movimentacao_id (pode já estar correta):', err.message);
+    }
 }
 
     // Criar tabela rcas (ATUALIZADA)
