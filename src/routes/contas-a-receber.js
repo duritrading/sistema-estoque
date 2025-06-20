@@ -56,43 +56,69 @@ router.get('/', async (req, res) => {
 });
 
 // ROTA POST /contas-a-receber/registrar-pagamento/:id - Processa o pagamento
+// Na rota de registrar pagamento em contas-a-receber.js
+// Substitua a rota existente por esta versão atualizada:
+
 router.post('/registrar-pagamento/:id', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
-
-    const contaId = req.params.id;
-    const dataPagamento = new Date().toISOString().split('T')[0];
     
+    const client = await pool.connect();
     try {
-        const contaResult = await pool.query(`
-            SELECT cr.*, p.descricao as produto_descricao
-            FROM contas_a_receber cr
-            LEFT JOIN movimentacoes m ON cr.movimentacao_id = m.id
-            LEFT JOIN produtos p ON m.produto_id = p.id
-            WHERE cr.id = $1
-        `, [contaId]);
-
-        const conta = contaResult.rows[0];
-        if (!conta) return res.render('error', { user: res.locals.user, titulo: 'Erro', mensagem: 'Conta a receber não encontrada.' });
-        if (conta.status === 'Pago') return res.redirect('/contas-a-receber');
-
-        const descricaoFluxo = `Recebimento Parcela ${conta.numero_parcela}/${conta.total_parcelas} - ${conta.produto_descricao || conta.cliente_nome}`;
-        const insertResult = await pool.query(`
-            INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id, status)
-            VALUES ($1, 'CREDITO', $2, $3, $4, 'PAGO')
-            RETURNING id
-        `, [dataPagamento, conta.valor, descricaoFluxo, 1]);
-
-        const fluxoCaixaId = insertResult.rows[0].id;
-
-        await pool.query(
-            `UPDATE contas_a_receber SET status = 'Pago', data_pagamento = $1, fluxo_caixa_id = $2 WHERE id = $3`,
-            [dataPagamento, fluxoCaixaId, contaId]
+        await client.query('BEGIN');
+        
+        const { id } = req.params;
+        
+        // Buscar a conta a receber
+        const contaResult = await client.query(
+            'SELECT * FROM contas_a_receber WHERE id = $1',
+            [id]
         );
         
+        if (contaResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).send('Conta não encontrada');
+        }
+        
+        const contaReceber = contaResult.rows[0];
+        
+        // Atualizar o status para Pago
+        await client.query(
+            'UPDATE contas_a_receber SET status = $1, data_pagamento = NOW() WHERE id = $2',
+            ['Pago', id]
+        );
+        
+        // Criar lançamento no fluxo de caixa COM A REFERÊNCIA
+        await client.query(
+            `INSERT INTO fluxo_caixa 
+            (tipo, valor, descricao, data_operacao, categoria_id, status, conta_receber_id) 
+            VALUES ($1, $2, $3, NOW(), $4, $5, $6)`,
+            [
+                'CREDITO', 
+                contaReceber.valor, 
+                `Recebimento - ${contaReceber.cliente_nome} - ${contaReceber.descricao || 'Parcela ' + contaReceber.numero_parcela}`,
+                contaReceber.categoria_id,
+                'PAGO',
+                id // Aqui está a referência para conta_receber_id!
+            ]
+        );
+        
+        // Log de auditoria (se você tiver tabela de logs)
+        if (res.locals.user && res.locals.user.id) {
+            await client.query(
+                'INSERT INTO logs_sistema (usuario_id, acao, detalhes) VALUES ($1, $2, $3)',
+                [res.locals.user.id, 'REGISTRO_RECEBIMENTO', `Recebimento registrado - Cliente: ${contaReceber.cliente_nome} - Valor: R$ ${contaReceber.valor}`]
+            );
+        }
+        
+        await client.query('COMMIT');
         res.redirect('/contas-a-receber');
-    } catch (err) {
-        console.error("Erro ao registrar pagamento:", err);
-        return res.render('error', { user: res.locals.user, titulo: 'Erro', mensagem: 'Não foi possível registrar o pagamento: ' + err.message });
+        
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Erro ao registrar pagamento:', error);
+        res.status(500).send('Erro ao processar pagamento');
+    } finally {
+        client.release();
     }
 });
 

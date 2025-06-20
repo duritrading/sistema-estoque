@@ -70,33 +70,69 @@ router.post('/', async (req, res) => {
 module.exports = router;
 
 // POST /contas-a-pagar/pagar/:id - Registra o pagamento usando a categoria correta
-router.post('/pagar/:id', async (req, res) => {
+// Na rota de registrar pagamento em contas-a-pagar.js
+// Substitua a rota existente por esta versão atualizada:
+
+router.post('/registrar-pagamento/:id', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
-    const contaId = req.params.id;
+    
+    const client = await pool.connect();
     try {
-        const conta = (await pool.query('SELECT * FROM contas_a_pagar WHERE id = $1', [contaId])).rows[0];
-        if (!conta) return res.status(404).send('Conta não encontrada.');
-        if (conta.status === 'Pago') return res.redirect('/contas-a-pagar');
-
-        const dataPagamento = new Date().toISOString().split('T')[0];
-        const descricaoFluxo = `Pagamento: ${conta.descricao}`;
-
-        // Lança a saída no fluxo de caixa usando a categoria da conta
-        const fluxoResult = await pool.query(
-            `INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id, status) VALUES ($1, 'DEBITO', $2, $3, $4, 'PAGO') RETURNING id`,
-            [dataPagamento, conta.valor, descricaoFluxo, conta.categoria_id]
+        await client.query('BEGIN');
+        
+        const { id } = req.params;
+        
+        // Buscar a conta a pagar
+        const contaResult = await client.query(
+            'SELECT * FROM contas_a_pagar WHERE id = $1',
+            [id]
         );
-        const fluxoCaixaId = fluxoResult.rows[0].id;
-
-        await pool.query(
-            `UPDATE contas_a_pagar SET status = 'Pago', data_pagamento = $1, fluxo_caixa_id = $2 WHERE id = $3`,
-            [dataPagamento, fluxoCaixaId, contaId]
+        
+        if (contaResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).send('Conta não encontrada');
+        }
+        
+        const contaPagar = contaResult.rows[0];
+        
+        // Atualizar o status para Pago
+        await client.query(
+            'UPDATE contas_a_pagar SET status = $1, data_pagamento = NOW() WHERE id = $2',
+            ['Pago', id]
         );
-
+        
+        // Criar lançamento no fluxo de caixa COM A REFERÊNCIA
+        await client.query(
+            `INSERT INTO fluxo_caixa 
+            (tipo, valor, descricao, data_operacao, categoria_id, status, conta_pagar_id) 
+            VALUES ($1, $2, $3, NOW(), $4, $5, $6)`,
+            [
+                'DEBITO', 
+                contaPagar.valor, 
+                `Pagamento - ${contaPagar.fornecedor_nome} - ${contaPagar.descricao || 'Parcela ' + contaPagar.numero_parcela}`,
+                contaPagar.categoria_id,
+                'PAGO',
+                id // Aqui está a referência para conta_pagar_id!
+            ]
+        );
+        
+        // Log de auditoria (se você tiver tabela de logs)
+        if (res.locals.user && res.locals.user.id) {
+            await client.query(
+                'INSERT INTO logs_sistema (usuario_id, acao, detalhes) VALUES ($1, $2, $3)',
+                [res.locals.user.id, 'REGISTRO_PAGAMENTO', `Pagamento registrado - Fornecedor: ${contaPagar.fornecedor_nome} - Valor: R$ ${contaPagar.valor}`]
+            );
+        }
+        
+        await client.query('COMMIT');
         res.redirect('/contas-a-pagar');
-    } catch (err) {
-        console.error('Erro ao registrar pagamento:', err);
-        res.status(500).send('Erro ao registrar pagamento.');
+        
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Erro ao registrar pagamento:', error);
+        res.status(500).send('Erro ao processar pagamento');
+    } finally {
+        client.release();
     }
 });
 
