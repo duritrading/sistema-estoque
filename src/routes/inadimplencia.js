@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
     try {
         const hoje = new Date().toISOString().split('T')[0];
 
-        // Query que busca apenas contas com status Pendente e data de vencimento no passado
+        // Query corrigida para PostgreSQL
         const query = `
             SELECT 
                 cr.id, 
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
                 cr.data_vencimento, 
                 cr.movimentacao_id, 
                 p.descricao as produto_descricao,
-                EXTRACT(DAY FROM CURRENT_DATE - cr.data_vencimento) as dias_atraso
+                (CURRENT_DATE - cr.data_vencimento::date) as dias_atraso
             FROM contas_a_receber cr
             LEFT JOIN movimentacoes m ON cr.movimentacao_id = m.id
             LEFT JOIN produtos p ON m.produto_id = p.id
