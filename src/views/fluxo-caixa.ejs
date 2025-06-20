@@ -4,28 +4,6 @@
   user: locals.user
 }) %>
 
-<style>
-  .btn-group {
-    display: flex;
-    gap: 5px;
-  }
-  
-  .btn-warning {
-    background-color: #ffc107;
-    color: #212529;
-    border: none;
-    padding: 5px 10px;
-    font-size: 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-  }
-  
-  .btn-warning:hover {
-    background-color: #e0a800;
-  }
-</style>
-
 <div class="stats">
   <div class="stat-card">
     <h3>R$ <%= parseFloat(totais.total_credito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></h3>
@@ -88,8 +66,7 @@
         <th>Data</th>
         <th>Tipo</th>
         <th>Descrição</th>
-        <th>Categoria</th>
-        <th class="text-right">Valor</th>
+        <th>Categoria</th> <th class="text-right">Valor</th>
         <th>Ações</th>
       </tr>
     </thead>
@@ -100,41 +77,13 @@
             <td><%= new Date(item.data_operacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
             <td><span class="badge <%= item.tipo === 'CREDITO' ? 'badge-success' : 'badge-danger' %>"><%= item.tipo %></span></td>
             <td><%= item.descricao %></td>
-            <td><%= item.categoria_nome || 'Não categorizado' %></td>
-            <td class="text-right <%= item.tipo === 'CREDITO' ? 'saldo-positivo' : 'saldo-negativo' %>">
+            <td><%= item.categoria_nome || 'Não categorizado' %></td> <td class="text-right <%= item.tipo === 'CREDITO' ? 'saldo-positivo' : 'saldo-negativo' %>">
               <%= item.tipo === 'CREDITO' ? '+' : '-' %> R$ <%= parseFloat(item.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
             </td>
             <td>
-              <div class="btn-group">
-                <% if (item.conta_receber_id && item.tipo === 'CREDITO') { %>
-                  <!-- Botão de estornar para lançamentos vindos de contas a receber -->
-                  <form action="/fluxo-caixa/estornar/<%= item.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja estornar este recebimento? O lançamento voltará para Contas a Receber.');">
-                    <button type="submit" class="btn btn-warning" title="Estornar recebimento">
-                      ↩️ Estornar
-                    </button>
-                  </form>
-                <% } else if (item.conta_pagar_id && item.tipo === 'DEBITO') { %>
-                  <!-- Botão de estornar para lançamentos vindos de contas a pagar -->
-                  <form action="/fluxo-caixa/estornar/<%= item.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja estornar este pagamento? O lançamento voltará para Contas a Pagar.');">
-                    <button type="submit" class="btn btn-warning" title="Estornar pagamento">
-                      ↩️ Estornar
-                    </button>
-                  </form>
-                <% } %>
-                
-                <!-- Botão de excluir -->
-                <% if (!item.conta_receber_id && !item.conta_pagar_id) { %>
-                  <!-- Só mostra excluir para lançamentos avulsos -->
-                  <form action="/fluxo-caixa/delete/<%= item.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este lançamento? Esta ação é irreversível.');">
-                    <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
-                  </form>
-                <% } else { %>
-                  <!-- Para lançamentos de contas, mostra botão desabilitado com tooltip -->
-                  <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px; opacity: 0.5; cursor: not-allowed;" disabled title="Para excluir, use o botão Estornar primeiro">
-                    Excluir
-                  </button>
-                <% } %>
-              </div>
+              <form action="/fluxo-caixa/delete/<%= item.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este lançamento? Esta ação é irreversível.');">
+                <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
+              </form>
             </td>
           </tr>
         <% }) %>
