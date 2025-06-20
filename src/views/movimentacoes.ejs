@@ -39,6 +39,7 @@
       </div>
     </div>
 
+    <!-- CAMPOS PARA ENTRADA (Fornecedor) -->
     <div id="entrada-fields" style="display: none;">
       <div class="form-group">
         <label for="fornecedor_id">Fornecedor</label>
@@ -48,41 +49,45 @@
             <option value="<%= f.id %>"><%= f.nome %></option>
           <% }) %>
         </select>
+        <small style="display: block; margin-top: 5px;">
+          <a href="/fornecedores" target="_blank">+ Cadastrar novo fornecedor</a>
+        </small>
       </div>
     </div>
 
-  <div id="saida-fields" style="display: none;">
-  <div class="form-row">
-    <div class="form-group">
-      <label for="cliente_nome">Cliente *</label>
-      <select id="cliente_nome" name="cliente_nome" class="form-control">
-        <option value="">Selecione um cliente</option>
-        <% clientes.forEach(cliente => { %>
-          <option value="<%= cliente.nome %>"><%= cliente.nome %></option>
-        <% }) %>
-      </select>
-      <small style="display: block; margin-top: 5px;">
-        <a href="/clientes" target="_blank">+ Cadastrar novo cliente</a>
-      </small>
+    <!-- CAMPOS PARA SAÍDA (Cliente e RCA) -->
+    <div id="saida-fields" style="display: none;">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cliente_nome">Cliente *</label>
+          <select id="cliente_nome" name="cliente_nome" class="form-control">
+            <option value="">Selecione um cliente</option>
+            <% clientes.forEach(cliente => { %>
+              <option value="<%= cliente.nome %>"><%= cliente.nome %></option>
+            <% }) %>
+          </select>
+          <small style="display: block; margin-top: 5px;">
+            <a href="/clientes" target="_blank">+ Cadastrar novo cliente</a>
+          </small>
+        </div>
+        <div class="form-group">
+          <label for="rca">RCA</label>
+          <select id="rca" name="rca" class="form-control">
+            <option value="">Selecione um RCA</option>
+            <% rcas.forEach(rca => { %>
+              <option value="<%= rca.nome %>"><%= rca.nome %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+            <label for="total_parcelas">Nº de Parcelas</label>
+            <input type="number" id="total_parcelas" name="total_parcelas" min="1" value="1">
+        </div>
+      </div>
+      <div id="vencimentos-container" class="form-row"></div>
     </div>
-    <div class="form-group">
-      <label for="rca">RCA</label>
-      <select id="rca" name="rca" class="form-control">
-        <option value="">Selecione um RCA</option>
-        <% rcas.forEach(rca => { %>
-          <option value="<%= rca.nome %>"><%= rca.nome %></option>
-        <% }) %>
-      </select>
-    </div>
-  </div>
-  <div class="form-row">
-    <div class="form-group">
-        <label for="total_parcelas">Nº de Parcelas</label>
-        <input type="number" id="total_parcelas" name="total_parcelas" min="1" value="1">
-    </div>
-  </div>
-  <div id="vencimentos-container" class="form-row"></div>
-</div>
 
     <div class="form-row">
       <div class="form-group">
@@ -116,7 +121,8 @@
         <th>Cliente/Fornecedor</th>
         <th>Documento</th>
         <th>Parcelas</th>
-        <th>Ações</th> </tr>
+        <th>Ações</th>
+      </tr>
     </thead>
     <tbody>
       <% movimentacoes.forEach(m => { %>
@@ -128,7 +134,8 @@
           <td><%= m.tipo === 'ENTRADA' ? (m.fornecedor_nome || '-') : (m.cliente_nome || '-') %></td>
           <td><%= m.documento || '-' %></td>
           <td><%= m.total_parcelas || '-' %></td>
-          <td> <form action="/movimentacoes/delete/<%= m.id %>" method="POST" onsubmit="return confirm('ATENÇÃO: Excluir uma movimentação é uma ação irreversível e irá apagar também todas as parcelas de faturamento associadas a ela. Deseja continuar?');">
+          <td>
+            <form action="/movimentacoes/delete/<%= m.id %>" method="POST" onsubmit="return confirm('ATENÇÃO: Excluir uma movimentação é uma ação irreversível e irá apagar também todas as parcelas de faturamento associadas a ela. Deseja continuar?');">
               <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
             </form>
           </td>
@@ -157,10 +164,11 @@
     const tipoSelect = document.getElementById('tipo');
     const entradaFields = document.getElementById('entrada-fields');
     const saidaFields = document.getElementById('saida-fields');
-    const clienteNomeSelect = document.getElementById('cliente_nome'); // MUDANÇA: agora é select
+    const clienteNomeSelect = document.getElementById('cliente_nome');
+    const fornecedorSelect = document.getElementById('fornecedor_id');
     const parcelasInput = document.getElementById('total_parcelas');
 
-function mostrarUnidade() {
+    function mostrarUnidade() {
       if (!produtoSelect || !spanUnidade) return;
       const produtoId = produtoSelect.value;
       spanUnidade.textContent = '';
@@ -175,27 +183,74 @@ function mostrarUnidade() {
       const quantidade = parseFloat(quantidadeInput.value) || 0;
       const precoUnitario = parseFloat(precoUnitarioInput.value) || 0;
       valorTotalInput.value = (quantidade * precoUnitario).toFixed(2);
+    }
+
+    function gerarCamposDeVencimento() {
+      if (!parcelasInput) return;
+      const numParcelas = parseInt(parcelasInput.value) || 0;
+      const container = document.getElementById('vencimentos-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (numParcelas > 0) {
+          const hoje = new Date();
+          for (let i = 1; i <= numParcelas; i++) {
+              const dataVencimento = new Date(hoje);
+              dataVencimento.setDate(hoje.getDate() + (i * 30));
+              const dataFormatada = dataVencimento.toISOString().split('T')[0];
+              
+              const formGroup = document.createElement('div');
+              formGroup.className = 'form-group';
+              formGroup.innerHTML = `
+                <label for="vencimento_parcela_${i}">Vencimento Parcela ${i}</label>
+                <input type="date" id="vencimento_parcela_${i}" name="vencimentos[]" value="${dataFormatada}" required class="form-control">
+              `;
+              container.appendChild(formGroup);
+          }
+      }
+    }
 
     function toggleFields() {
         if (!tipoSelect) return;
         const tipo = tipoSelect.value;
+        
         if (tipo === 'ENTRADA') {
+            // Mostra campos de entrada, esconde de saída
             entradaFields.style.display = 'block';
             saidaFields.style.display = 'none';
+            
+            // Ajusta campos obrigatórios
             if (clienteNomeSelect) clienteNomeSelect.required = false;
+            if (fornecedorSelect) fornecedorSelect.required = false;
+            
+            // Limpa campos de saída
+            if (clienteNomeSelect) clienteNomeSelect.value = '';
+            
         } else if (tipo === 'SAIDA') {
+            // Mostra campos de saída, esconde de entrada
             entradaFields.style.display = 'none';
             saidaFields.style.display = 'block';
+            
+            // Ajusta campos obrigatórios
             if (clienteNomeSelect) clienteNomeSelect.required = true;
+            if (fornecedorSelect) fornecedorSelect.required = false;
+            
+            // Limpa campos de entrada
+            if (fornecedorSelect) fornecedorSelect.value = '';
+            
+            // Gera campos de vencimento
             gerarCamposDeVencimento();
+            
         } else {
+            // Esconde todos se nenhum tipo selecionado
             entradaFields.style.display = 'none';
             saidaFields.style.display = 'none';
             if (clienteNomeSelect) clienteNomeSelect.required = false;
+            if (fornecedorSelect) fornecedorSelect.required = false;
         }
     }
-  }
-    // Adiciona os "escutadores" de evento
+
+    // Adiciona os event listeners
     if (quantidadeInput) quantidadeInput.addEventListener('input', calcularValorTotal);
     if (precoUnitarioInput) precoUnitarioInput.addEventListener('input', calcularValorTotal);
     if (produtoSelect) produtoSelect.addEventListener('change', mostrarUnidade);
