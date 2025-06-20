@@ -7,19 +7,19 @@
 <div class="stats-grid">
   <div class="stat-card danger">
     <h3>Total em Atraso</h3>
-    <p class="stat-value">R$ <%= totalEmAtraso.toFixed(2) %></p>
+    <p class="stat-value text-danger">R$ <%= totalEmAtraso.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p>
     <p class="stat-label">Vencidas e não pagas</p>
   </div>
   
   <div class="stat-card warning">
     <h3>Contas Vencidas</h3>
-    <p class="stat-value"><%= contasVencidas.length %></p>
+    <p class="stat-value text-warning"><%= contasVencidas.length %></p>
     <p class="stat-label">Parcelas em atraso</p>
   </div>
   
   <div class="stat-card info">
     <h3>Clientes Inadimplentes</h3>
-    <p class="stat-value"><%= clientesInadimplentes %></p>
+    <p class="stat-value text-info"><%= clientesInadimplentes %></p>
     <p class="stat-label">Com parcelas vencidas</p>
   </div>
 </div>
@@ -28,53 +28,71 @@
   <h2>📊 Parcelas Vencidas e Não Pagas</h2>
   
   <% if (contasVencidas.length > 0) { %>
-    <table>
-      <thead>
-        <tr>
-          <th>Cliente</th>
-          <th>Parcela</th>
-          <th>Valor</th>
-          <th>Vencimento</th>
-          <th>Dias em Atraso</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% contasVencidas.forEach(conta => { %>
+    <div class="table-responsive">
+      <table class="table inadimplencia-table">
+        <thead>
           <tr>
-            <td><%= conta.cliente_nome %></td>
-            <td><%= conta.numero_parcela %>/<%= conta.total_parcelas %></td>
-            <td>R$ <%= parseFloat(conta.valor).toFixed(2) %></td>
-            <td><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR') %></td>
-            <td class="danger"><%= conta.dias_atraso %> dias</td>
-            <td>
-              <form action="/inadimplencia/marcar-paga/<%= conta.id %>" method="POST" style="display: inline;">
-                <button type="submit" class="btn btn-sm btn-success">✓ Marcar como Paga</button>
-              </form>
-            </td>
+            <th>Cliente</th>
+            <th>Produto</th>
+            <th>Parcela</th>
+            <th>Valor</th>
+            <th>Vencimento</th>
+            <th>Dias em Atraso</th>
+            <th>Ações</th>
           </tr>
-        <% }) %>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <% contasVencidas.forEach(conta => { %>
+            <tr>
+              <td><strong><%= conta.cliente_nome %></strong></td>
+              <td><%= conta.produto_descricao || '-' %></td>
+              <td style="white-space: nowrap;"><%= conta.numero_parcela %>/<%= conta.total_parcelas %></td>
+              <td style="white-space: nowrap;">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+              <td style="white-space: nowrap;"><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
+              <td class="text-center">
+                <span class="badge badge-danger" style="font-size: 14px; padding: 6px 12px;">
+                  <%= Math.floor(conta.dias_atraso) %> dias
+                </span>
+              </td>
+              <td>
+                <form action="/inadimplencia/marcar-paga/<%= conta.id %>" method="POST" style="display: inline;" onsubmit="return confirm('Confirma o recebimento desta parcela em atraso?');">
+                  <button type="submit" class="btn btn-sm btn-success">
+                    <span style="white-space: nowrap;">✓ Marcar como Paga</span>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
   <% } else { %>
-    <p>✅ Não há parcelas vencidas no momento!</p>
+    <div class="alert alert-success">
+      <p style="margin: 0; text-align: center;">✅ Não há parcelas vencidas no momento!</p>
+    </div>
   <% } %>
 </div>
 
 <style>
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  margin-bottom: 35px;
 }
 
 .stat-card {
   background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  border-left: 4px solid;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  border-left: 5px solid;
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .stat-card.danger {
@@ -90,42 +108,127 @@
 }
 
 .stat-card h3 {
-  margin: 0 0 10px 0;
-  font-size: 14px;
+  margin: 0 0 15px 0;
+  font-size: 16px;
   color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: bold;
   margin: 0;
+  line-height: 1.2;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.text-warning {
+  color: #f39c12 !important;
+}
+
+.text-info {
+  color: #17a2b8 !important;
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 13px;
   color: #999;
-  margin: 5px 0 0 0;
+  margin: 8px 0 0 0;
 }
 
-.danger {
-  color: #dc3545;
+.table-responsive {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.inadimplencia-table {
+  min-width: 800px;
+  width: 100%;
+}
+
+.inadimplencia-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  padding: 15px 12px;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.inadimplencia-table td {
+  padding: 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.inadimplencia-table tbody tr:hover {
+  background-color: #f8f9fa;
 }
 
 .btn-sm {
-  padding: 5px 10px;
-  font-size: 12px;
+  padding: 6px 16px;
+  font-size: 13px;
+  border-radius: 4px;
 }
 
 .btn-success {
   background-color: #28a745;
   color: white;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
 }
 
 .btn-success:hover {
   background-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+}
+
+.badge-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .stat-value {
+    font-size: 28px;
+  }
+  
+  .inadimplencia-table {
+    font-size: 14px;
+  }
+  
+  .inadimplencia-table th,
+  .inadimplencia-table td {
+    padding: 8px;
+  }
 }
 </style>
 
