@@ -99,14 +99,14 @@ router.post('/registrar-pagamento/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     try {
-        const { cliente_nome, valor, data_vencimento, descricao } = req.body;
+        const { cliente_nome, valor, data_vencimento, categoria_id, descricao } = req.body;
         
         await pool.query(`
             INSERT INTO contas_a_receber (
                 cliente_nome, numero_parcela, total_parcelas, 
-                valor, data_vencimento, status
-            ) VALUES ($1, 1, 1, $2, $3, 'Pendente')
-        `, [cliente_nome, valor, data_vencimento]);
+                valor, data_vencimento, status, categoria_id, descricao
+            ) VALUES ($1, 1, 1, $2, $3, 'Pendente', $4, $5)
+        `, [cliente_nome, valor, data_vencimento, categoria_id, descricao || null]);
         
         res.redirect('/contas-a-receber');
     } catch (err) {
