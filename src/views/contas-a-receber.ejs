@@ -1,150 +1,235 @@
 <%- include('partials/header', {
-  titulo: 'Contas a Receber',
-  subtitulo: 'Gerencie seus recebimentos futuros',
+  titulo: 'Inadimplência',
+  subtitulo: 'Análise de contas vencidas e não pagas',
   user: locals.user
 }) %>
 
-<div class="card">
-  <h2>📊 Lista de Contas a Receber</h2>
-  
-  <!-- NOVO AVISO -->
-  <div class="alert alert-info">
-    <strong>ℹ️ Atenção:</strong> Esta tela mostra apenas as parcelas que ainda não venceram. 
-    Parcelas vencidas e não pagas estão na aba <a href="/inadimplencia">Inadimplência</a>.
+<div class="stats-grid">
+  <div class="stat-card danger">
+    <h3>Total em Atraso</h3>
+    <p class="stat-value text-danger">R$ <%= totalEmAtraso.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p>
+    <p class="stat-label">Vencidas e não pagas</p>
   </div>
   
-  <div class="card">
-  <h2>➕ Nova Conta a Receber Manual</h2>
-  <form action="/contas-a-receber" method="POST">
-    <div class="form-row">
-      <div class="form-group">
-        <label for="cliente_nome">Cliente *</label>
-        <select id="cliente_nome" name="cliente_nome" class="form-control" required>
-          <option value="">Selecione um cliente</option>
-          <% clientes.forEach(cliente => { %>
-            <option value="<%= cliente.nome %>"><%= cliente.nome %></option>
-          <% }) %>
-        </select>
-        <small style="display: block; margin-top: 5px;">
-          <a href="/clientes" target="_blank">+ Cadastrar novo cliente</a>
-        </small>
-      </div>
-      <div class="form-group">
-        <label for="valor">Valor (R$) *</label>
-        <input type="number" id="valor" name="valor" step="0.01" min="0.01" required>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="data_vencimento">Data de Vencimento *</label>
-        <input type="date" id="data_vencimento" name="data_vencimento" required>
-      </div>
-      <div class="form-group">
-        <label for="categoria_id">Categoria *</label>
-        <select id="categoria_id" name="categoria_id" required>
-          <option value="">Selecione uma categoria</option>
-          <% categorias.forEach(categoria => { %>
-            <option value="<%= categoria.id %>"><%= categoria.nome %></option>
-          <% }) %>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group" style="grid-column: span 2;">
-        <label for="descricao">Descrição</label>
-        <input type="text" id="descricao" name="descricao" placeholder="Descrição opcional">
-      </div>
-    </div>
-    <button type="submit" class="btn">Adicionar Conta Manual</button>
-  </form>
+  <div class="stat-card warning">
+    <h3>Contas Vencidas</h3>
+    <p class="stat-value text-warning"><%= contasVencidas.length %></p>
+    <p class="stat-label">Parcelas em atraso</p>
+  </div>
+  
+  <div class="stat-card info">
+    <h3>Clientes Inadimplentes</h3>
+    <p class="stat-value text-info"><%= clientesInadimplentes %></p>
+    <p class="stat-label">Com parcelas vencidas</p>
+  </div>
 </div>
 
-  <form method="GET" action="/contas-a-receber" class="filter-section">
-    <div class="form-row">
-      <div class="form-group">
-        <label for="data_inicio">De:</label>
-        <input type="date" name="data_inicio" id="data_inicio" class="form-control" value="<%= locals.filtros ? filtros.data_inicio : '' %>">
-      </div>
-      <div class="form-group">
-        <label for="data_fim">Até:</label>
-        <input type="date" name="data_fim" id="data_fim" class="form-control" value="<%= locals.filtros ? filtros.data_fim : '' %>">
-      </div>
-      <div class="form-group" style="align-self: flex-end;">
-        <button type="submit" class="btn">Filtrar</button>
-      </div>
-    </div>
-  </form>
-
+<div class="card">
+  <h2>📊 Parcelas Vencidas e Não Pagas</h2>
   
-  <div style="overflow-x: auto;">
-    <table class="table mt-2">
+  <% if (contasVencidas.length > 0) { %>
+    <div class="table-responsive">
+      <table class="table inadimplencia-table">
         <thead>
-            <tr>
-                <th>Cliente</th>
-                <th>Produto</th>
-                <th>Vencimento</th>
-                <th>Parcela</th>
-                <th class="text-right">Valor</th>
-                <th>Status</th>
-                <th>Ações</th>
-            </tr>
+          <tr>
+            <th>Cliente</th>
+            <th>Produto</th>
+            <th>Parcela</th>
+            <th>Valor</th>
+            <th>Vencimento</th>
+            <th>Dias em Atraso</th>
+            <th>Ações</th>
+          </tr>
         </thead>
         <tbody>
-            <% if (contas && contas.length > 0) { %>
-                <% contas.forEach(conta => { %>
-                    <tr>
-                        <td><%= conta.cliente_nome %></td>
-                        <td><%= conta.produto_descricao || conta.descricao %></td>
-                        <td><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
-                        <td><%= conta.numero_parcela %> / <%= conta.total_parcelas %></td>
-                        <td class="text-right">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></td>
-                        <td>
-                            <% if (conta.status === 'Pago') { %>
-                                <span class="badge badge-success">Pago</span>
-                            <% } else if (new Date(conta.data_vencimento) < new Date() && conta.status !== 'Pago') { %>
-                                <span class="badge badge-warning">Pendente</span>
-                            <% } %>
-                        </td>
-                        <td>
-  <div style="display: flex; gap: 5px; justify-content: flex-end;">
-    <% if (conta.status !== 'Pago') { %>
-      <form action="/contas-a-receber/registrar-pagamento/<%= conta.id %>" method="POST" onsubmit="return confirm('Confirma o recebimento desta parcela?');">
-          <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Receber</button>
-      </form>
-
-      <% if (!conta.movimentacao_id) { %>
-        <form action="/contas-a-receber/delete/<%= conta.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este lançamento manual?');">
-            <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
-        </form>
-      <% } %>
-
-    <% } else { %>
-      -
-    <% } %>
-  </div>
-</td>
-                    </tr>
-                <% }) %>
-            <% } else { %>
-                <tr>
-                    <td colspan="7" class="text-center">Nenhuma conta a receber encontrada para o período selecionado.</td>
-                </tr>
-            <% } %>
+          <% contasVencidas.forEach(conta => { %>
+            <tr>
+              <td><strong><%= conta.cliente_nome %></strong></td>
+              <td><%= conta.produto_descricao || '-' %></td>
+              <td style="white-space: nowrap;"><%= conta.numero_parcela %>/<%= conta.total_parcelas %></td>
+              <td style="white-space: nowrap;">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+              <td style="white-space: nowrap;"><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
+              <td class="text-center">
+                <span class="badge badge-danger" style="font-size: 14px; padding: 6px 12px;">
+                  <%= Math.floor(conta.dias_atraso) %> dias
+                </span>
+              </td>
+              <td>
+                <form action="/inadimplencia/marcar-paga/<%= conta.id %>" method="POST" style="display: inline;" onsubmit="return confirm('Confirma o recebimento desta parcela em atraso?');">
+                  <button type="submit" class="btn btn-sm btn-success">
+                    <span style="white-space: nowrap;">✓ Marcar como Paga</span>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
         </tbody>
-        <tfoot>
-            <tr style="font-weight: bold; background-color: #f8f9fa;">
-                <td colspan="4" class="text-right">Total do Período:</td>
-                <td class="text-right">R$ <%= (totalValor || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
-                <td colspan="2"></td>
-            </tr>
-            <tr style="font-weight: bold; background-color: #fff3cd;">
-                <td colspan="4" class="text-right">Total Pendente no Período:</td>
-                <td class="text-right">R$ <%= (totalPendente || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
-                <td colspan="2"></td>
-            </tr>
-        </tfoot>
-    </table>
-  </div>
+      </table>
+    </div>
+  <% } else { %>
+    <div class="alert alert-success">
+      <p style="margin: 0; text-align: center;">✅ Não há parcelas vencidas no momento!</p>
+    </div>
+  <% } %>
 </div>
+
+<style>
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  margin-bottom: 35px;
+}
+
+.stat-card {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  border-left: 5px solid;
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.stat-card.danger {
+  border-left-color: #dc3545;
+}
+
+.stat-card.warning {
+  border-left-color: #ffc107;
+}
+
+.stat-card.info {
+  border-left-color: #17a2b8;
+}
+
+.stat-card h3 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.text-warning {
+  color: #f39c12 !important;
+}
+
+.text-info {
+  color: #17a2b8 !important;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #999;
+  margin: 8px 0 0 0;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.inadimplencia-table {
+  min-width: 800px;
+  width: 100%;
+}
+
+.inadimplencia-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  padding: 15px 12px;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.inadimplencia-table td {
+  padding: 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.inadimplencia-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.btn-sm {
+  padding: 6px 16px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+}
+
+.badge-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .stat-value {
+    font-size: 28px;
+  }
+  
+  .inadimplencia-table {
+    font-size: 14px;
+  }
+  
+  .inadimplencia-table th,
+  .inadimplencia-table td {
+    padding: 8px;
+  }
+}
+</style>
 
 <%- include('partials/footer') %>
