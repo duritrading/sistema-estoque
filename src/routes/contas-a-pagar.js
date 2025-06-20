@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
-// Rota GET /contas-a-pagar - Mostra a página
+// Rota GET
+
 router.get('/', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     try {
-        // Lógica de filtro de datas
+        // Lógica para pegar as datas do filtro ou usar datas padrão
         let { data_inicio, data_fim } = req.query;
         if (!data_inicio) {
             const hoje = new Date();
@@ -18,6 +19,7 @@ router.get('/', async (req, res) => {
         }
 
         const params = [data_inicio, data_fim];
+        // Query de contas a pagar agora com filtro de data de vencimento
         const queryContas = `
             SELECT cp.*, f.nome as fornecedor_nome, cf.nome as categoria_nome 
             FROM contas_a_pagar cp
@@ -27,7 +29,6 @@ router.get('/', async (req, res) => {
             ORDER BY cp.data_vencimento ASC
         `;
 
-        // Buscas em paralelo
         const [contasResult, fornecedoresResult, categoriasResult] = await Promise.all([
             pool.query(queryContas, params),
             pool.query('SELECT * FROM fornecedores ORDER BY nome'),
@@ -36,7 +37,7 @@ router.get('/', async (req, res) => {
 
         const contas = contasResult.rows || [];
 
-        // Cálculo dos totais
+        // Os totais agora são calculados com base nos resultados filtrados
         const totalValor = contas.reduce((sum, conta) => sum + parseFloat(conta.valor), 0);
         const totalPendente = contas
             .filter(conta => conta.status !== 'Pago')
@@ -56,8 +57,6 @@ router.get('/', async (req, res) => {
         res.status(500).send('Erro ao carregar a página.');
     }
 });
-
-module.exports = router;
 
 // NOVA ROTA PARA ESTORNAR UM PAGAMENTO
 
