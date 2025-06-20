@@ -17,8 +17,8 @@ router.get('/', async (req, res) => {
             SELECT COALESCE(SUM(valor_total), 0) as total
             FROM movimentacoes
             WHERE tipo = 'saida'
-            AND data_movimentacao >= $1
-            AND data_movimentacao <= $2
+            AND data >= $1
+            AND data <= $2
         `, [inicioMes, fimMes]);
         const faturamentoMes = parseFloat(faturamentoMesResult.rows[0].total);
 
@@ -27,8 +27,8 @@ router.get('/', async (req, res) => {
             SELECT COALESCE(SUM(valor_total), 0) as total
             FROM movimentacoes
             WHERE tipo = 'saida'
-            AND data_movimentacao >= $1
-            AND data_movimentacao <= $2
+            AND data >= $1
+            AND data <= $2
         `, [inicioMesPassado, fimMesPassado]);
         const faturamentoMesPassado = parseFloat(faturamentoMesPassadoResult.rows[0].total);
 
@@ -45,8 +45,8 @@ router.get('/', async (req, res) => {
             FROM movimentacoes m
             JOIN produtos p ON m.produto_id = p.id
             WHERE m.tipo = 'saida'
-            AND m.data_movimentacao >= $1
-            AND m.data_movimentacao <= $2
+            AND m.data >= $1
+            AND m.data <= $2
         `, [inicioMes, fimMes]);
         const lucroMes = parseFloat(lucroMesResult.rows[0].vendas) - parseFloat(lucroMesResult.rows[0].custo);
 
@@ -89,8 +89,8 @@ router.get('/', async (req, res) => {
             FROM movimentacoes m
             JOIN produtos p ON m.produto_id = p.id
             WHERE m.tipo = 'saida'
-            AND m.data_movimentacao >= $1
-            AND m.data_movimentacao <= $2
+            AND m.data >= $1
+            AND m.data <= $2
             GROUP BY p.id, p.nome
             ORDER BY quantidade_vendida DESC
             LIMIT 5
@@ -103,12 +103,12 @@ router.get('/', async (req, res) => {
                 p.nome,
                 p.quantidade_estoque,
                 p.preco_custo * p.quantidade_estoque as valor_parado,
-                MAX(m.data_movimentacao) as ultima_venda
+                MAX(m.data) as ultima_venda
             FROM produtos p
             LEFT JOIN movimentacoes m ON p.id = m.produto_id AND m.tipo = 'saida'
             WHERE p.quantidade_estoque > 0
             GROUP BY p.id, p.nome, p.quantidade_estoque, p.preco_custo
-            HAVING MAX(m.data_movimentacao) < $1 OR MAX(m.data_movimentacao) IS NULL
+            HAVING MAX(m.data) < $1 OR MAX(m.data) IS NULL
             ORDER BY valor_parado DESC
             LIMIT 5
         `, [trintaDiasAtras]);
@@ -117,12 +117,12 @@ router.get('/', async (req, res) => {
         // Vendas dos últimos 7 dias (para gráfico)
         const vendasDiariasResult = await pool.query(`
             SELECT 
-                DATE(data_movimentacao) as dia,
+                DATE(data) as dia,
                 COALESCE(SUM(valor_total), 0) as total
             FROM movimentacoes
             WHERE tipo = 'saida'
-            AND data_movimentacao >= CURRENT_DATE - INTERVAL '7 days'
-            GROUP BY DATE(data_movimentacao)
+            AND data >= CURRENT_DATE - INTERVAL '7 days'
+            GROUP BY DATE(data)
             ORDER BY dia
         `);
         const vendasDiarias = vendasDiariasResult.rows;
