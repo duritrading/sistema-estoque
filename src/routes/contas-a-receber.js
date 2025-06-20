@@ -1,3 +1,7 @@
+const express = require('express');
+const router = express.Router();
+const pool = require('../config/database');
+
 // Em src/routes/contas-a-receber.js
 
 router.get('/', async (req, res) => {
