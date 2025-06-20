@@ -19,21 +19,21 @@ router.get('/', async (req, res) => {
             data_fim = new Date(hojeDate.getFullYear(), hojeDate.getMonth() + 1, 0).toISOString().split('T')[0];
         }
         
-        // Mostra apenas contas não vencidas
+        // QUERY CORRIGIDA - Mostra apenas contas NÃO vencidas e NÃO pagas
         const queryContas = `
             SELECT cr.*, p.descricao as produto_descricao
             FROM contas_a_receber cr
             LEFT JOIN movimentacoes m ON cr.movimentacao_id = m.id
             LEFT JOIN produtos p ON m.produto_id = p.id
-            WHERE cr.data_vencimento >= $1 AND cr.data_vencimento <= $2
-                AND cr.status != 'Pago'
-                AND cr.data_vencimento >= $3
+            WHERE cr.status = 'Pendente'
+                AND cr.data_vencimento >= $1
             ORDER BY cr.data_vencimento ASC
         `;
         
-        const [contasResult, categoriasResult] = await Promise.all([
-            pool.query(queryContas, [data_inicio, data_fim, hoje]),
-            pool.query(`SELECT * FROM categorias_financeiras WHERE tipo = 'RECEITA' ORDER BY nome`)
+        const [contasResult, categoriasResult, clientesResult] = await Promise.all([
+            pool.query(queryContas, [hoje]), // Agora só passa a data de hoje
+            pool.query(`SELECT * FROM categorias_financeiras WHERE tipo = 'RECEITA' ORDER BY nome`),
+            pool.query('SELECT DISTINCT nome FROM clientes ORDER BY nome') // NOVA QUERY
         ]);
 
         const contas = contasResult.rows || [];
@@ -44,6 +44,7 @@ router.get('/', async (req, res) => {
             user: res.locals.user,
             contas: contas,
             categorias: categoriasResult.rows || [],
+            clientes: clientesResult.rows || [], // NOVA LINHA
             filtros: { data_inicio, data_fim },
             totalValor,
             totalPendente

@@ -19,7 +19,15 @@
     <div class="form-row">
       <div class="form-group">
         <label for="cliente_nome">Cliente *</label>
-        <input type="text" id="cliente_nome" name="cliente_nome" required>
+        <select id="cliente_nome" name="cliente_nome" class="form-control" required>
+          <option value="">Selecione um cliente</option>
+          <% clientes.forEach(cliente => { %>
+            <option value="<%= cliente.nome %>"><%= cliente.nome %></option>
+          <% }) %>
+        </select>
+        <small style="display: block; margin-top: 5px;">
+          <a href="/clientes" target="_blank">+ Cadastrar novo cliente</a>
+        </small>
       </div>
       <div class="form-group">
         <label for="valor">Valor (R$) *</label>
@@ -94,8 +102,6 @@
                             <% if (conta.status === 'Pago') { %>
                                 <span class="badge badge-success">Pago</span>
                             <% } else if (new Date(conta.data_vencimento) < new Date() && conta.status !== 'Pago') { %>
-                                <span class="badge badge-danger">Atrasado</span>
-                            <% } else { %>
                                 <span class="badge badge-warning">Pendente</span>
                             <% } %>
                         </td>
