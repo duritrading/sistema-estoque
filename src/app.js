@@ -571,7 +571,7 @@ try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS contas_a_receber (
         id SERIAL PRIMARY KEY,
-        movimentacao_id INTEGER NOT NULL REFERENCES movimentacoes(id) ON DELETE CASCADE,
+        movimentacao_id INTEGER REFERENCES movimentacoes(id) ON DELETE CASCADE,
         cliente_nome VARCHAR(200),
         numero_parcela INTEGER NOT NULL,
         total_parcelas INTEGER NOT NULL,
