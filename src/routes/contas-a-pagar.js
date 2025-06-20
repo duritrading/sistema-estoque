@@ -2,27 +2,54 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
-// GET /contas-a-pagar - Mostra a página, agora buscando também as categorias
+// Rota GET /contas-a-pagar - Mostra a página
 router.get('/', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     try {
+        // Lógica de filtro de datas
+        let { data_inicio, data_fim } = req.query;
+        if (!data_inicio) {
+            const hoje = new Date();
+            data_inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+        }
+        if (!data_fim) {
+            const hoje = new Date();
+            data_fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
+        }
+
+        const params = [data_inicio, data_fim];
+        const queryContas = `
+            SELECT cp.*, f.nome as fornecedor_nome, cf.nome as categoria_nome 
+            FROM contas_a_pagar cp
+            LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
+            LEFT JOIN categorias_financeiras cf ON cp.categoria_id = cf.id
+            WHERE cp.data_vencimento >= $1 AND cp.data_vencimento <= $2
+            ORDER BY cp.data_vencimento ASC
+        `;
+
+        // Buscas em paralelo
         const [contasResult, fornecedoresResult, categoriasResult] = await Promise.all([
-            pool.query(`
-                SELECT cp.*, f.nome as fornecedor_nome, cf.nome as categoria_nome 
-                FROM contas_a_pagar cp
-                LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
-                LEFT JOIN categorias_financeiras cf ON cp.categoria_id = cf.id
-                ORDER BY cp.data_vencimento ASC
-            `),
+            pool.query(queryContas, params),
             pool.query('SELECT * FROM fornecedores ORDER BY nome'),
             pool.query(`SELECT * FROM categorias_financeiras WHERE tipo = 'DESPESA' ORDER BY nome`)
         ]);
 
+        const contas = contasResult.rows || [];
+
+        // Cálculo dos totais
+        const totalValor = contas.reduce((sum, conta) => sum + parseFloat(conta.valor), 0);
+        const totalPendente = contas
+            .filter(conta => conta.status !== 'Pago')
+            .reduce((sum, conta) => sum + parseFloat(conta.valor), 0);
+
         res.render('contas-a-pagar', {
             user: res.locals.user,
-            contas: contasResult.rows || [],
+            contas: contas,
             fornecedores: fornecedoresResult.rows || [],
-            categorias: categoriasResult.rows || []
+            categorias: categoriasResult.rows || [],
+            filtros: { data_inicio, data_fim },
+            totalValor: totalValor,
+            totalPendente: totalPendente
         });
     } catch (error) {
         console.error('Erro ao buscar contas a pagar:', error);
@@ -30,53 +57,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /contas-a-pagar - Cria uma nova conta a pagar, agora com categoria
-router.post('/', async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração.');
-    try {
-        const { descricao, fornecedor_id, valor, data_vencimento, categoria_id } = req.body;
-        const params = [descricao, fornecedor_id || null, parseFloat(valor), data_vencimento, categoria_id];
-        await pool.query(
-            'INSERT INTO contas_a_pagar (descricao, fornecedor_id, valor, data_vencimento, categoria_id) VALUES ($1, $2, $3, $4, $5)',
-            params
-        );
-        res.redirect('/contas-a-pagar');
-    } catch(err) {
-        console.error('Erro ao criar conta a pagar:', err);
-        res.status(500).send('Erro ao criar conta.');
-    }
-});
-
-// POST /contas-a-pagar/pagar/:id - Registra o pagamento usando a categoria correta
-router.post('/pagar/:id', async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração.');
-    const contaId = req.params.id;
-    try {
-        const conta = (await pool.query('SELECT * FROM contas_a_pagar WHERE id = $1', [contaId])).rows[0];
-        if (!conta) return res.status(404).send('Conta não encontrada.');
-        if (conta.status === 'Pago') return res.redirect('/contas-a-pagar');
-
-        const dataPagamento = new Date().toISOString().split('T')[0];
-        const descricaoFluxo = `Pagamento: ${conta.descricao}`;
-
-        // Lança a saída no fluxo de caixa usando a categoria da conta
-        const fluxoResult = await pool.query(
-            `INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id, status) VALUES ($1, 'DEBITO', $2, $3, $4, 'PAGO') RETURNING id`,
-            [dataPagamento, conta.valor, descricaoFluxo, conta.categoria_id]
-        );
-        const fluxoCaixaId = fluxoResult.rows[0].id;
-
-        await pool.query(
-            `UPDATE contas_a_pagar SET status = 'Pago', data_pagamento = $1, fluxo_caixa_id = $2 WHERE id = $3`,
-            [dataPagamento, fluxoCaixaId, contaId]
-        );
-
-        res.redirect('/contas-a-pagar');
-    } catch (err) {
-        console.error('Erro ao registrar pagamento:', err);
-        res.status(500).send('Erro ao registrar pagamento.');
-    }
-});
+module.exports = router;
 
 // NOVA ROTA PARA ESTORNAR UM PAGAMENTO
 
