@@ -93,15 +93,23 @@
     transform: translateY(-2px);
 }
 
-.metric-card.receitas {
+.metric-card.receitas-abertas {
+    border-left-color: #06b6d4;
+}
+
+.metric-card.receitas-realizadas {
     border-left-color: #10b981;
 }
 
-.metric-card.despesas {
+.metric-card.despesas-abertas {
+    border-left-color: #f59e0b;
+}
+
+.metric-card.despesas-realizadas {
     border-left-color: #ef4444;
 }
 
-.metric-card.saldo {
+.metric-card.total-periodo {
     border-left-color: #6366f1;
 }
 
@@ -404,19 +412,29 @@
 
 <!-- Métricas Cards -->
 <div class="metrics-grid">
-  <div class="metric-card receitas">
-    <div class="metric-label">Total de Entradas</div>
-    <div class="metric-value positive">R$ <%= parseFloat(totais.total_credito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
+  <div class="metric-card receitas-abertas">
+    <div class="metric-label">Receitas em Aberto (R$)</div>
+    <div class="metric-value">R$ <%= metricas.receitasAbertas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
   </div>
 
-  <div class="metric-card despesas">
-    <div class="metric-label">Total de Saídas</div>
-    <div class="metric-value negative">R$ <%= parseFloat(totais.total_debito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
+  <div class="metric-card receitas-realizadas">
+    <div class="metric-label">Receitas Realizadas (R$)</div>
+    <div class="metric-value positive">R$ <%= metricas.receitasRealizadas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
   </div>
 
-  <div class="metric-card saldo">
-    <div class="metric-label">Saldo Atual</div>
-    <div class="metric-value <%= saldoAtual >= 0 ? 'positive' : 'negative' %>">R$ <%= saldoAtual.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
+  <div class="metric-card despesas-abertas">
+    <div class="metric-label">Despesas em Aberto (R$)</div>
+    <div class="metric-value">R$ <%= metricas.despesasAbertas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
+  </div>
+
+  <div class="metric-card despesas-realizadas">
+    <div class="metric-label">Despesas Realizadas (R$)</div>
+    <div class="metric-value negative">R$ <%= metricas.despesasRealizadas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
+  </div>
+
+  <div class="metric-card total-periodo">
+    <div class="metric-label">Total do Período (R$)</div>
+    <div class="metric-value <%= metricas.saldoTotal >= 0 ? 'positive' : 'negative' %>">R$ <%= metricas.saldoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
   </div>
 </div>
 
