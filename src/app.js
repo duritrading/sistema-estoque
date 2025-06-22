@@ -181,7 +181,7 @@ app.use((req, res, next) => {
   console.log('👤 User ID na sessão:', req.session?.userId);
   
   // Rotas públicas (não precisam de login)
-  const publicRoutes = ['/login', '/health', '/debug/usuarios', '/debug/test-login', '/debug/recriar-admin'];
+  const publicRoutes = ['/login', '/logout', '/health', '/debug/usuarios', '/debug/test-login', '/debug/recriar-admin'];
   
   // Verificar se é rota pública
   if (publicRoutes.includes(req.path)) {
@@ -377,6 +377,35 @@ app.post('/login', async (req, res) => {
     console.error('💥 Erro no login:', error);
     console.error('Stack:', error.stack);
     res.redirect('/login?error=' + encodeURIComponent('Erro interno do servidor'));
+  }
+});
+
+// ========================================
+// ROTA DE LOGOUT
+// ========================================
+app.get('/logout', (req, res) => {
+  console.log('🚪 Logout iniciado para usuário:', req.session?.username);
+  
+  if (req.session) {
+    // Destruir a sessão
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('❌ Erro ao destruir sessão:', err);
+        return res.redirect('/?error=' + encodeURIComponent('Erro ao fazer logout'));
+      }
+      
+      console.log('✅ Sessão destruída com sucesso');
+      
+      // Limpar o cookie da sessão
+      res.clearCookie('sessionId');
+      
+      // Redirecionar para login com mensagem de sucesso
+      res.redirect('/login?success=' + encodeURIComponent('Logout realizado com sucesso'));
+    });
+  } else {
+    // Se não há sessão, redirecionar direto para login
+    console.log('ℹ️ Tentativa de logout sem sessão ativa');
+    res.redirect('/login');
   }
 });
 
