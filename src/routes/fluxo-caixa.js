@@ -177,7 +177,7 @@ router.post('/lancamento', async (req, res) => {
     }
 });
 
-// Rota POST /fluxo-caixa/delete/:id - Exclui um lançamento
+// ROTA DELETE ATUALIZADA - com mensagem melhor para lançamentos vinculados
 router.post('/delete/:id', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     try {
@@ -200,18 +200,97 @@ router.post('/delete/:id', async (req, res) => {
             return res.render('error', { 
                 user: res.locals.user, 
                 titulo: 'Ação Bloqueada', 
-                mensagem: 'Este lançamento não pode ser excluído pois está vinculado a contas a receber/pagar.',
+                mensagem: `Este lançamento está vinculado a contas a receber/pagar. 
+                          <br><br>
+                          <strong>Use o botão "Estornar"</strong> ao lado do lançamento para reverter o pagamento e excluir o registro.`,
                 voltar_url: '/fluxo-caixa'
             });
         }
         
-        // Excluir o lançamento
+        // Excluir o lançamento (se não estiver vinculado)
         await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [id]);
         res.redirect('/fluxo-caixa');
         
     } catch (err) {
         console.error("Erro ao excluir lançamento:", err);
         res.status(500).send('Erro ao excluir lançamento: ' + err.message);
+    }
+});
+
+// NOVA ROTA: Estornar lançamento vinculado
+router.post('/estornar/:id', async (req, res) => {
+    if (!pool) return res.status(500).send('Erro de configuração.');
+    
+    try {
+        const { id } = req.params;
+        
+        // Buscar o lançamento
+        const lancamento = await pool.query('SELECT * FROM fluxo_caixa WHERE id = $1', [id]);
+        
+        if (!lancamento.rows[0]) {
+            return res.render('error', { 
+                user: res.locals.user, 
+                titulo: 'Erro', 
+                mensagem: 'Lançamento não encontrado.',
+                voltar_url: '/fluxo-caixa'
+            });
+        }
+        
+        const dadosLancamento = lancamento.rows[0];
+        
+        // Verificar se está vinculado a conta a receber
+        const contaReceber = await pool.query(`
+            SELECT * FROM contas_a_receber WHERE fluxo_caixa_id = $1
+        `, [id]);
+        
+        // Verificar se está vinculado a conta a pagar  
+        const contaPagar = await pool.query(`
+            SELECT * FROM contas_a_pagar WHERE fluxo_caixa_id = $1
+        `, [id]);
+        
+        // ESTORNAR CONTA A RECEBER
+        if (contaReceber.rows.length > 0) {
+            const conta = contaReceber.rows[0];
+            
+            // 1. Atualizar conta a receber para pendente
+            await pool.query(`
+                UPDATE contas_a_receber 
+                SET status = 'Pendente', data_pagamento = NULL, fluxo_caixa_id = NULL 
+                WHERE id = $1
+            `, [conta.id]);
+            
+            console.log(`✅ Conta a receber ID ${conta.id} estornada para pendente`);
+        }
+        
+        // ESTORNAR CONTA A PAGAR
+        if (contaPagar.rows.length > 0) {
+            const conta = contaPagar.rows[0];
+            
+            // 1. Atualizar conta a pagar para pendente
+            await pool.query(`
+                UPDATE contas_a_pagar 
+                SET status = 'Pendente', data_pagamento = NULL, fluxo_caixa_id = NULL 
+                WHERE id = $1
+            `, [conta.id]);
+            
+            console.log(`✅ Conta a pagar ID ${conta.id} estornada para pendente`);
+        }
+        
+        // 2. Excluir o lançamento do fluxo de caixa
+        await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [id]);
+        
+        console.log(`✅ Lançamento do fluxo de caixa ID ${id} excluído`);
+        
+        res.redirect('/fluxo-caixa?success=' + encodeURIComponent('Lançamento estornado com sucesso!'));
+        
+    } catch (err) {
+        console.error("Erro ao estornar lançamento:", err);
+        res.render('error', { 
+            user: res.locals.user, 
+            titulo: 'Erro', 
+            mensagem: 'Erro ao estornar lançamento: ' + err.message,
+            voltar_url: '/fluxo-caixa'
+        });
     }
 });
 

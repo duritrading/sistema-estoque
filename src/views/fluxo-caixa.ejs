@@ -525,11 +525,32 @@
                 <span class="status-badge status-pago">Pago</span>
               </td>
               <td>
-                <form action="/fluxo-caixa/delete/<%= item.id %>" method="POST" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir este lançamento?');">
-                  <button type="submit" class="btn-modern btn-danger">🗑️</button>
-                </form>
-              </td>
-            </tr>
+               <div style="display: flex; gap: 5px; justify-content: flex-end;">
+  
+  <!-- Verificar se é um lançamento vinculado (baseado na descrição) -->
+  <% if (item.descricao && (item.descricao.includes('Recebimento Parcela') || item.descricao.includes('Pagamento:'))) { %>
+    
+    <!-- Botão de ESTORNO para lançamentos vinculados -->
+    <form action="/fluxo-caixa/estornar/<%= item.id %>" method="POST" style="display: inline;" 
+          onsubmit="return confirm('⚠️ ATENÇÃO: Estornar este lançamento irá:\n\n• Reverter o pagamento da conta associada\n• Excluir este lançamento do fluxo de caixa\n\nDeseja continuar?');">
+      <button type="submit" class="btn-modern btn-warning" title="Estornar lançamento vinculado">
+        ↩️ Estornar
+      </button>
+    </form>
+    
+  <% } else { %>
+    
+    <!-- Botão de EXCLUSÃO para lançamentos manuais -->
+    <form action="/fluxo-caixa/delete/<%= item.id %>" method="POST" style="display: inline;" 
+          onsubmit="return confirm('Tem certeza que deseja excluir este lançamento?');">
+      <button type="submit" class="btn-modern btn-danger" title="Excluir lançamento">
+        🗑️ Excluir
+      </button>
+    </form>
+    
+  <% } %>
+  
+</div>            </tr>
           <% }) %>
         <% } else { %>
           <tr>
