@@ -55,12 +55,26 @@
                 </span>
               </td>
               <td>
-                <form action="/inadimplencia/marcar-paga/<%= conta.id %>" method="POST" style="display: inline;" onsubmit="return confirm('Confirma o recebimento desta parcela em atraso?');">
-                  <button type="submit" class="btn btn-sm btn-success">
-                    <span style="white-space: nowrap;">✓ Marcar como Paga</span>
-                  </button>
-                </form>
-              </td>
+  <div style="display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap;">
+    
+    <!-- Botão Marcar como Paga -->
+    <form action="/inadimplencia/marcar-paga/<%= conta.id %>" method="POST" style="display: inline;" 
+          onsubmit="return confirm('Confirma o recebimento desta parcela em atraso?');">
+      <button type="submit" class="btn btn-sm btn-success" title="Marcar como paga">
+        <span style="white-space: nowrap;">✓ Marcar como Paga</span>
+      </button>
+    </form>
+
+    <!-- Botão Excluir -->
+    <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" style="display: inline;" 
+          onsubmit="return confirm('⚠️ ATENÇÃO: Excluir esta conta irá:\n\n• Remover permanentemente do sistema\n• Não poderá ser recuperada\n\nAPENAS para contas lançadas por engano!\n\nDeseja continuar?');">
+      <button type="submit" class="btn btn-sm btn-danger" title="Excluir conta (apenas contas manuais)">
+        <span style="white-space: nowrap;">🗑️ Excluir</span>
+      </button>
+    </form>
+    
+  </div>
+</td>
             </tr>
           <% }) %>
         </tbody>
@@ -190,6 +204,31 @@
   background-color: #218838;
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border: 1px solid #dc3545;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+}
+
+/* Melhorar o layout dos botões em mobile */
+@media (max-width: 768px) {
+  .btn-sm {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .btn-sm span {
+    font-size: 11px;
+  }
 }
 
 .badge-danger {

@@ -110,4 +110,75 @@ router.post('/marcar-paga/:id', async (req, res) => {
     }
 });
 
+// ADICIONAR no arquivo src/routes/inadimplencia.js
+// Inserir ANTES da linha: module.exports = router;
+
+// NOVA ROTA: Excluir conta a receber vencida
+router.post('/excluir/:id', async (req, res) => {
+    if (!pool) return res.status(500).send('Erro de configuração.');
+    
+    const contaId = req.params.id;
+    
+    try {
+        // Buscar dados da conta
+        const contaResult = await pool.query(`
+            SELECT cr.*, p.descricao as produto_descricao
+            FROM contas_a_receber cr
+            LEFT JOIN movimentacoes m ON cr.movimentacao_id = m.id
+            LEFT JOIN produtos p ON m.produto_id = p.id
+            WHERE cr.id = $1
+        `, [contaId]);
+
+        const conta = contaResult.rows[0];
+        if (!conta) {
+            return res.render('error', { 
+                user: res.locals.user, 
+                titulo: 'Erro', 
+                mensagem: 'Conta não encontrada.' 
+            });
+        }
+
+        // Verificar se a conta já foi paga
+        if (conta.status === 'Pago') {
+            return res.render('error', { 
+                user: res.locals.user, 
+                titulo: 'Ação Bloqueada', 
+                mensagem: 'Não é possível excluir uma conta que já foi paga. Use o estorno no fluxo de caixa se necessário.',
+                voltar_url: '/inadimplencia'
+            });
+        }
+
+        // Verificar se está vinculada a uma movimentação (venda real)
+        if (conta.movimentacao_id) {
+            return res.render('error', { 
+                user: res.locals.user, 
+                titulo: 'Ação Bloqueada', 
+                mensagem: `Esta conta está vinculada a uma venda real (movimentação ${conta.movimentacao_id}). 
+                          <br><br>
+                          <strong>Para remover:</strong><br>
+                          • Vá em "Movimentações"<br>
+                          • Exclua a movimentação de saída<br>
+                          • Isso removerá automaticamente todas as parcelas`,
+                voltar_url: '/inadimplencia'
+            });
+        }
+
+        // Se chegou aqui, é uma conta manual que pode ser excluída
+        await pool.query('DELETE FROM contas_a_receber WHERE id = $1', [contaId]);
+        
+        console.log(`✅ Conta a receber manual ID ${contaId} excluída (cliente: ${conta.cliente_nome})`);
+        
+        res.redirect('/inadimplencia?success=' + encodeURIComponent('Conta excluída com sucesso!'));
+        
+    } catch (err) {
+        console.error("Erro ao excluir conta:", err);
+        return res.render('error', { 
+            user: res.locals.user, 
+            titulo: 'Erro', 
+            mensagem: 'Não foi possível excluir a conta: ' + err.message,
+            voltar_url: '/inadimplencia'
+        });
+    }
+});
+
 module.exports = router;
