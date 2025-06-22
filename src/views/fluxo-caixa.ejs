@@ -1,99 +1,579 @@
 <%- include('partials/header', {
   titulo: 'Fluxo de Caixa',
-  subtitulo: 'Acompanhe suas entradas e saídas financeiras',
+  subtitulo: 'Controle suas entradas e saídas financeiras',
   user: locals.user
 }) %>
 
-<div class="stats">
-  <div class="stat-card">
-    <h3>R$ <%= parseFloat(totais.total_credito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></h3>
-    <p>Total de Entradas</p>
-  </div>
-  <div class="stat-card">
-    <h3>R$ <%= parseFloat(totais.total_debito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></h3>
-    <p>Total de Saídas</p>
-  </div>
-  <div class="stat-card <%= saldoAtual >= 0 ? 'saldo-positivo-bg' : 'saldo-negativo-bg' %>">
-    <h3>R$ <%= saldoAtual.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></h3>
-    <p>Saldo Atual</p>
+<style>
+/* Estilos específicos para o Fluxo de Caixa moderno */
+.page-header {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.page-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-subtitle {
+    color: #64748b;
+    font-size: 16px;
+}
+
+/* Filtros */
+.filters-section {
+    background: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.filters-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.filter-input, .filter-select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    min-width: 140px;
+}
+
+.filter-input:focus, .filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Métricas Cards - Novo design */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.metric-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-left: 4px solid;
+    transition: transform 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+}
+
+.metric-card.receitas {
+    border-left-color: #10b981;
+}
+
+.metric-card.despesas {
+    border-left-color: #ef4444;
+}
+
+.metric-card.saldo {
+    border-left-color: #6366f1;
+}
+
+.metric-label {
+    font-size: 13px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.metric-value.positive {
+    color: #10b981;
+}
+
+.metric-value.negative {
+    color: #ef4444;
+}
+
+/* Tabela moderna */
+.table-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.table-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.table-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: #f8fafc;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.data-table td {
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.data-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Status badges */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-pago {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-pendente {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Valores */
+.valor-positivo {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.valor-negativo {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-modern {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+}
+
+.btn-success {
+    background: #10b981;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #059669;
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filters-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .data-table {
+        font-size: 14px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 8px;
+    }
+}
+</style>
+
+<!-- Header -->
+<div class="page-header">
+  <h1 class="page-title">
+    💰 Fluxo de Caixa
+  </h1>
+  <p class="page-subtitle">Controle suas entradas e saídas financeiras</p>
+</div>
+
+<!-- Filtros -->
+<div class="filters-section">
+  <div class="filters-row">
+    <div class="filter-group">
+      <span class="filter-label">Período:</span>
+      <select class="filter-select" id="periodoSelect">
+        <option value="mes-atual">Mês Atual</option>
+        <option value="mes-passado">Mês Passado</option>
+        <option value="ultimos-30">Últimos 30 dias</option>
+        <option value="custom">Período personalizado</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-label">Pesquisar:</span>
+      <input type="text" class="filter-input" placeholder="Descrição ou categoria" id="searchInput">
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-label">Tipo:</span>
+      <select class="filter-select" id="tipoSelect">
+        <option value="">Todos</option>
+        <option value="CREDITO">Apenas Entradas</option>
+        <option value="DEBITO">Apenas Saídas</option>
+      </select>
+    </div>
+
+    <button class="btn-modern btn-primary" onclick="aplicarFiltros()">
+      🔍 Filtrar
+    </button>
+
+    <button class="btn-modern btn-success" onclick="abrirModalLancamento()">
+      ➕ Novo Lançamento
+    </button>
   </div>
 </div>
 
-<div class="card">
-  <h2>➕ Novo Lançamento Avulso</h2>
-  <form action="/fluxo-caixa/lancamento" method="POST">
-    <div class="form-row">
-        <div class="form-group">
-            <label for="data_operacao">Data *</label>
-            <input type="date" id="data_operacao" name="data_operacao" value="<%= hoje %>" required>
-        </div>
-        <div class="form-group">
-            <label for="tipo">Tipo *</label>
-            <select id="tipo" name="tipo" required>
-                <option value="CREDITO">Entrada (Crédito)</option>
-                <option value="DEBITO">Saída (Débito)</option>
-            </select>
-        </div>
-    </div>
-    <div class="form-row">
-        <div class="form-group">
-            <label for="valor">Valor (R$) *</label>
-            <input type="number" id="valor" name="valor" step="0.01" min="0.01" required>
-        </div>
-        <div class="form-group">
-            <label for="descricao">Descrição *</label>
-            <input type="text" id="descricao" name="descricao" required>
-        </div>
-    </div>
-    <div class="form-group">
-        <label for="categoria_id">Categoria *</label>
-        <select id="categoria_id" name="categoria_id" required>
-            <option value="" disabled selected>Selecione uma categoria</option>
-            <% categorias.forEach(cat => { %>
-                <option value="<%= cat.id %>"><%= cat.nome %></option>
-            <% }) %>
-        </select>
-    </div>
-    <button type="submit" class="btn">Registrar Lançamento</button>
-  </form>
+<!-- Métricas Cards -->
+<div class="metrics-grid">
+  <div class="metric-card receitas">
+    <div class="metric-label">Total de Entradas</div>
+    <div class="metric-value positive">R$ <%= parseFloat(totais.total_credito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
+  </div>
+
+  <div class="metric-card despesas">
+    <div class="metric-label">Total de Saídas</div>
+    <div class="metric-value negative">R$ <%= parseFloat(totais.total_debito || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
+  </div>
+
+  <div class="metric-card saldo">
+    <div class="metric-label">Saldo Atual</div>
+    <div class="metric-value <%= saldoAtual >= 0 ? 'positive' : 'negative' %>">R$ <%= saldoAtual.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
+  </div>
 </div>
 
-<div class="card">
-  <h2>📋 Últimos Lançamentos</h2>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Data</th>
-        <th>Tipo</th>
-        <th>Descrição</th>
-        <th>Categoria</th> <th class="text-right">Valor</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% if (lancamentos.length > 0) { %>
-        <% lancamentos.forEach(item => { %>
+<!-- Tabela de Lançamentos -->
+<div class="table-section">
+  <div class="table-header">
+    <h2 class="table-title">Últimos Lançamentos</h2>
+    <span style="color: #64748b; font-size: 14px;">
+      <%= lancamentos.length %> registro(s) encontrado(s)
+    </span>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Descrição</th>
+          <th>Categoria</th>
+          <th>Tipo</th>
+          <th style="text-align: right;">Valor (R$)</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (lancamentos && lancamentos.length > 0) { %>
+          <% lancamentos.forEach(item => { %>
+            <tr>
+              <td><%= new Date(item.data_operacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
+              <td>
+                <div>
+                  <strong><%= item.descricao %></strong>
+                  <% if (item.observacao) { %>
+                    <br><small style="color: #64748b;"><%= item.observacao %></small>
+                  <% } %>
+                </div>
+              </td>
+              <td><span style="color: #64748b;"><%= item.categoria_nome || 'Não categorizado' %></span></td>
+              <td>
+                <span class="status-badge <%= item.tipo === 'CREDITO' ? 'status-pago' : 'status-pendente' %>">
+                  <%= item.tipo === 'CREDITO' ? 'Entrada' : 'Saída' %>
+                </span>
+              </td>
+              <td style="text-align: right;" class="<%= item.tipo === 'CREDITO' ? 'valor-positivo' : 'valor-negativo' %>">
+                <%= item.tipo === 'CREDITO' ? '+' : '-' %> R$ <%= parseFloat(item.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+              </td>
+              <td>
+                <span class="status-badge status-pago">Pago</span>
+              </td>
+              <td>
+                <form action="/fluxo-caixa/delete/<%= item.id %>" method="POST" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir este lançamento?');">
+                  <button type="submit" class="btn-modern btn-danger">🗑️</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
           <tr>
-            <td><%= new Date(item.data_operacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
-            <td><span class="badge <%= item.tipo === 'CREDITO' ? 'badge-success' : 'badge-danger' %>"><%= item.tipo %></span></td>
-            <td><%= item.descricao %></td>
-            <td><%= item.categoria_nome || 'Não categorizado' %></td> <td class="text-right <%= item.tipo === 'CREDITO' ? 'saldo-positivo' : 'saldo-negativo' %>">
-              <%= item.tipo === 'CREDITO' ? '+' : '-' %> R$ <%= parseFloat(item.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-            </td>
-            <td>
-              <form action="/fluxo-caixa/delete/<%= item.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este lançamento? Esta ação é irreversível.');">
-                <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
-              </form>
+            <td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">
+              Nenhum lançamento encontrado.
             </td>
           </tr>
-        <% }) %>
-      <% } else { %>
-        <tr>
-          <td colspan="6" class="text-center">Nenhum lançamento encontrado.</td>
-        </tr>
-      <% } %>
-    </tbody>
-  </table>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
 </div>
+
+<!-- Modal para Novo Lançamento -->
+<div class="modal" id="modalLancamento">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Novo Lançamento</h3>
+    </div>
+    <form action="/fluxo-caixa/lancamento" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Data da Operação *</label>
+          <input type="date" class="form-input" name="data_operacao" value="<%= hoje %>" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tipo *</label>
+          <select class="form-select" name="tipo" required>
+            <option value="">Selecione...</option>
+            <option value="CREDITO">Entrada (Crédito)</option>
+            <option value="DEBITO">Saída (Débito)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Valor (R$) *</label>
+          <input type="number" class="form-input" name="valor" step="0.01" min="0.01" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Descrição *</label>
+          <input type="text" class="form-input" name="descricao" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Categoria *</label>
+          <select class="form-select" name="categoria_id" required>
+            <option value="">Selecione uma categoria...</option>
+            <% categorias.forEach(cat => { %>
+              <option value="<%= cat.id %>"><%= cat.nome %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-modern btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn-modern btn-success">💾 Salvar Lançamento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Funções JavaScript
+function aplicarFiltros() {
+  const periodo = document.getElementById('periodoSelect').value;
+  const search = document.getElementById('searchInput').value;
+  const tipo = document.getElementById('tipoSelect').value;
+  
+  console.log('Aplicando filtros:', { periodo, search, tipo });
+  // Implementar lógica de filtros conforme necessário
+}
+
+function abrirModalLancamento() {
+  document.getElementById('modalLancamento').style.display = 'flex';
+}
+
+function fecharModal() {
+  document.getElementById('modalLancamento').style.display = 'none';
+}
+
+// Fechar modal clicando fora
+window.onclick = function(event) {
+  const modal = document.getElementById('modalLancamento');
+  if (event.target === modal) {
+    fecharModal();
+  }
+}
+
+// Pesquisa em tempo real
+document.getElementById('searchInput').addEventListener('input', function() {
+  const searchTerm = this.value.toLowerCase();
+  const rows = document.querySelectorAll('.data-table tbody tr');
+  
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (text.includes('nenhum lançamento')) return; // Não filtrar linha de "sem dados"
+    row.style.display = text.includes(searchTerm) ? '' : 'none';
+  });
+});
+</script>
 
 <%- include('partials/footer') %>
