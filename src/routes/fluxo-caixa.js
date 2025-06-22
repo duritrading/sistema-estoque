@@ -2,43 +2,107 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
-// Rota GET /fluxo-caixa - Mostra a página com métricas completas
+// Rota GET /fluxo-caixa - Mostra a página com filtros funcionais
 router.get('/', async (req, res) => {
   if (!pool) return res.status(500).send('Erro de configuração.');
   try {
     const hoje = new Date().toISOString().split('T')[0];
-
-    // Buscar lançamentos do fluxo de caixa
-    const lancamentosResult = await pool.query(`
+    
+    // Capturar parâmetros de filtros da URL
+    const { periodo, pesquisar, tipo, data_inicio, data_fim } = req.query;
+    
+    // Definir período baseado no filtro
+    let dataInicio, dataFim;
+    const agora = new Date();
+    
+    switch (periodo) {
+      case 'mes-atual':
+        dataInicio = new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString().split('T')[0];
+        dataFim = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).toISOString().split('T')[0];
+        break;
+      case 'mes-passado':
+        dataInicio = new Date(agora.getFullYear(), agora.getMonth() - 1, 1).toISOString().split('T')[0];
+        dataFim = new Date(agora.getFullYear(), agora.getMonth(), 0).toISOString().split('T')[0];
+        break;
+      case 'ultimos-30':
+        dataFim = hoje;
+        dataInicio = new Date(agora.setDate(agora.getDate() - 30)).toISOString().split('T')[0];
+        break;
+      case 'custom':
+        dataInicio = data_inicio || hoje;
+        dataFim = data_fim || hoje;
+        break;
+      default:
+        // Padrão: mês atual
+        dataInicio = new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString().split('T')[0];
+        dataFim = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).toISOString().split('T')[0];
+    }
+    
+    // Construir WHERE clause para lançamentos
+    let whereConditions = ['fc.data_operacao >= $1', 'fc.data_operacao <= $2'];
+    let queryParams = [dataInicio, dataFim];
+    let paramCount = 2;
+    
+    // Filtro por tipo
+    if (tipo && (tipo === 'CREDITO' || tipo === 'DEBITO')) {
+      paramCount++;
+      whereConditions.push(`fc.tipo = $${paramCount}`);
+      queryParams.push(tipo);
+    }
+    
+    // Filtro por pesquisa
+    if (pesquisar && pesquisar.trim()) {
+      paramCount++;
+      whereConditions.push(`(LOWER(fc.descricao) LIKE $${paramCount} OR LOWER(cf.nome) LIKE $${paramCount})`);
+      queryParams.push(`%${pesquisar.toLowerCase()}%`);
+    }
+    
+    // Buscar lançamentos do fluxo de caixa com filtros
+    const lancamentosQuery = `
       SELECT fc.*, cf.nome as categoria_nome 
       FROM fluxo_caixa fc 
       LEFT JOIN categorias_financeiras cf ON fc.categoria_id = cf.id 
+      WHERE ${whereConditions.join(' AND ')}
       ORDER BY fc.data_operacao DESC, fc.created_at DESC 
-      LIMIT 50
-    `);
+      LIMIT 100
+    `;
+    
+    const lancamentosResult = await pool.query(lancamentosQuery, queryParams);
 
-    // Calcular totais do fluxo de caixa (realizados)
-    const totaisFluxoResult = await pool.query(`
+    // Calcular totais do fluxo de caixa (realizados) com filtros de período
+    const totaisFluxoQuery = `
       SELECT 
         COALESCE(SUM(CASE WHEN tipo = 'CREDITO' THEN valor ELSE 0 END), 0) as total_credito,
         COALESCE(SUM(CASE WHEN tipo = 'DEBITO' THEN valor ELSE 0 END), 0) as total_debito
       FROM fluxo_caixa 
-      WHERE status = 'PAGO'
-    `);
+      WHERE status = 'PAGO' 
+        AND data_operacao >= $1 
+        AND data_operacao <= $2
+    `;
+    
+    const totaisFluxoResult = await pool.query(totaisFluxoQuery, [dataInicio, dataFim]);
 
-    // Calcular receitas em aberto (contas a receber pendentes)
-    const receitasAbertasResult = await pool.query(`
+    // Calcular receitas em aberto (contas a receber pendentes) no período
+    const receitasAbertasQuery = `
       SELECT COALESCE(SUM(valor), 0) as total
       FROM contas_a_receber 
       WHERE status = 'Pendente'
-    `);
+        AND data_vencimento >= $1 
+        AND data_vencimento <= $2
+    `;
+    
+    const receitasAbertasResult = await pool.query(receitasAbertasQuery, [dataInicio, dataFim]);
 
-    // Calcular despesas em aberto (contas a pagar pendentes)
-    const despesasAbertasResult = await pool.query(`
+    // Calcular despesas em aberto (contas a pagar pendentes) no período
+    const despesasAbertasQuery = `
       SELECT COALESCE(SUM(valor), 0) as total
       FROM contas_a_pagar 
       WHERE status = 'Pendente'
-    `);
+        AND data_vencimento >= $1 
+        AND data_vencimento <= $2
+    `;
+    
+    const despesasAbertasResult = await pool.query(despesasAbertasQuery, [dataInicio, dataFim]);
 
     // Buscar categorias para o formulário
     const categoriasResult = await pool.query(`
@@ -62,6 +126,15 @@ router.get('/', async (req, res) => {
       despesasRealizadas,
       saldoTotal
     };
+    
+    // Preparar filtros para a view
+    const filtros = {
+      periodo: periodo || 'mes-atual',
+      pesquisar: pesquisar || '',
+      tipo: tipo || '',
+      data_inicio: dataInicio,
+      data_fim: dataFim
+    };
 
     res.render('fluxo-caixa', {
       user: res.locals.user,
@@ -70,7 +143,8 @@ router.get('/', async (req, res) => {
       saldoAtual: saldoTotal,
       metricas: metricas,
       hoje,
-      categorias: categoriasResult.rows || []
+      categorias: categoriasResult.rows || [],
+      filtros: filtros
     });
 
   } catch (error) {

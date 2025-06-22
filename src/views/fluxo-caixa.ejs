@@ -49,6 +49,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
+}
+
+#customDateGroup {
+    background: #f8fafc;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
 }
 
 .filter-label {
@@ -370,7 +378,17 @@
   <h1 class="page-title">
     💰 Fluxo de Caixa
   </h1>
-  <p class="page-subtitle">Controle suas entradas e saídas financeiras</p>
+  <p class="page-subtitle">
+    Controle suas entradas e saídas financeiras
+    <% if (filtros.periodo !== 'mes-atual') { %>
+      <span style="color: #3b82f6; font-weight: 600;">
+        - 
+        <% if (filtros.periodo === 'mes-passado') { %>Mês Passado<% } %>
+        <% if (filtros.periodo === 'ultimos-30') { %>Últimos 30 dias<% } %>
+        <% if (filtros.periodo === 'custom') { %>Período: <%= new Date(filtros.data_inicio).toLocaleDateString('pt-BR') %> a <%= new Date(filtros.data_fim).toLocaleDateString('pt-BR') %><% } %>
+      </span>
+    <% } %>
+  </p>
 </div>
 
 <!-- Filtros -->
@@ -379,29 +397,41 @@
     <div class="filter-group">
       <span class="filter-label">Período:</span>
       <select class="filter-select" id="periodoSelect">
-        <option value="mes-atual">Mês Atual</option>
-        <option value="mes-passado">Mês Passado</option>
-        <option value="ultimos-30">Últimos 30 dias</option>
-        <option value="custom">Período personalizado</option>
+        <option value="mes-atual" <%= filtros.periodo === 'mes-atual' ? 'selected' : '' %>>Mês Atual</option>
+        <option value="mes-passado" <%= filtros.periodo === 'mes-passado' ? 'selected' : '' %>>Mês Passado</option>
+        <option value="ultimos-30" <%= filtros.periodo === 'ultimos-30' ? 'selected' : '' %>>Últimos 30 dias</option>
+        <option value="custom" <%= filtros.periodo === 'custom' ? 'selected' : '' %>>Período personalizado</option>
       </select>
+    </div>
+
+    <!-- Campos de data personalizada (aparecem quando período = custom) -->
+    <div class="filter-group" id="customDateGroup" style="display: <%= filtros.periodo === 'custom' ? 'flex' : 'none' %>;">
+      <span class="filter-label">De:</span>
+      <input type="date" class="filter-input" id="dataInicio" value="<%= filtros.data_inicio || '' %>">
+      <span class="filter-label">Até:</span>
+      <input type="date" class="filter-input" id="dataFim" value="<%= filtros.data_fim || '' %>">
     </div>
 
     <div class="filter-group">
       <span class="filter-label">Pesquisar:</span>
-      <input type="text" class="filter-input" placeholder="Descrição ou categoria" id="searchInput">
+      <input type="text" class="filter-input" placeholder="Descrição ou categoria" id="searchInput" value="<%= filtros.pesquisar || '' %>">
     </div>
 
     <div class="filter-group">
       <span class="filter-label">Tipo:</span>
       <select class="filter-select" id="tipoSelect">
-        <option value="">Todos</option>
-        <option value="CREDITO">Apenas Entradas</option>
-        <option value="DEBITO">Apenas Saídas</option>
+        <option value="" <%= !filtros.tipo ? 'selected' : '' %>>Todos</option>
+        <option value="CREDITO" <%= filtros.tipo === 'CREDITO' ? 'selected' : '' %>>Apenas Entradas</option>
+        <option value="DEBITO" <%= filtros.tipo === 'DEBITO' ? 'selected' : '' %>>Apenas Saídas</option>
       </select>
     </div>
 
     <button class="btn-modern btn-primary" onclick="aplicarFiltros()">
       🔍 Filtrar
+    </button>
+
+    <button class="btn-modern btn-secondary" onclick="limparFiltros()">
+      🗑️ Limpar
     </button>
 
     <button class="btn-modern btn-success" onclick="abrirModalLancamento()">
@@ -442,9 +472,18 @@
 <div class="table-section">
   <div class="table-header">
     <h2 class="table-title">Últimos Lançamentos</h2>
-    <span style="color: #64748b; font-size: 14px;">
-      <%= lancamentos.length %> registro(s) encontrado(s)
-    </span>
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <!-- Indicador de filtros ativos -->
+      <% if (filtros.pesquisar || filtros.tipo || filtros.periodo !== 'mes-atual') { %>
+        <span style="color: #3b82f6; font-size: 14px; background: #dbeafe; padding: 4px 8px; border-radius: 4px;">
+          🔍 Filtros ativos
+        </span>
+      <% } %>
+      
+      <span style="color: #64748b; font-size: 14px;">
+        <%= lancamentos.length %> registro(s) encontrado(s)
+      </span>
+    </div>
   </div>
 
   <div style="overflow-x: auto;">
@@ -558,12 +597,62 @@
 // Funções JavaScript
 function aplicarFiltros() {
   const periodo = document.getElementById('periodoSelect').value;
-  const search = document.getElementById('searchInput').value;
+  const pesquisar = document.getElementById('searchInput').value;
   const tipo = document.getElementById('tipoSelect').value;
   
-  console.log('Aplicando filtros:', { periodo, search, tipo });
-  // Implementar lógica de filtros conforme necessário
+  // Construir URL com parâmetros
+  let url = '/fluxo-caixa?';
+  const params = new URLSearchParams();
+  
+  if (periodo) params.append('periodo', periodo);
+  if (pesquisar.trim()) params.append('pesquisar', pesquisar.trim());
+  if (tipo) params.append('tipo', tipo);
+  
+  // Se período personalizado, incluir datas
+  if (periodo === 'custom') {
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    if (dataInicio) params.append('data_inicio', dataInicio);
+    if (dataFim) params.append('data_fim', dataFim);
+  }
+  
+  // Redirecionar com os filtros
+  window.location.href = url + params.toString();
 }
+
+// Função para limpar filtros
+function limparFiltros() {
+  window.location.href = '/fluxo-caixa';
+}
+
+// Mostrar/esconder campos de data personalizada
+document.getElementById('periodoSelect').addEventListener('change', function() {
+  const customDateGroup = document.getElementById('customDateGroup');
+  if (this.value === 'custom') {
+    customDateGroup.style.display = 'flex';
+    
+    // Definir datas padrão (mês atual)
+    const hoje = new Date();
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    
+    document.getElementById('dataInicio').value = inicioMes.toISOString().split('T')[0];
+    document.getElementById('dataFim').value = fimMes.toISOString().split('T')[0];
+  } else {
+    customDateGroup.style.display = 'none';
+  }
+});
+
+// Aplicar filtros quando Enter é pressionado no campo de pesquisa
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    aplicarFiltros();
+  }
+});
+
+// Aplicar filtros quando campos mudam
+document.getElementById('periodoSelect').addEventListener('change', aplicarFiltros);
+document.getElementById('tipoSelect').addEventListener('change', aplicarFiltros);
 
 function abrirModalLancamento() {
   document.getElementById('modalLancamento').style.display = 'flex';
@@ -581,16 +670,14 @@ window.onclick = function(event) {
   }
 }
 
-// Pesquisa em tempo real
-document.getElementById('searchInput').addEventListener('input', function() {
-  const searchTerm = this.value.toLowerCase();
-  const rows = document.querySelectorAll('.data-table tbody tr');
+// Inicializar campos de data personalizada se já estiver selecionado
+document.addEventListener('DOMContentLoaded', function() {
+  const periodoSelect = document.getElementById('periodoSelect');
+  const customDateGroup = document.getElementById('customDateGroup');
   
-  rows.forEach(row => {
-    const text = row.textContent.toLowerCase();
-    if (text.includes('nenhum lançamento')) return; // Não filtrar linha de "sem dados"
-    row.style.display = text.includes(searchTerm) ? '' : 'none';
-  });
+  if (periodoSelect.value === 'custom') {
+    customDateGroup.style.display = 'flex';
+  }
 });
 </script>
 
