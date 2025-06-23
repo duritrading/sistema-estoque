@@ -236,41 +236,6 @@ async function createUsersTable() {
   }
 }
 
-// Middleware para adicionar informações do usuário
-app.use((req, res, next) => {
-  if (req.session && req.session.userId) {
-    res.locals.user = {
-      id: req.session.userId,
-      username: req.session.username,
-      nomeCompleto: req.session.nomeCompleto
-    };
-  }
-  next();
-});
-
-// Middleware de autenticação (CORRIGIDO)
-app.use((req, res, next) => {
-  console.log('🛡️ Middleware auth - URL:', req.path, 'Method:', req.method);
-  
-  // Rotas públicas (não precisam de login)
-  const publicRoutes = ['/login', '/health', '/debug/usuarios', '/debug/test-login'];
-  
-  // Verificar se é rota pública
-  if (publicRoutes.includes(req.path)) {
-    console.log('✅ Rota pública permitida:', req.path);
-    return next();
-  }
-  
-  // Verificar se tem sessão para outras rotas
-  if (req.session && req.session.userId) {
-    console.log('✅ Usuário autenticado:', req.session.username);
-    return next();
-  } else {
-    console.log('❌ Acesso negado, redirecionando para login');
-    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
-  }
-});
-
 // ========================================
 // ROTAS DE LOGIN (CORRIGIDAS)
 // ========================================
