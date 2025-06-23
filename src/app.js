@@ -536,8 +536,6 @@ try {
 
 
 // ... (após o CREATE TABLE IF NOT EXISTS fluxo_caixa)
-
-// Inserir/Atualizar categorias financeiras para garantir que existam em produção
 try {
     console.log('📝 Inserindo/Atualizando categorias financeiras...');
     await pool.query(`
@@ -568,6 +566,55 @@ try {
 } catch (err) {
     console.error('⚠️  Não foi possível inserir/atualizar categorias:', err.message);
 }
+
+// ===== SISTEMA DE ENTREGAS =====
+    console.log('🚚 Criando tabelas do sistema de entregas...');
+    
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS entregas (
+        id SERIAL PRIMARY KEY,
+        data_entrega DATE NOT NULL,
+        cliente_id INTEGER,
+        cliente_nome VARCHAR(200) NOT NULL,
+        endereco_completo TEXT NOT NULL,
+        latitude DECIMAL(10, 8),
+        longitude DECIMAL(11, 8),
+        observacoes TEXT,
+        valor_entrega DECIMAL(10,2),
+        status VARCHAR(20) DEFAULT 'PENDENTE',
+        ordem_entrega INTEGER,
+        hora_prevista TIME,
+        hora_entrega TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS rotas (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(100) NOT NULL,
+        data_rota DATE NOT NULL,
+        motorista VARCHAR(100),
+        veiculo VARCHAR(100),
+        km_total DECIMAL(8,2),
+        tempo_total_minutos INTEGER,
+        status VARCHAR(20) DEFAULT 'PLANEJADA',
+        observacoes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS rota_entregas (
+        id SERIAL PRIMARY KEY,
+        rota_id INTEGER REFERENCES rotas(id) ON DELETE CASCADE,
+        entrega_id INTEGER REFERENCES entregas(id) ON DELETE CASCADE,
+        ordem_na_rota INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    console.log('✅ Tabelas de entregas criadas!');
 
 console.log('📝 Criando tabela clientes...');
 await pool.query(`
@@ -711,7 +758,6 @@ app.use('/contas-a-receber', contasAReceberRoutes);
 app.use('/usuarios', usuariosRoutes);
 app.use('/contas-a-pagar', contasAPagarRoutes);
 app.use('/inadimplencia', inadimplenciaRoutes);
-app.use('/entregas', entregasRoutes);
 
 
 // Inicializar servidor
