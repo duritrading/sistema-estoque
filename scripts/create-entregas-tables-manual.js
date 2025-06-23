@@ -1,20 +1,22 @@
+// scripts/create-entregas-tables-manual.js
 const { Pool } = require('pg');
 
 async function createEntregasTables() {
+    console.log('🔧 Iniciando criação das tabelas de entregas...');
+    
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
     });
 
     try {
-        console.log('🚚 Criando tabelas do sistema de entregas...');
-
-        // Tabela de entregas
+        // 1. Criar tabela de entregas
+        console.log('📦 Criando tabela entregas...');
         await pool.query(`
             CREATE TABLE IF NOT EXISTS entregas (
                 id SERIAL PRIMARY KEY,
                 data_entrega DATE NOT NULL,
-                cliente_id INTEGER REFERENCES clientes(id),
+                cliente_id INTEGER,
                 cliente_nome VARCHAR(200) NOT NULL,
                 endereco_completo TEXT NOT NULL,
                 latitude DECIMAL(10, 8),
@@ -28,8 +30,10 @@ async function createEntregasTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabela entregas criada!');
 
-        // Tabela de rotas
+        // 2. Criar tabela de rotas
+        console.log('🚚 Criando tabela rotas...');
         await pool.query(`
             CREATE TABLE IF NOT EXISTS rotas (
                 id SERIAL PRIMARY KEY,
@@ -44,8 +48,10 @@ async function createEntregasTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabela rotas criada!');
 
-        // Tabela de relacionamento rotas <-> entregas
+        // 3. Criar tabela de relacionamento
+        console.log('🔗 Criando tabela rota_entregas...');
         await pool.query(`
             CREATE TABLE IF NOT EXISTS rota_entregas (
                 id SERIAL PRIMARY KEY,
@@ -55,51 +61,62 @@ async function createEntregasTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Tabela rota_entregas criada!');
 
-        // Adicionar índices para performance
+        // 4. Criar índices para performance
+        console.log('📊 Criando índices...');
         await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_entregas_data ON entregas(data_entrega);
             CREATE INDEX IF NOT EXISTS idx_entregas_status ON entregas(status);
             CREATE INDEX IF NOT EXISTS idx_entregas_cliente ON entregas(cliente_id);
             CREATE INDEX IF NOT EXISTS idx_rotas_data ON rotas(data_rota);
         `);
+        console.log('✅ Índices criados!');
 
-        console.log('✅ Tabelas de entregas criadas com sucesso!');
+        // 5. Verificar se as tabelas foram criadas
+        const tabelas = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name IN ('entregas', 'rotas', 'rota_entregas')
+            ORDER BY table_name
+        `);
+        
+        console.log('\n🎉 SUCESSO! Tabelas criadas:');
+        tabelas.rows.forEach(row => {
+            console.log(`✅ ${row.table_name}`);
+        });
 
-        // Inserir dados de exemplo (opcional)
+        // 6. Inserir dados de exemplo (opcional)
+        console.log('\n📋 Inserindo dados de exemplo...');
         const hoje = new Date().toISOString().split('T')[0];
         
         await pool.query(`
             INSERT INTO entregas (data_entrega, cliente_nome, endereco_completo, valor_entrega, observacoes)
             VALUES 
-                ($1, 'Cliente Exemplo 1', 'Rua das Flores, 123, Boa Viagem, Recife-PE', 150.00, 'Entregar pela manhã'),
-                ($1, 'Cliente Exemplo 2', 'Av. Bernardo Vieira, 456, Tirol, Natal-RN', 220.50, 'Cliente prefere entrega após 14h')
+                ($1, 'Cliente Exemplo 1', 'Rua das Flores, 123, Boa Viagem, Recife-PE, 51030-230', 150.00, 'Entregar pela manhã'),
+                ($1, 'Cliente Exemplo 2', 'Av. Bernardo Vieira, 456, Tirol, Natal-RN, 59075-250', 220.50, 'Cliente prefere entrega após 14h')
             ON CONFLICT DO NOTHING
         `, [hoje]);
 
         console.log('✅ Dados de exemplo inseridos!');
+        console.log('\n🚀 Sistema de entregas pronto para usar!');
+        console.log('🔄 Agora você pode acessar /entregas no sistema');
 
     } catch (error) {
         console.error('❌ Erro ao criar tabelas de entregas:', error);
+        console.error('Stack:', error.stack);
+        process.exit(1);
     } finally {
         await pool.end();
+        console.log('\n✨ Processo concluído!');
+        process.exit(0);
     }
 }
 
+// Executar se chamado diretamente
 if (require.main === module) {
     createEntregasTables();
 }
 
 module.exports = { createEntregasTables };
-
-// ===== ATUALIZAÇÃO NO HEADER.EJS =====
-// Adicionar este item no menu de navegação em src/views/partials/header.ejs
-
-// Dentro do nav-content, adicionar:
-/*
-<div class="nav-item">
-    <a href="/entregas" class="<%= locals.currentPage === 'entregas' ? 'active' : '' %>">
-        <span class="menu-icon">🚚</span> Entregas
-    </a>
-</div>
-*/
