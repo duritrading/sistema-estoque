@@ -683,6 +683,24 @@ app.get('/debug/usuarios', async (req, res) => {
   }
 });
 
+app.get('/debug/estrutura-produtos', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'produtos'
+            ORDER BY ordinal_position;
+        `);
+        
+        res.json({
+            message: 'Estrutura da tabela produtos',
+            colunas: result.rows
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Debug - testar login direto
 app.get('/debug/test-login', async (req, res) => {
   try {
