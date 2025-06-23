@@ -55,119 +55,6 @@ const db = {
 };
 
 // ========================================
-// SISTEMA DE LOGIN
-// ========================================
-
-// CSS para Login
-const loginStyles = `
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { 
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .login-container {
-    background: white;
-    padding: 3rem;
-    border-radius: 20px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-  }
-  .login-header {
-    margin-bottom: 2rem;
-  }
-  .login-header h1 {
-    color: #2d3748;
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-  }
-  .login-header p {
-    color: #718096;
-    font-size: 1rem;
-  }
-  .form-group {
-    margin-bottom: 1.5rem;
-    text-align: left;
-  }
-  .form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: #4a5568;
-  }
-  .form-group input {
-    width: 100%;
-    padding: 12px 16px;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: border-color 0.2s;
-  }
-  .form-group input:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  }
-  .btn-login {
-    width: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 1rem;
-  }
-  .btn-login:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-  }
-  .alert {
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    font-weight: 500;
-  }
-  .alert-danger {
-    background: #fed7d7;
-    color: #742a2a;
-    border: 1px solid #feb2b2;
-  }
-  .alert-success {
-    background: #f0fff4;
-    color: #22543d;
-    border: 1px solid #9ae6b4;
-  }
-  .footer-info {
-    margin-top: 2rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e2e8f0;
-    color: #718096;
-    font-size: 0.9rem;
-  }
-  @media (max-width: 480px) {
-    .login-container {
-      margin: 1rem;
-      padding: 2rem;
-    }
-  }
-</style>
-`;
-
-// ...
-app.use(express.static('public'));
-app.use(session({ /* ... */ }));
-
-// ========================================
 // ROTA DE HEALTH CHECK PARA O RENDER
 // ========================================
 app.get('/health', (req, res) => {
@@ -192,6 +79,14 @@ app.use((req, res, next) => {
   // Verificar se tem sessão para outras rotas
   if (req.session && req.session.userId) {
     console.log('✅ Usuário autenticado:', req.session.username, 'ID:', req.session.userId);
+    
+    // ADICIONAR: Definir informações do usuário nos locals para o header
+    res.locals.user = {
+      id: req.session.userId,
+      username: req.session.username,
+      nomeCompleto: req.session.nomeCompleto
+    };
+    
     return next();
   } else {
     console.log('❌ Acesso negado - Session:', !!req.session, 'UserID:', req.session?.userId);
@@ -221,7 +116,7 @@ async function createUsersTable() {
     
     if (adminCheck.rows.length === 0) {
       // Criar usuário admin padrão
-      const defaultPassword = 'adminofdistribuidora987';
+      const defaultPassword = 'admin123';
       const hashedPassword = await bcrypt.hash(defaultPassword, 10);
       
       await pool.query(`
@@ -245,7 +140,6 @@ app.get('/login', (req, res) => {
   const error = req.query.error;
   const success = req.query.success;
 
-  // A mágica acontece aqui!
   res.render('login', {
     error,
     success,
@@ -397,8 +291,6 @@ function getSaldoProduto(produtoId) {
   });
 }
 
-// Dentro de src/app.js
-
 async function initializeDatabase() {
   try {
     console.log('🔧 Inicializando banco PostgreSQL...');
@@ -442,8 +334,6 @@ try {
 } catch (err) {
   console.error('⚠️  Não foi possível atualizar a tabela contas_a_pagar:', err.message);
 }
-
-
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS fornecedores (
@@ -498,7 +388,6 @@ try {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-
 
 // ... (após o CREATE TABLE IF NOT EXISTS fluxo_caixa)
 try {
@@ -723,9 +612,8 @@ app.use('/contas-a-receber', contasAReceberRoutes);
 app.use('/usuarios', usuariosRoutes);
 app.use('/contas-a-pagar', contasAPagarRoutes);
 app.use('/inadimplencia', inadimplenciaRoutes);
+app.use('/entregas', entregasRoutes);
 
-
-// Inicializar servidor
 // ========================================
 // ENDPOINTS DE DEBUG (TEMPORÁRIOS)
 // ========================================
