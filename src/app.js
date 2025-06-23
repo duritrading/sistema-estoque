@@ -62,37 +62,47 @@ app.get('/health', (req, res) => {
 });
 
 // Middleware de autenticação (CORRIGIDO)
+// Middleware de autenticação (COM LIMPEZA DE SESSÃO CORROMPIDA)
 app.use((req, res, next) => {
-  console.log('🛡️ Middleware auth - URL:', req.path, 'Method:', req.method);
-  console.log('🎫 Session ID:', req.sessionID);
-  console.log('👤 User ID na sessão:', req.session?.userId);
-  
-  // Rotas públicas (não precisam de login)
-  const publicRoutes = ['/login', '/logout', '/health', '/debug/usuarios', '/debug/test-login', '/debug/recriar-admin'];
-  
-  // Verificar se é rota pública
-  if (publicRoutes.includes(req.path)) {
-    console.log('✅ Rota pública permitida:', req.path);
-    return next();
-  }
-  
-  // Verificar se tem sessão para outras rotas
-  if (req.session && req.session.userId) {
-    console.log('✅ Usuário autenticado:', req.session.username, 'ID:', req.session.userId);
-    
-    // ADICIONAR: Definir informações do usuário nos locals para o header
-    res.locals.user = {
-      id: req.session.userId,
-      username: req.session.username,
-      nomeCompleto: req.session.nomeCompleto
-    };
-    
-    return next();
-  } else {
-    console.log('❌ Acesso negado - Session:', !!req.session, 'UserID:', req.session?.userId);
-    console.log('❌ Redirecionando para login');
-    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
-  }
+    console.log('🛡️ Middleware auth - URL:', req.path, 'Method:', req.method);
+    console.log('🎫 Session ID:', req.sessionID);
+    console.log('👤 User ID na sessão:', req.session?.userId);
+
+    // Rotas públicas
+    const publicRoutes = ['/login', '/logout', '/health', '/debug/usuarios', '/debug/test-login', '/debug/recriar-admin'];
+
+    if (publicRoutes.includes(req.path)) {
+        console.log('✅ Rota pública permitida:', req.path);
+        return next();
+    }
+
+    // Verificar se tem sessão válida
+    if (req.session && req.session.userId) {
+        console.log('✅ Usuário autenticado:', req.session.username, 'ID:', req.session.userId);
+        
+        res.locals.user = {
+            id: req.session.userId,
+            username: req.session.username,
+            nomeCompleto: req.session.nomeCompleto
+        };
+        
+        return next();
+    } else {
+        console.log('❌ Acesso negado - Session:', !!req.session, 'UserID:', req.session?.userId);
+        
+        // NOVO: Limpar sessão corrompida antes de redirecionar
+        if (req.session) {
+            console.log('🧹 Destruindo sessão corrompida');
+            req.session.destroy((err) => {
+                if (err) console.log('Erro ao destruir sessão:', err);
+                console.log('❌ Redirecionando para login');
+                return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+            });
+        } else {
+            console.log('❌ Redirecionando para login');
+            return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+        }
+    }
 });
 
 // Função para criar tabela de usuários
