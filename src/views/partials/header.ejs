@@ -352,6 +352,12 @@
             </div>
           </div>
 
+          <div class="nav-item">
+    <a href="/entregas" class="<%= locals.currentPage === 'entregas' ? 'active' : '' %>">
+        <span class="menu-icon">🚚</span> Entregas
+    </a>
+</div>
+
           <div class="nav-dropdown <%= ['produtos', 'usuarios', 'clientes', 'fornecedores', 'rcas'].includes(locals.currentPage) ? 'active' : '' %>">
             <a href="#">
               <span class="menu-icon">⚙️</span> Gerenciar
