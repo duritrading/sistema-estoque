@@ -695,14 +695,11 @@ const dreRoutes = require('./routes/dre');
 const contasAReceberRoutes = require('./routes/contas-a-receber');
 const contasAPagarRoutes = require('./routes/contas-a-pagar');
 const inadimplenciaRoutes = require('./routes/inadimplencia');
-
-
-
+const entregasRoutes = require('./routes/entregas');
 
 // ...
 app.use('/movimentacoes', movimentacoesRoutes);
 app.use('/fornecedores', fornecedoresRoutes);
-app.use('/usuarios', usuariosRoutes);
 app.use('/backup', backupRoutes); 
 app.use('/clientes', clientesRoutes);
 app.use('/rcas', rcaRoutes);
@@ -711,8 +708,10 @@ app.use('/produtos', produtosRoutes);
 app.use('/fluxo-caixa', fluxoCaixaRoutes);
 app.use('/dre', dreRoutes);
 app.use('/contas-a-receber', contasAReceberRoutes);
+app.use('/usuarios', usuariosRoutes);
 app.use('/contas-a-pagar', contasAPagarRoutes);
 app.use('/inadimplencia', inadimplenciaRoutes);
+app.use('/entregas', entregasRoutes);
 
 
 // Inicializar servidor
