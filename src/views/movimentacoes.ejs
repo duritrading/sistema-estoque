@@ -7,6 +7,15 @@
 <div class="card">
   <h2>➕ Nova Movimentação</h2>
   <form action="/movimentacoes" method="POST">
+    <!-- NOVO CAMPO DE DATA -->
+    <div class="form-group">
+      <label for="data_movimentacao">Data da Movimentação *</label>
+      <input type="date" id="data_movimentacao" name="data_movimentacao" required>
+      <small style="color: #666; display: block; margin-top: 5px;">
+        ℹ️ Selecione a data em que a movimentação realmente ocorreu (permite lançamentos retroativos)
+      </small>
+    </div>
+
     <div class="form-row">
       <div class="form-group">
         <label for="produto_id">Produto *</label>
@@ -183,6 +192,38 @@
     const clienteNomeSelect = document.getElementById('cliente_nome');
     const fornecedorSelect = document.getElementById('fornecedor_id');
     const parcelasInput = document.getElementById('total_parcelas');
+    const dataMovimentacaoInput = document.getElementById('data_movimentacao');
+
+    // NOVO: Definir data padrão como hoje
+    function definirDataPadrao() {
+      if (dataMovimentacaoInput) {
+        const hoje = new Date();
+        const dataFormatada = hoje.toISOString().split('T')[0];
+        dataMovimentacaoInput.value = dataFormatada;
+      }
+    }
+
+    // NOVO: Atualizar campos de vencimento baseado na data da movimentação
+    function atualizarVencimentosComDataMovimentacao() {
+      const dataMovimentacao = dataMovimentacaoInput ? new Date(dataMovimentacaoInput.value) : new Date();
+      gerarCamposDeVencimento(dataMovimentacao);
+    }
+    const dataMovimentacaoInput = document.getElementById('data_movimentacao');
+
+    // NOVO: Definir data padrão como hoje
+    function definirDataPadrao() {
+      if (dataMovimentacaoInput) {
+        const hoje = new Date();
+        const dataFormatada = hoje.toISOString().split('T')[0];
+        dataMovimentacaoInput.value = dataFormatada;
+      }
+    }
+
+    // NOVO: Atualizar campos de vencimento baseado na data da movimentação
+    function atualizarVencimentosComDataMovimentacao() {
+      const dataMovimentacao = dataMovimentacaoInput ? new Date(dataMovimentacaoInput.value) : new Date();
+      gerarCamposDeVencimento(dataMovimentacao);
+    }
 
     function mostrarUnidade() {
       if (!produtoSelect || !spanUnidade) return;
@@ -201,7 +242,8 @@
       valorTotalInput.value = (quantidade * precoUnitario).toFixed(2);
     }
 
-    function gerarCamposDeVencimento() {
+    // MODIFICADO: Aceitar data base para os vencimentos
+    function gerarCamposDeVencimento(dataBase = null) {
       if (!parcelasInput) return;
       const numParcelas = parseInt(parcelasInput.value) || 0;
       const container = document.getElementById('vencimentos-container');
@@ -209,10 +251,12 @@
       container.innerHTML = '';
 
       if (numParcelas > 0) {
-          const hoje = new Date();
+          // Usar data da movimentação como base, ou hoje se não fornecida
+          const baseDate = dataBase || (dataMovimentacaoInput ? new Date(dataMovimentacaoInput.value) : new Date());
+          
           for (let i = 1; i <= numParcelas; i++) {
-              const dataVencimento = new Date(hoje);
-              dataVencimento.setDate(hoje.getDate() + (i * 30));
+              const dataVencimento = new Date(baseDate);
+              dataVencimento.setDate(baseDate.getDate() + (i * 30));
               const dataFormatada = dataVencimento.toISOString().split('T')[0];
               
               const formGroup = document.createElement('div');
@@ -255,7 +299,7 @@
             if (fornecedorSelect) fornecedorSelect.value = '';
             
             // Gera campos de vencimento
-            gerarCamposDeVencimento();
+            atualizarVencimentosComDataMovimentacao();
             
         } else {
             // Esconde todos se nenhum tipo selecionado
@@ -271,9 +315,15 @@
     if (precoUnitarioInput) precoUnitarioInput.addEventListener('input', calcularValorTotal);
     if (produtoSelect) produtoSelect.addEventListener('change', mostrarUnidade);
     if (tipoSelect) tipoSelect.addEventListener('change', toggleFields);
-    if (parcelasInput) parcelasInput.addEventListener('input', gerarCamposDeVencimento);
+    if (parcelasInput) parcelasInput.addEventListener('input', atualizarVencimentosComDataMovimentacao);
+    
+    // NOVO: Event listener para mudança de data
+    if (dataMovimentacaoInput) {
+      dataMovimentacaoInput.addEventListener('change', atualizarVencimentosComDataMovimentacao);
+    }
     
     // Chama as funções no carregamento inicial
+    definirDataPadrao(); // NOVO
     toggleFields();
     mostrarUnidade();
   });

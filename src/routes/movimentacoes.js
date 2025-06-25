@@ -50,12 +50,13 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ROTA POST COM VALIDAÇÕES
+// ROTA POST ATUALIZADA COM CAMPO DE DATA
 router.post('/', async (req, res) => {
   if (!pool) return res.status(500).send('Erro de configuração.');
   
   try {
     const {
+      data_movimentacao, // NOVO CAMPO
       produto_id,
       tipo,
       quantidade,
@@ -70,8 +71,31 @@ router.post('/', async (req, res) => {
     } = req.body;
 
     // Validações básicas
-    if (!produto_id || !tipo || !quantidade) {
-      return res.status(400).send('Dados obrigatórios faltando.');
+    if (!produto_id || !tipo || !quantidade || !data_movimentacao) {
+      return res.status(400).send('Dados obrigatórios faltando (incluindo data da movimentação).');
+    }
+
+    // Validar data
+    const dataMovimentacao = new Date(data_movimentacao);
+    if (isNaN(dataMovimentacao.getTime())) {
+      return res.render('error', {
+        user: res.locals.user,
+        titulo: 'Erro de Validação',
+        mensagem: 'Data da movimentação inválida.',
+        voltar_url: '/movimentacoes'
+      });
+    }
+
+    // Validar se a data não é muito futura (máximo 1 dia no futuro)
+    const hoje = new Date();
+    const umDiaDepois = new Date(hoje.getTime() + (24 * 60 * 60 * 1000));
+    if (dataMovimentacao > umDiaDepois) {
+      return res.render('error', {
+        user: res.locals.user,
+        titulo: 'Erro de Validação',
+        mensagem: 'A data da movimentação não pode ser mais de 1 dia no futuro.',
+        voltar_url: '/movimentacoes'
+      });
     }
 
     // VALIDAÇÕES DE LIMITES NUMÉRICOS
@@ -122,12 +146,12 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Insere a movimentação com valores validados
+    // Insere a movimentação com DATA PERSONALIZADA
     const movimentacaoResult = await pool.query(`
       INSERT INTO movimentacoes (
         produto_id, tipo, quantidade, preco_unitario, valor_total,
-        fornecedor_id, cliente_nome, rca, documento, observacao
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        fornecedor_id, cliente_nome, rca, documento, observacao, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING id
     `, [
       produto_id,
@@ -139,7 +163,8 @@ router.post('/', async (req, res) => {
       cliente_nome || null,
       rca || null,
       documento || null,
-      observacao || null
+      observacao || null,
+      dataMovimentacao // USAR A DATA PERSONALIZADA
     ]);
 
     const movimentacaoId = movimentacaoResult.rows[0].id;
@@ -169,14 +194,21 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Se for ENTRADA, pode registrar no fluxo de caixa
+    // Se for ENTRADA, pode registrar no fluxo de caixa COM A DATA PERSONALIZADA
     if (tipo === 'ENTRADA' && valor_total) {
       await pool.query(`
         INSERT INTO fluxo_caixa (
           data_operacao, tipo, valor, categoria_id, descricao, status
-        ) VALUES (CURRENT_DATE, 'DEBITO', $1, 3, $2, 'PAGO')
-      `, [valor_total, `Compra de produtos - Doc: ${documento || 'S/N'}`]);
+        ) VALUES ($1, 'DEBITO', $2, 3, $3, 'PAGO')
+      `, [
+        data_movimentacao, // USAR A DATA DA MOVIMENTAÇÃO
+        valor_total, 
+        `Compra de produtos - Doc: ${documento || 'S/N'}`
+      ]);
     }
+
+    // Log da operação
+    console.log(`✅ Movimentação criada: ${tipo} de ${qtd} unidades em ${data_movimentacao}`);
 
     res.redirect('/movimentacoes');
   } catch (error) {
