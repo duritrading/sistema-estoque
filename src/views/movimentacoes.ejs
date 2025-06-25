@@ -7,7 +7,7 @@
 <div class="card">
   <h2>➕ Nova Movimentação</h2>
   <form action="/movimentacoes" method="POST">
-    <!-- NOVO CAMPO DE DATA -->
+    <!-- CAMPO DE DATA -->
     <div class="form-group">
       <label for="data_movimentacao">Data da Movimentação *</label>
       <input type="date" id="data_movimentacao" name="data_movimentacao" required>
@@ -170,114 +170,119 @@
   </table>
 </div>
 
+<!-- Dados dos produtos para o JavaScript -->
 <script type="application/json" id="produtos-data">
   <%- JSON.stringify(produtos) %>
 </script>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
+    // ===== OBTER ELEMENTOS DO DOM =====
     const produtosDataElement = document.getElementById('produtos-data');
     if (!produtosDataElement) return;
     
     const produtos = JSON.parse(produtosDataElement.textContent);
 
+    // Elementos do formulário
     const produtoSelect = document.getElementById('produto_id');
+    const tipoSelect = document.getElementById('tipo');
     const quantidadeInput = document.getElementById('quantidade');
     const precoUnitarioInput = document.getElementById('preco_unitario');
-    const spanUnidade = document.getElementById('unidade_produto');
     const valorTotalInput = document.getElementById('valor_total');
-    const tipoSelect = document.getElementById('tipo');
+    const spanUnidade = document.getElementById('unidade_produto');
+    const dataMovimentacaoInput = document.getElementById('data_movimentacao');
+    
+    // Containers de campos específicos
     const entradaFields = document.getElementById('entrada-fields');
     const saidaFields = document.getElementById('saida-fields');
+    
+    // Campos específicos
     const clienteNomeSelect = document.getElementById('cliente_nome');
     const fornecedorSelect = document.getElementById('fornecedor_id');
     const parcelasInput = document.getElementById('total_parcelas');
-    const dataMovimentacaoInput = document.getElementById('data_movimentacao');
+    const vencimentosContainer = document.getElementById('vencimentos-container');
 
-    // NOVO: Definir data padrão como hoje
+    // ===== FUNÇÃO PARA DEFINIR DATA PADRÃO =====
     function definirDataPadrao() {
-      if (dataMovimentacaoInput) {
-        const hoje = new Date();
-        const dataFormatada = hoje.toISOString().split('T')[0];
-        dataMovimentacaoInput.value = dataFormatada;
-      }
+        if (dataMovimentacaoInput) {
+            const hoje = new Date();
+            const dataFormatada = hoje.toISOString().split('T')[0];
+            dataMovimentacaoInput.value = dataFormatada;
+        }
     }
 
-    // NOVO: Atualizar campos de vencimento baseado na data da movimentação
-    function atualizarVencimentosComDataMovimentacao() {
-      const dataMovimentacao = dataMovimentacaoInput ? new Date(dataMovimentacaoInput.value) : new Date();
-      gerarCamposDeVencimento(dataMovimentacao);
-    }
-    const dataMovimentacaoInput = document.getElementById('data_movimentacao');
-
-    // NOVO: Definir data padrão como hoje
-    function definirDataPadrao() {
-      if (dataMovimentacaoInput) {
-        const hoje = new Date();
-        const dataFormatada = hoje.toISOString().split('T')[0];
-        dataMovimentacaoInput.value = dataFormatada;
-      }
-    }
-
-    // NOVO: Atualizar campos de vencimento baseado na data da movimentação
-    function atualizarVencimentosComDataMovimentacao() {
-      const dataMovimentacao = dataMovimentacaoInput ? new Date(dataMovimentacaoInput.value) : new Date();
-      gerarCamposDeVencimento(dataMovimentacao);
-    }
-
+    // ===== FUNÇÃO PARA MOSTRAR UNIDADE =====
     function mostrarUnidade() {
-      if (!produtoSelect || !spanUnidade) return;
-      const produtoId = produtoSelect.value;
-      spanUnidade.textContent = '';
-      if (produtoId) {
-        const produtoSelecionado = produtos.find(p => p.id == produtoId);
-        if (produtoSelecionado) spanUnidade.textContent = `(${produtoSelecionado.unidade || 'UN'})`;
-      }
+        if (!produtoSelect || !spanUnidade) return;
+        const produtoId = produtoSelect.value;
+        spanUnidade.textContent = '';
+        
+        if (produtoId) {
+            const produtoSelecionado = produtos.find(p => p.id == produtoId);
+            if (produtoSelecionado) {
+                spanUnidade.textContent = `(${produtoSelecionado.unidade || 'UN'})`;
+            }
+        }
     }
 
+    // ===== FUNÇÃO PARA CALCULAR VALOR TOTAL =====
     function calcularValorTotal() {
-      if (!quantidadeInput || !precoUnitarioInput || !valorTotalInput) return;
-      const quantidade = parseFloat(quantidadeInput.value) || 0;
-      const precoUnitario = parseFloat(precoUnitarioInput.value) || 0;
-      valorTotalInput.value = (quantidade * precoUnitario).toFixed(2);
+        if (!quantidadeInput || !precoUnitarioInput || !valorTotalInput) return;
+        
+        const quantidade = parseFloat(quantidadeInput.value) || 0;
+        const precoUnitario = parseFloat(precoUnitarioInput.value) || 0;
+        const valorTotal = quantidade * precoUnitario;
+        
+        valorTotalInput.value = valorTotal.toFixed(2);
     }
 
-    // MODIFICADO: Aceitar data base para os vencimentos
-    function gerarCamposDeVencimento(dataBase = null) {
-      if (!parcelasInput) return;
-      const numParcelas = parseInt(parcelasInput.value) || 0;
-      const container = document.getElementById('vencimentos-container');
-      if (!container) return;
-      container.innerHTML = '';
+    // ===== FUNÇÃO PARA GERAR CAMPOS DE VENCIMENTO =====
+    function gerarCamposDeVencimento() {
+        if (!parcelasInput || !vencimentosContainer) return;
+        
+        const numParcelas = parseInt(parcelasInput.value) || 0;
+        vencimentosContainer.innerHTML = '';
 
-      if (numParcelas > 0) {
-          // Usar data da movimentação como base, ou hoje se não fornecida
-          const baseDate = dataBase || (dataMovimentacaoInput ? new Date(dataMovimentacaoInput.value) : new Date());
-          
-          for (let i = 1; i <= numParcelas; i++) {
-              const dataVencimento = new Date(baseDate);
-              dataVencimento.setDate(baseDate.getDate() + (i * 30));
-              const dataFormatada = dataVencimento.toISOString().split('T')[0];
-              
-              const formGroup = document.createElement('div');
-              formGroup.className = 'form-group';
-              formGroup.innerHTML = `
-                <label for="vencimento_parcela_${i}">Vencimento Parcela ${i}</label>
-                <input type="date" id="vencimento_parcela_${i}" name="vencimentos[]" value="${dataFormatada}" required class="form-control">
-              `;
-              container.appendChild(formGroup);
-          }
-      }
+        if (numParcelas > 0) {
+            // Usar data da movimentação como base, ou hoje se não fornecida
+            const baseDate = dataMovimentacaoInput && dataMovimentacaoInput.value 
+                ? new Date(dataMovimentacaoInput.value) 
+                : new Date();
+            
+            for (let i = 1; i <= numParcelas; i++) {
+                const dataVencimento = new Date(baseDate);
+                dataVencimento.setDate(baseDate.getDate() + (i * 30));
+                const dataFormatada = dataVencimento.toISOString().split('T')[0];
+                
+                const formGroup = document.createElement('div');
+                formGroup.className = 'form-group';
+                formGroup.innerHTML = `
+                  <label for="vencimento_parcela_${i}">Vencimento Parcela ${i}</label>
+                  <input type="date" id="vencimento_parcela_${i}" name="vencimentos[]" value="${dataFormatada}" required class="form-control">
+                `;
+                vencimentosContainer.appendChild(formGroup);
+            }
+        }
     }
 
+    // ===== FUNÇÃO PRINCIPAL: TOGGLE FIELDS =====
     function toggleFields() {
-        if (!tipoSelect) return;
+        console.log('toggleFields chamada'); // Debug
+        
+        if (!tipoSelect) {
+            console.log('tipoSelect não encontrado'); // Debug
+            return;
+        }
+        
         const tipo = tipoSelect.value;
+        console.log('Tipo selecionado:', tipo); // Debug
         
         if (tipo === 'ENTRADA') {
+            console.log('Mostrando campos de ENTRADA'); // Debug
+            
             // Mostra campos de entrada, esconde de saída
-            entradaFields.style.display = 'block';
-            saidaFields.style.display = 'none';
+            if (entradaFields) entradaFields.style.display = 'block';
+            if (saidaFields) saidaFields.style.display = 'none';
             
             // Ajusta campos obrigatórios
             if (clienteNomeSelect) clienteNomeSelect.required = false;
@@ -287,9 +292,11 @@
             if (clienteNomeSelect) clienteNomeSelect.value = '';
             
         } else if (tipo === 'SAIDA') {
+            console.log('Mostrando campos de SAÍDA'); // Debug
+            
             // Mostra campos de saída, esconde de entrada
-            entradaFields.style.display = 'none';
-            saidaFields.style.display = 'block';
+            if (entradaFields) entradaFields.style.display = 'none';
+            if (saidaFields) saidaFields.style.display = 'block';
             
             // Ajusta campos obrigatórios
             if (clienteNomeSelect) clienteNomeSelect.required = true;
@@ -299,34 +306,55 @@
             if (fornecedorSelect) fornecedorSelect.value = '';
             
             // Gera campos de vencimento
-            atualizarVencimentosComDataMovimentacao();
+            gerarCamposDeVencimento();
             
         } else {
+            console.log('Nenhum tipo selecionado, escondendo todos os campos'); // Debug
+            
             // Esconde todos se nenhum tipo selecionado
-            entradaFields.style.display = 'none';
-            saidaFields.style.display = 'none';
+            if (entradaFields) entradaFields.style.display = 'none';
+            if (saidaFields) saidaFields.style.display = 'none';
             if (clienteNomeSelect) clienteNomeSelect.required = false;
             if (fornecedorSelect) fornecedorSelect.required = false;
         }
     }
 
-    // Adiciona os event listeners
-    if (quantidadeInput) quantidadeInput.addEventListener('input', calcularValorTotal);
-    if (precoUnitarioInput) precoUnitarioInput.addEventListener('input', calcularValorTotal);
-    if (produtoSelect) produtoSelect.addEventListener('change', mostrarUnidade);
-    if (tipoSelect) tipoSelect.addEventListener('change', toggleFields);
-    if (parcelasInput) parcelasInput.addEventListener('input', atualizarVencimentosComDataMovimentacao);
-    
-    // NOVO: Event listener para mudança de data
-    if (dataMovimentacaoInput) {
-      dataMovimentacaoInput.addEventListener('change', atualizarVencimentosComDataMovimentacao);
+    // ===== ADICIONAR EVENT LISTENERS =====
+    if (produtoSelect) {
+        produtoSelect.addEventListener('change', mostrarUnidade);
     }
-    
-    // Chama as funções no carregamento inicial
-    definirDataPadrao(); // NOVO
-    toggleFields();
+
+    if (quantidadeInput) {
+        quantidadeInput.addEventListener('input', calcularValorTotal);
+    }
+
+    if (precoUnitarioInput) {
+        precoUnitarioInput.addEventListener('input', calcularValorTotal);
+    }
+
+    if (tipoSelect) {
+        tipoSelect.addEventListener('change', function() {
+            console.log('Tipo alterado para:', this.value); // Debug
+            toggleFields();
+        });
+    }
+
+    if (parcelasInput) {
+        parcelasInput.addEventListener('input', gerarCamposDeVencimento);
+    }
+
+    if (dataMovimentacaoInput) {
+        dataMovimentacaoInput.addEventListener('change', gerarCamposDeVencimento);
+    }
+
+    // ===== CHAMADAS INICIAIS =====
+    console.log('Inicializando...'); // Debug
+    definirDataPadrao();
     mostrarUnidade();
-  });
+    toggleFields(); // Esta é a chamada importante!
+    
+    console.log('Inicialização completa'); // Debug
+});
 </script>
     
 <%- include('partials/footer') %>
