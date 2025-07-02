@@ -1,9 +1,9 @@
-// src/routes/entregas.js - VERSÃO CORRIGIDA COM FALLBACK
+// src/routes/entregas.js - VERSÃO CORRIGIDA COMPLETA
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
-// GET / - Página principal de entregas (versão defensiva)
+// GET / - Página principal de entregas (SEMPRE mostra as entregas)
 router.get('/', async (req, res) => {
     try {
         const hoje = new Date().toISOString().split('T')[0];
@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
         // Verificar se tabela warehouse_config existe e criar se necessário
         await inicializarTabelaWarehouse();
         
-        // Buscar configuração do armazém com fallback
+        // Buscar configuração do armazém (sem bloquear se não existir)
         let warehouse = await obterConfiguracaoWarehouse();
         
         // Buscar entregas do dia
@@ -25,19 +25,6 @@ router.get('/', async (req, res) => {
 
         const entregas = entregasResult.rows || [];
         
-        // Calcular estatísticas básicas
-        const stats = {
-            total_entregas: entregas.length,
-            entregues: entregas.filter(e => e.status === 'ENTREGUE').length,
-            pendentes: entregas.filter(e => e.status === 'PENDENTE').length,
-            valor_total: entregas.reduce((sum, e) => sum + parseFloat(e.valor_entrega || 0), 0),
-            distancia_total_km: 0,
-            tempo_total_estimado_minutos: 0,
-            horario_conclusao_estimado: null,
-            velocidade_media: warehouse.velocidade_media_kmh,
-            tempo_por_entrega: warehouse.tempo_entrega_minutos
-        };
-
         // Buscar clientes para o formulário
         const clientesResult = await pool.query(`
             SELECT id, nome, endereco, cep 
@@ -45,6 +32,20 @@ router.get('/', async (req, res) => {
             WHERE endereco IS NOT NULL 
             ORDER BY nome
         `);
+
+        // Calcular estatísticas básicas
+        const stats = {
+            total_entregas: entregas.length,
+            entregues: entregas.filter(e => e.status === 'ENTREGUE').length,
+            pendentes: entregas.filter(e => e.status === 'PENDENTE').length,
+            valor_total: entregas.reduce((sum, e) => sum + parseFloat(e.valor_entrega || 0), 0),
+            distancia_total_km: 'N/A',
+            tempo_total_estimado_minutos: entregas.filter(e => e.status === 'PENDENTE').length * warehouse.tempo_entrega_minutos,
+            tempo_total_estimado_horas: Math.round(entregas.filter(e => e.status === 'PENDENTE').length * warehouse.tempo_entrega_minutos / 60 * 10) / 10,
+            horario_conclusao_estimado: calcularHorarioConclusao(entregas.filter(e => e.status === 'PENDENTE').length * warehouse.tempo_entrega_minutos),
+            velocidade_media: warehouse.velocidade_media_kmh,
+            tempo_por_entrega: warehouse.tempo_entrega_minutos
+        };
 
         res.render('entregas', {
             user: res.locals.user,
@@ -124,14 +125,14 @@ router.post('/config', async (req, res) => {
         ]);
 
         console.log(`✅ Armazém configurado: ${endereco} (${coords.latitude}, ${coords.longitude})`);
-        res.redirect('/entregas');
+        res.redirect('/entregas'); // SEMPRE volta para a página principal
     } catch (error) {
         console.error('Erro ao salvar config:', error);
         res.status(500).send('Erro ao salvar configuração: ' + error.message);
     }
 });
 
-// POST / - Criar nova entrega (simplificado)
+// POST / - Criar nova entrega
 router.post('/', async (req, res) => {
     try {
         const {
@@ -244,10 +245,21 @@ router.post('/delete/:id', async (req, res) => {
 
 // ===== FUNÇÕES AUXILIARES =====
 
+// Calcular horário de conclusão estimado
+function calcularHorarioConclusao(minutos) {
+    if (minutos <= 0) return null;
+    
+    const agora = new Date();
+    const conclusao = new Date(agora.getTime() + (minutos * 60000));
+    return conclusao.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+}
+
 // Inicializar tabela warehouse_config se não existir
 async function inicializarTabelaWarehouse() {
     try {
-        // Verificar se a tabela existe
         const checkTable = await pool.query(`
             SELECT EXISTS (
                 SELECT FROM information_schema.tables 
@@ -259,7 +271,6 @@ async function inicializarTabelaWarehouse() {
         if (!checkTable.rows[0].exists) {
             console.log('📦 Criando tabela warehouse_config...');
             
-            // Criar tabela
             await pool.query(`
                 CREATE TABLE warehouse_config (
                     id SERIAL PRIMARY KEY,
@@ -276,7 +287,6 @@ async function inicializarTabelaWarehouse() {
                 )
             `);
 
-            // Inserir configuração padrão
             await pool.query(`
                 INSERT INTO warehouse_config (
                     nome, endereco, latitude, longitude, 
@@ -295,7 +305,6 @@ async function inicializarTabelaWarehouse() {
         }
     } catch (error) {
         console.error('Erro ao inicializar warehouse_config:', error);
-        throw error;
     }
 }
 
@@ -309,36 +318,23 @@ async function obterConfiguracaoWarehouse() {
         if (result.rows.length > 0) {
             return result.rows[0];
         }
-        
-        // Retornar configuração padrão se não existir
-        return {
-            id: null,
-            nome: 'OF Distribuidora - Sede',
-            endereco: 'Recife, PE, Brasil',
-            latitude: -8.0476,
-            longitude: -34.8770,
-            velocidade_media_kmh: 25,
-            tempo_entrega_minutos: 8,
-            horario_inicio: '08:00',
-            horario_fim: '18:00',
-            is_active: true
-        };
     } catch (error) {
         console.error('Erro ao obter configuração warehouse:', error);
-        // Retornar configuração padrão em caso de erro
-        return {
-            id: null,
-            nome: 'OF Distribuidora - Sede',
-            endereco: 'Recife, PE, Brasil',
-            latitude: -8.0476,
-            longitude: -34.8770,
-            velocidade_media_kmh: 25,
-            tempo_entrega_minutos: 8,
-            horario_inicio: '08:00',
-            horario_fim: '18:00',
-            is_active: true
-        };
     }
+    
+    // Retornar configuração padrão
+    return {
+        id: null,
+        nome: 'OF Distribuidora - Sede',
+        endereco: 'Recife, PE, Brasil',
+        latitude: -8.0476,
+        longitude: -34.8770,
+        velocidade_media_kmh: 25,
+        tempo_entrega_minutos: 8,
+        horario_inicio: '08:00',
+        horario_fim: '18:00',
+        is_active: true
+    };
 }
 
 // Geocodificar endereço usando API externa

@@ -1,84 +1,321 @@
-<!-- src/views/entregas-config.ejs - NOVA VIEW PARA CONFIGURAÇÃO -->
+<!-- src/views/entregas.ejs - PÁGINA PRINCIPAL DE ENTREGAS -->
 <%- include('partials/header', {
-  titulo: 'Configuração do Armazém',
-  subtitulo: 'Configure a localização da sua sede para otimização de rotas',
+  titulo: 'Sistema de Entregas',
+  subtitulo: 'Gerencie suas entregas e otimize rotas',
   user: locals.user
 }) %>
 
-<div class="card">
-  <h2>📍 Configuração do Armazém</h2>
+<!-- Estatísticas do dia -->
+<div class="stats-grid">
+  <div class="stat-card primary">
+    <h3>📦 Total de Entregas</h3>
+    <p class="stat-value"><%= stats.total_entregas %></p>
+    <p class="stat-label">Programadas para hoje</p>
+  </div>
   
-  <form action="/entregas/config" method="POST">
-    <div class="form-row">
-      <div class="form-group">
-        <label for="nome">Nome do Armazém:</label>
-        <input type="text" id="nome" name="nome" class="form-control" 
-               value="<%= warehouse ? warehouse.nome : 'OF Distribuidora - Sede' %>" required>
-      </div>
+  <div class="stat-card success">
+    <h3>✅ Entregues</h3>
+    <p class="stat-value text-success"><%= stats.entregues %></p>
+    <p class="stat-label">Concluídas</p>
+  </div>
+  
+  <div class="stat-card warning">
+    <h3>⏳ Pendentes</h3>
+    <p class="stat-value text-warning"><%= stats.pendentes %></p>
+    <p class="stat-label">Aguardando entrega</p>
+  </div>
+  
+  <div class="stat-card info">
+    <h3>💰 Valor Total</h3>
+    <p class="stat-value text-info">R$ <%= stats.valor_total.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p>
+    <p class="stat-label">Valor das entregas</p>
+  </div>
+</div>
+
+<!-- Informações de tempo estimado -->
+<% if (stats.pendentes > 0) { %>
+<div class="time-info-card">
+  <h3>⏱️ Estimativa de Tempo</h3>
+  <div class="time-details">
+    <div class="time-item">
+      <span class="label">Tempo Total Estimado:</span>
+      <span class="value"><%= stats.tempo_total_estimado_horas %>h (<%= stats.tempo_total_estimado_minutos %> min)</span>
     </div>
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label for="endereco">Endereço Completo:</label>
-        <textarea id="endereco" name="endereco" class="form-control" rows="2" required 
-                  placeholder="Ex: Rua das Flores, 123, Centro, Recife, PE, Brasil"><%= warehouse ? warehouse.endereco : '' %></textarea>
-        <small class="help-text">Inclua cidade, estado e país para melhor precisão</small>
-      </div>
+    <div class="time-item">
+      <span class="label">Previsão de Conclusão:</span>
+      <span class="value"><%= stats.horario_conclusao_estimado || 'N/A' %></span>
     </div>
-    
+    <div class="time-item">
+      <span class="label">Tempo por Entrega:</span>
+      <span class="value"><%= stats.tempo_por_entrega %> minutos</span>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<!-- Controles principais -->
+<div class="controls-section">
+  <!-- Botão para configurar armazém -->
+  <a href="/entregas/config" class="btn btn-secondary">⚙️ Configurar Armazém</a>
+  
+  <!-- Otimizar rota -->
+  <% if (stats.pendentes > 0) { %>
+  <button onclick="otimizarRota()" class="btn btn-primary">🗺️ Otimizar Rota</button>
+  <% } %>
+  
+  <!-- Adicionar nova entrega -->
+  <button onclick="mostrarFormulario()" class="btn btn-success">➕ Nova Entrega</button>
+</div>
+
+<!-- Formulário para nova entrega -->
+<div id="formularioEntrega" class="card" style="display: none;">
+  <h3>📦 Nova Entrega</h3>
+  
+  <form action="/entregas" method="POST">
     <div class="form-row">
       <div class="form-group">
-        <label for="velocidade_media_kmh">Velocidade Média (km/h):</label>
-        <input type="number" id="velocidade_media_kmh" name="velocidade_media_kmh" 
-               class="form-control" min="10" max="80" 
-               value="<%= warehouse ? warehouse.velocidade_media_kmh : 25 %>">
-        <small class="help-text">Velocidade média em área urbana (recomendado: 20-30 km/h)</small>
+        <label for="data_entrega">Data da Entrega:</label>
+        <input type="date" id="data_entrega" name="data_entrega" class="form-control" 
+               value="<%= dataFiltro %>" required>
       </div>
       
       <div class="form-group">
-        <label for="tempo_entrega_minutos">Tempo por Entrega (minutos):</label>
-        <input type="number" id="tempo_entrega_minutos" name="tempo_entrega_minutos" 
-               class="form-control" min="2" max="60" 
-               value="<%= warehouse ? warehouse.tempo_entrega_minutos : 8 %>">
-        <small class="help-text">Tempo médio gasto em cada entrega</small>
+        <label for="cliente_id">Cliente (opcional):</label>
+        <select id="cliente_id" name="cliente_id" class="form-control">
+          <option value="">Selecione um cliente...</option>
+          <% if (clientes && clientes.length > 0) { %>
+            <% clientes.forEach(cliente => { %>
+              <option value="<%= cliente.id %>" data-endereco="<%= cliente.endereco %>">
+                <%= cliente.nome %>
+              </option>
+            <% }) %>
+          <% } %>
+        </select>
       </div>
     </div>
     
     <div class="form-row">
       <div class="form-group">
-        <label for="horario_inicio">Horário de Início:</label>
-        <input type="time" id="horario_inicio" name="horario_inicio" class="form-control" 
-               value="<%= warehouse ? warehouse.horario_inicio : '08:00' %>">
+        <label for="cliente_nome">Nome do Cliente:</label>
+        <input type="text" id="cliente_nome" name="cliente_nome" class="form-control" 
+               placeholder="Nome completo" required>
       </div>
       
       <div class="form-group">
-        <label for="horario_fim">Horário de Fim:</label>
-        <input type="time" id="horario_fim" name="horario_fim" class="form-control" 
-               value="<%= warehouse ? warehouse.horario_fim : '18:00' %>">
+        <label for="valor_entrega">Valor da Entrega:</label>
+        <input type="number" id="valor_entrega" name="valor_entrega" class="form-control" 
+               min="0" step="0.01" placeholder="0.00">
       </div>
     </div>
     
-    <% if (warehouse) { %>
-      <div class="info-box">
-        <h4>📍 Localização Atual</h4>
-        <p><strong>Coordenadas:</strong> <%= warehouse.latitude %>, <%= warehouse.longitude %></p>
-        <p><strong>Última Atualização:</strong> <%= new Date(warehouse.updated_at).toLocaleString('pt-BR') %></p>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="endereco_completo">Endereço Completo:</label>
+        <textarea id="endereco_completo" name="endereco_completo" class="form-control" 
+                  rows="2" placeholder="Rua, número, bairro, cidade..." required></textarea>
       </div>
-    <% } %>
+    </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label for="observacoes">Observações:</label>
+        <textarea id="observacoes" name="observacoes" class="form-control" 
+                  rows="2" placeholder="Informações adicionais..."></textarea>
+      </div>
+    </div>
     
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary">💾 Salvar Configuração</button>
-      <a href="/entregas" class="btn btn-secondary">← Voltar para Entregas</a>
+      <button type="submit" class="btn btn-success">💾 Salvar Entrega</button>
+      <button type="button" onclick="esconderFormulario()" class="btn btn-secondary">Cancelar</button>
     </div>
   </form>
 </div>
 
+<!-- Lista de entregas -->
+<div class="card">
+  <h3>📋 Entregas de Hoje (<%= dataFiltro %>)</h3>
+  
+  <% if (entregas && entregas.length > 0) { %>
+    <div class="table-responsive">
+      <table class="table entregas-table">
+        <thead>
+          <tr>
+            <th>Ordem</th>
+            <th>Cliente</th>
+            <th>Endereço</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Observações</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% entregas.forEach(entrega => { %>
+            <tr class="<%= entrega.status === 'ENTREGUE' ? 'entrega-concluida' : '' %>">
+              <td class="text-center">
+                <span class="ordem-badge"><%= entrega.ordem_entrega || '-' %></span>
+              </td>
+              <td><strong><%= entrega.cliente_nome %></strong></td>
+              <td><%= entrega.endereco_completo %></td>
+              <td>R$ <%= parseFloat(entrega.valor_entrega || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+              <td>
+                <% if (entrega.status === 'ENTREGUE') { %>
+                  <span class="badge badge-success">✅ Entregue</span>
+                  <% if (entrega.hora_entrega) { %>
+                    <small class="text-muted"><br><%= new Date(entrega.hora_entrega).toLocaleTimeString('pt-BR') %></small>
+                  <% } %>
+                <% } else { %>
+                  <span class="badge badge-warning">⏳ Pendente</span>
+                <% } %>
+              </td>
+              <td><%= entrega.observacoes || '-' %></td>
+              <td>
+                <div class="action-buttons">
+                  <% if (entrega.status !== 'ENTREGUE') { %>
+                    <form action="/entregas/marcar-entregue/<%= entrega.id %>" method="POST" style="display: inline;">
+                      <button type="submit" class="btn btn-sm btn-success" 
+                              onclick="return confirm('Marcar como entregue?')">
+                        ✅ Entregar
+                      </button>
+                    </form>
+                  <% } %>
+                  
+                  <form action="/entregas/delete/<%= entrega.id %>" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" 
+                            onclick="return confirm('Excluir esta entrega?')">
+                      🗑️ Excluir
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <div class="alert alert-info">
+      <p style="margin: 0; text-align: center;">📭 Nenhuma entrega programada para hoje.</p>
+    </div>
+  <% } %>
+</div>
+
 <style>
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-left: 4px solid;
+}
+
+.stat-card.primary { border-left-color: #007bff; }
+.stat-card.success { border-left-color: #28a745; }
+.stat-card.warning { border-left-color: #ffc107; }
+.stat-card.info { border-left-color: #17a2b8; }
+
+.stat-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.text-success { color: #28a745 !important; }
+.text-warning { color: #ffc107 !important; }
+.text-info { color: #17a2b8 !important; }
+
+.stat-label {
+  font-size: 12px;
+  color: #999;
+  margin: 5px 0 0 0;
+}
+
+.time-info-card {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.time-info-card h3 {
+  margin: 0 0 15px 0;
+  color: #495057;
+}
+
+.time-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.time-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.time-item .label {
+  font-weight: 600;
+  color: #666;
+}
+
+.time-item .value {
+  font-weight: bold;
+  color: #28a745;
+}
+
+.controls-section {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary { background: #007bff; color: white; }
+.btn-success { background: #28a745; color: white; }
+.btn-secondary { background: #6c757d; color: white; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-danger { background: #dc3545; color: white; }
+
+.btn:hover { transform: translateY(-1px); opacity: 0.9; }
+
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .form-row:last-child {
@@ -97,68 +334,83 @@
 }
 
 .form-control {
-  padding: 10px;
-  border: 2px solid #e1e5e9;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   font-size: 14px;
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #28a745;
-}
-
-.help-text {
-  font-size: 12px;
-  color: #666;
-  margin-top: 5px;
-}
-
-.info-box {
-  background: #e3f2fd;
-  border: 1px solid #bbdefb;
-  padding: 15px;
-  border-radius: 6px;
-  margin: 20px 0;
-}
-
-.info-box h4 {
-  margin: 0 0 10px 0;
-  color: #1976d2;
+  border-color: #007bff;
 }
 
 .form-actions {
   display: flex;
-  gap: 15px;
-  margin-top: 30px;
+  gap: 10px;
+  margin-top: 20px;
 }
 
-.btn {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 6px;
+.table-responsive {
+  overflow-x: auto;
+}
+
+.entregas-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.entregas-table th,
+.entregas-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.entregas-table th {
+  background: #f8f9fa;
   font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
-.btn-primary {
-  background: #28a745;
+.entrega-concluida {
+  background: #f8fff8;
+}
+
+.ordem-badge {
+  background: #007bff;
   color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
 }
 
-.btn-primary:hover {
-  background: #218838;
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
 }
 
-.btn-secondary {
-  background: #6c757d;
-  color: white;
+.badge-success { background: #d4edda; color: #155724; }
+.badge-warning { background: #fff3cd; color: #856404; }
+
+.action-buttons {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
 }
 
-.btn-secondary:hover {
-  background: #5a6268;
+.alert {
+  padding: 15px;
+  border-radius: 4px;
+  margin: 20px 0;
+}
+
+.alert-info {
+  background: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
 }
 
 @media (max-width: 768px) {
@@ -166,10 +418,69 @@
     grid-template-columns: 1fr;
   }
   
-  .form-actions {
+  .controls-section {
+    flex-direction: column;
+  }
+  
+  .time-details {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-buttons {
     flex-direction: column;
   }
 }
 </style>
+
+<script>
+function mostrarFormulario() {
+  document.getElementById('formularioEntrega').style.display = 'block';
+}
+
+function esconderFormulario() {
+  document.getElementById('formularioEntrega').style.display = 'none';
+}
+
+// Preencher dados quando selecionar cliente
+document.getElementById('cliente_id').addEventListener('change', function() {
+  const select = this;
+  const option = select.options[select.selectedIndex];
+  
+  if (option.value) {
+    document.getElementById('cliente_nome').value = option.text;
+    document.getElementById('endereco_completo').value = option.dataset.endereco || '';
+  } else {
+    document.getElementById('cliente_nome').value = '';
+    document.getElementById('endereco_completo').value = '';
+  }
+});
+
+// Função para otimizar rota
+async function otimizarRota() {
+  try {
+    const dataEntrega = '<%= dataFiltro %>';
+    
+    const response = await fetch('/entregas/otimizar-rota', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data_entrega: dataEntrega })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert(`✅ ${result.message}\n\nEstatísticas:\n• ${result.estatisticas.total_entregas} entregas\n• ${result.estatisticas.tempo_total_horas}h estimadas`);
+      location.reload();
+    } else {
+      alert(`❌ ${result.message}`);
+    }
+  } catch (error) {
+    alert('❌ Erro ao otimizar rota');
+    console.error(error);
+  }
+}
+</script>
 
 <%- include('partials/footer') %>
