@@ -52,12 +52,58 @@ router.get('/', async (req, res) => {
     }
 });
 
-// NOVA ROTA: Marcar conta como paga
+// ROTA ATUALIZADA: Marcar conta como paga com data customizada
 router.post('/marcar-paga/:id', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     
     const contaId = req.params.id;
-    const dataPagamento = new Date().toISOString().split('T')[0];
+    const { data_pagamento } = req.body;
+    
+    // Validar se a data foi enviada
+    if (!data_pagamento) {
+        return res.render('error', {
+            user: res.locals.user,
+            titulo: 'Erro de Validação',
+            mensagem: 'Data de pagamento é obrigatória.',
+            voltar_url: '/inadimplencia'
+        });
+    }
+    
+    // Validar formato da data
+    const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dataRegex.test(data_pagamento)) {
+        return res.render('error', {
+            user: res.locals.user,
+            titulo: 'Erro de Validação',
+            mensagem: 'Formato de data inválido.',
+            voltar_url: '/inadimplencia'
+        });
+    }
+    
+    // Validar se a data não é muito futura (máximo hoje)
+    const hoje = new Date().toISOString().split('T')[0];
+    if (data_pagamento > hoje) {
+        return res.render('error', {
+            user: res.locals.user,
+            titulo: 'Erro de Validação',
+            mensagem: 'A data de pagamento não pode ser no futuro.',
+            voltar_url: '/inadimplencia'
+        });
+    }
+    
+    // Validar se a data não é muito antiga (máximo 2 anos atrás)
+    const doisAnosAtras = new Date();
+    doisAnosAtras.setFullYear(doisAnosAtras.getFullYear() - 2);
+    const doisAnosAtrasString = doisAnosAtras.toISOString().split('T')[0];
+    
+    if (data_pagamento < doisAnosAtrasString) {
+        return res.render('error', {
+            user: res.locals.user,
+            titulo: 'Erro de Validação',
+            mensagem: 'A data de pagamento não pode ser anterior a 2 anos.',
+            voltar_url: '/inadimplencia'
+        });
+    }
     
     try {
         // Buscar dados da conta
@@ -74,30 +120,38 @@ router.post('/marcar-paga/:id', async (req, res) => {
             return res.render('error', { 
                 user: res.locals.user, 
                 titulo: 'Erro', 
-                mensagem: 'Conta não encontrada.' 
+                mensagem: 'Conta não encontrada.',
+                voltar_url: '/inadimplencia'
             });
         }
 
         if (conta.status === 'Pago') {
-            return res.redirect('/inadimplencia');
+            return res.render('error', {
+                user: res.locals.user,
+                titulo: 'Ação Bloqueada',
+                mensagem: 'Esta conta já foi marcada como paga.',
+                voltar_url: '/inadimplencia'
+            });
         }
 
-        // Registrar o pagamento no fluxo de caixa
+        // Registrar o pagamento no fluxo de caixa com a data escolhida
         const descricaoFluxo = `Recebimento Parcela ${conta.numero_parcela}/${conta.total_parcelas} - ${conta.produto_descricao || conta.cliente_nome} (PAGAMENTO ATRASADO)`;
         
         const insertResult = await pool.query(`
             INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id, status)
             VALUES ($1, 'CREDITO', $2, $3, $4, 'PAGO')
             RETURNING id
-        `, [dataPagamento, conta.valor, descricaoFluxo, 1]); // categoria 1 = Receita de Vendas
+        `, [data_pagamento, conta.valor, descricaoFluxo, 1]); // categoria 1 = Receita de Vendas
 
         const fluxoCaixaId = insertResult.rows[0].id;
 
-        // Atualizar status da conta
+        // Atualizar status da conta com a data escolhida
         await pool.query(
             `UPDATE contas_a_receber SET status = 'Pago', data_pagamento = $1, fluxo_caixa_id = $2 WHERE id = $3`,
-            [dataPagamento, fluxoCaixaId, contaId]
+            [data_pagamento, fluxoCaixaId, contaId]
         );
+        
+        console.log(`✅ Conta ID ${contaId} marcada como paga em ${data_pagamento} (cliente: ${conta.cliente_nome})`);
         
         res.redirect('/inadimplencia');
     } catch (err) {
@@ -105,13 +159,11 @@ router.post('/marcar-paga/:id', async (req, res) => {
         return res.render('error', { 
             user: res.locals.user, 
             titulo: 'Erro', 
-            mensagem: 'Não foi possível registrar o pagamento.' 
+            mensagem: 'Não foi possível registrar o pagamento: ' + err.message,
+            voltar_url: '/inadimplencia'
         });
     }
 });
-
-// ADICIONAR no arquivo src/routes/inadimplencia.js
-// Inserir ANTES da linha: module.exports = router;
 
 // NOVA ROTA: Excluir conta a receber vencida
 router.post('/excluir/:id', async (req, res) => {

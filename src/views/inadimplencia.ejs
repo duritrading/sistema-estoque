@@ -57,13 +57,12 @@
               <td>
   <div style="display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap;">
     
-    <!-- Botão Marcar como Paga -->
-    <form action="/inadimplencia/marcar-paga/<%= conta.id %>" method="POST" style="display: inline;" 
-          onsubmit="return confirm('Confirma o recebimento desta parcela em atraso?');">
-      <button type="submit" class="btn btn-sm btn-success" title="Marcar como paga">
-        <span style="white-space: nowrap;">✓ Marcar como Paga</span>
-      </button>
-    </form>
+    <!-- Botão Marcar como Paga com Modal -->
+    <button type="button" class="btn btn-sm btn-success" 
+            onclick="abrirModalPagamento('<%= conta.id %>', '<%= conta.cliente_nome %>', '<%= conta.valor %>', '<%= conta.numero_parcela %>', '<%= conta.total_parcelas %>')"
+            title="Marcar como paga">
+      <span style="white-space: nowrap;">✓ Marcar como Paga</span>
+    </button>
 
     <!-- Botão Excluir -->
     <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" style="display: inline;" 
@@ -85,6 +84,47 @@
       <p style="margin: 0; text-align: center;">✅ Não há parcelas vencidas no momento!</p>
     </div>
   <% } %>
+</div>
+
+<!-- Modal para seleção de data de pagamento -->
+<div id="modalPagamento" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <h3 style="margin-top: 0; color: #2d5a8e; display: flex; align-items: center; gap: 10px;">
+      💰 Registrar Pagamento
+    </h3>
+    
+    <form id="formPagamento" method="POST">
+      <div class="form-row">
+        <label>Cliente:</label>
+        <div style="color: #333; font-weight: bold; font-size: 16px;" id="clienteNome"></div>
+      </div>
+      
+      <div class="form-row">
+        <label>Parcela:</label>
+        <div style="color: #666;" id="parcelaInfo"></div>
+      </div>
+      
+      <div class="form-row">
+        <label>Valor:</label>
+        <div style="color: #28a745; font-size: 20px; font-weight: bold;" id="valorConta"></div>
+      </div>
+      
+      <div class="form-row">
+        <label for="dataPagamento">Data do Pagamento: <span style="color: #dc3545;">*</span></label>
+        <input type="date" id="dataPagamento" name="data_pagamento" required
+               style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" onclick="fecharModalPagamento()" class="btn-modal cancel">
+          Cancelar
+        </button>
+        <button type="submit" class="btn-modal confirm">
+          ✓ Confirmar Pagamento
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <style>
@@ -249,6 +289,109 @@
   margin-top: 20px;
 }
 
+/* === ESTILOS DO MODAL === */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: modalSlideIn 0.3s ease-out;
+  position: relative;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.form-row {
+  margin-bottom: 20px;
+}
+
+.form-row label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.form-row input[type="date"] {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.form-row input[type="date"]:focus {
+  outline: none;
+  border-color: #28a745;
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 25px;
+}
+
+.btn-modal {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+  min-width: 120px;
+}
+
+.btn-modal.cancel {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-modal.cancel:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.btn-modal.confirm {
+  background: #28a745;
+  color: white;
+}
+
+.btn-modal.confirm:hover {
+  background: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
   .stats-grid {
@@ -268,7 +411,88 @@
   .inadimplencia-table td {
     padding: 8px;
   }
+
+  .modal-content {
+    width: 95%;
+    padding: 20px;
+    margin: 10px;
+  }
+
+  .modal-buttons {
+    flex-direction: column;
+  }
+
+  .btn-modal {
+    width: 100%;
+  }
 }
 </style>
+
+<script>
+function abrirModalPagamento(contaId, clienteNome, valor, numeroParcela, totalParcelas) {
+  // Preencher dados do modal
+  document.getElementById('clienteNome').textContent = clienteNome;
+  document.getElementById('parcelaInfo').textContent = `${numeroParcela}/${totalParcelas}`;
+  document.getElementById('valorConta').textContent = 'R$ ' + parseFloat(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+  
+  // Definir ação do formulário
+  document.getElementById('formPagamento').action = '/inadimplencia/marcar-paga/' + contaId;
+  
+  // Definir data padrão como hoje
+  const hoje = new Date().toISOString().split('T')[0];
+  document.getElementById('dataPagamento').value = hoje;
+  
+  // Mostrar modal
+  document.getElementById('modalPagamento').style.display = 'flex';
+  
+  // Focar no campo de data
+  setTimeout(() => {
+    document.getElementById('dataPagamento').focus();
+  }, 100);
+}
+
+function fecharModalPagamento() {
+  document.getElementById('modalPagamento').style.display = 'none';
+}
+
+// Fechar modal clicando fora do conteúdo
+document.getElementById('modalPagamento').addEventListener('click', function(e) {
+  if (e.target === this) {
+    fecharModalPagamento();
+  }
+});
+
+// Fechar modal com ESC
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    fecharModalPagamento();
+  }
+});
+
+// Validação do formulário
+document.getElementById('formPagamento').addEventListener('submit', function(e) {
+  const dataPagamento = document.getElementById('dataPagamento').value;
+  
+  if (!dataPagamento) {
+    e.preventDefault();
+    alert('Por favor, selecione a data do pagamento.');
+    return;
+  }
+  
+  // Verificar se a data não é muito futura (máximo hoje)
+  const hoje = new Date().toISOString().split('T')[0];
+  if (dataPagamento > hoje) {
+    e.preventDefault();
+    alert('A data de pagamento não pode ser no futuro.');
+    return;
+  }
+  
+  // Confirmar ação
+  const confirmacao = confirm('Confirma o recebimento desta parcela na data selecionada?');
+  if (!confirmacao) {
+    e.preventDefault();
+  }
+});
+</script>
 
 <%- include('partials/footer') %>
