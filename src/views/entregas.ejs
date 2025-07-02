@@ -1,470 +1,175 @@
-<!-- src/views/entregas.ejs -->
+<!-- src/views/entregas-config.ejs - NOVA VIEW PARA CONFIGURAÇÃO -->
 <%- include('partials/header', {
-  titulo: 'Roteirização de Entregas',
-  subtitulo: 'Planeje e otimize suas rotas de entrega',
+  titulo: 'Configuração do Armazém',
+  subtitulo: 'Configure a localização da sua sede para otimização de rotas',
   user: locals.user
 }) %>
 
+<div class="card">
+  <h2>📍 Configuração do Armazém</h2>
+  
+  <form action="/entregas/config" method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="nome">Nome do Armazém:</label>
+        <input type="text" id="nome" name="nome" class="form-control" 
+               value="<%= warehouse ? warehouse.nome : 'OF Distribuidora - Sede' %>" required>
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label for="endereco">Endereço Completo:</label>
+        <textarea id="endereco" name="endereco" class="form-control" rows="2" required 
+                  placeholder="Ex: Rua das Flores, 123, Centro, Recife, PE, Brasil"><%= warehouse ? warehouse.endereco : '' %></textarea>
+        <small class="help-text">Inclua cidade, estado e país para melhor precisão</small>
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label for="velocidade_media_kmh">Velocidade Média (km/h):</label>
+        <input type="number" id="velocidade_media_kmh" name="velocidade_media_kmh" 
+               class="form-control" min="10" max="80" 
+               value="<%= warehouse ? warehouse.velocidade_media_kmh : 25 %>">
+        <small class="help-text">Velocidade média em área urbana (recomendado: 20-30 km/h)</small>
+      </div>
+      
+      <div class="form-group">
+        <label for="tempo_entrega_minutos">Tempo por Entrega (minutos):</label>
+        <input type="number" id="tempo_entrega_minutos" name="tempo_entrega_minutos" 
+               class="form-control" min="2" max="60" 
+               value="<%= warehouse ? warehouse.tempo_entrega_minutos : 8 %>">
+        <small class="help-text">Tempo médio gasto em cada entrega</small>
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label for="horario_inicio">Horário de Início:</label>
+        <input type="time" id="horario_inicio" name="horario_inicio" class="form-control" 
+               value="<%= warehouse ? warehouse.horario_inicio : '08:00' %>">
+      </div>
+      
+      <div class="form-group">
+        <label for="horario_fim">Horário de Fim:</label>
+        <input type="time" id="horario_fim" name="horario_fim" class="form-control" 
+               value="<%= warehouse ? warehouse.horario_fim : '18:00' %>">
+      </div>
+    </div>
+    
+    <% if (warehouse) { %>
+      <div class="info-box">
+        <h4>📍 Localização Atual</h4>
+        <p><strong>Coordenadas:</strong> <%= warehouse.latitude %>, <%= warehouse.longitude %></p>
+        <p><strong>Última Atualização:</strong> <%= new Date(warehouse.updated_at).toLocaleString('pt-BR') %></p>
+      </div>
+    <% } %>
+    
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">💾 Salvar Configuração</button>
+      <a href="/entregas" class="btn btn-secondary">← Voltar para Entregas</a>
+    </div>
+  </form>
+</div>
+
 <style>
-/* Estilos específicos para o sistema de entregas */
-.entregas-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 25px;
+.form-row:last-child {
+  grid-template-columns: 1fr;
 }
 
-.stat-card {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    text-align: center;
-    border-left: 4px solid;
+.form-group {
+  display: flex;
+  flex-direction: column;
 }
 
-.stat-card.total { border-left-color: #3498db; }
-.stat-card.entregues { border-left-color: #2ecc71; }
-.stat-card.pendentes { border-left-color: #f39c12; }
-.stat-card.valor { border-left-color: #9b59b6; }
-
-.stat-number {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 5px;
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #333;
 }
 
-.stat-label {
-    color: #666;
-    font-size: 0.9rem;
+.form-control {
+  padding: 10px;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 14px;
 }
 
-.mapa-container {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+.form-control:focus {
+  outline: none;
+  border-color: #28a745;
 }
 
-#mapa {
-    height: 400px;
-    width: 100%;
-    border-radius: 8px;
+.help-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
 }
 
-.entregas-container {
-    display: grid;
-    grid-template-columns: 1fr 400px;
-    gap: 20px;
+.info-box {
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  padding: 15px;
+  border-radius: 6px;
+  margin: 20px 0;
 }
 
-.entregas-lista {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+.info-box h4 {
+  margin: 0 0 10px 0;
+  color: #1976d2;
 }
 
-.entrega-item {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    border-left: 4px solid #ddd;
-    transition: all 0.3s ease;
+.form-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 30px;
 }
 
-.entrega-item.pendente { border-left-color: #f39c12; }
-.entrega-item.entregue { border-left-color: #2ecc71; }
-.entrega-item.em-rota { border-left-color: #3498db; }
-
-.entrega-item:hover {
-    transform: translateX(5px);
-    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.entrega-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+.btn-primary {
+  background: #28a745;
+  color: white;
 }
 
-.ordem-entrega {
-    background: #667eea;
-    color: white;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
+.btn-primary:hover {
+  background: #218838;
 }
 
-.status-badge {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
+.btn-secondary {
+  background: #6c757d;
+  color: white;
 }
 
-.status-pendente { background: #fff3cd; color: #856404; }
-.status-entregue { background: #d4edda; color: #155724; }
-.status-em-rota { background: #cce5ff; color: #004085; }
-
-.form-container {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.btn-group {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-}
-
-.btn-otimizar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-otimizar:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+.btn-secondary:hover {
+  background: #5a6268;
 }
 
 @media (max-width: 768px) {
-    .entregas-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr 1fr;
-    }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
 }
 </style>
-
-<!-- Header com estatísticas -->
-<div class="entregas-header">
-    <h1>🚚 Entregas do Dia - <%= new Date(dataFiltro).toLocaleDateString('pt-BR') %></h1>
-    <p>Gerencie e otimize suas rotas de entrega</p>
-</div>
-
-<!-- Estatísticas do dia -->
-<div class="stats-grid">
-    <div class="stat-card total">
-        <div class="stat-number"><%= stats.total_entregas %></div>
-        <div class="stat-label">Total de Entregas</div>
-    </div>
-    <div class="stat-card entregues">
-        <div class="stat-number"><%= stats.entregues %></div>
-        <div class="stat-label">Entregues</div>
-    </div>
-    <div class="stat-card pendentes">
-        <div class="stat-number"><%= stats.pendentes %></div>
-        <div class="stat-label">Pendentes</div>
-    </div>
-    <div class="stat-card valor">
-        <div class="stat-number">R$ <%= parseFloat(stats.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
-        <div class="stat-label">Valor Total</div>
-    </div>
-</div>
-
-<!-- Botões de ação -->
-<div class="btn-group">
-    <button class="btn-otimizar" onclick="otimizarRota()">
-        🗺️ Otimizar Rota
-    </button>
-    <button class="btn btn-success" onclick="mostrarTodasNoMapa()">
-        📍 Ver Todas no Mapa
-    </button>
-    <button class="btn btn-secondary" onclick="exportarRota()">
-        📊 Exportar Rota
-    </button>
-</div>
-
-<!-- Mapa -->
-<div class="mapa-container">
-    <h3>🗺️ Visualização da Rota</h3>
-    <div id="mapa"></div>
-</div>
-
-<!-- Container principal -->
-<div class="entregas-container">
-    <!-- Lista de entregas -->
-    <div class="entregas-lista">
-        <h2>📋 Lista de Entregas</h2>
-        
-        <% if (entregas.length > 0) { %>
-            <% entregas.forEach((entrega, index) => { %>
-                <div class="entrega-item <%= entrega.status.toLowerCase().replace('_', '-') %>" 
-                     data-lat="<%= entrega.latitude %>" 
-                     data-lng="<%= entrega.longitude %>"
-                     data-endereco="<%= entrega.endereco_completo %>">
-                    
-                    <div class="entrega-header">
-                        <div class="ordem-entrega"><%= entrega.ordem_entrega || index + 1 %></div>
-                        <span class="status-badge status-<%= entrega.status.toLowerCase().replace('_', '-') %>">
-                            <%= entrega.status.replace('_', ' ') %>
-                        </span>
-                    </div>
-                    
-                    <h4><%= entrega.cliente_nome %></h4>
-                    <p><strong>📍 Endereço:</strong> <%= entrega.endereco_completo %></p>
-                    
-                    <% if (entrega.valor_entrega) { %>
-                        <p><strong>💰 Valor:</strong> R$ <%= parseFloat(entrega.valor_entrega).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p>
-                    <% } %>
-                    
-                    <% if (entrega.observacoes) { %>
-                        <p><strong>📝 Obs:</strong> <%= entrega.observacoes %></p>
-                    <% } %>
-                    
-                    <% if (entrega.telefone) { %>
-                        <p><strong>📞 Tel:</strong> 
-                            <a href="tel:<%= entrega.telefone %>"><%= entrega.telefone %></a>
-                        </p>
-                    <% } %>
-                    
-                    <div style="margin-top: 15px; display: flex; gap: 10px;">
-                        <% if (entrega.status === 'PENDENTE') { %>
-                            <form action="/entregas/marcar-entregue/<%= entrega.id %>" method="POST" style="display: inline;">
-                                <button type="submit" class="btn btn-success btn-sm" 
-                                        onclick="return confirm('Marcar como entregue?')">
-                                    ✅ Entregue
-                                </button>
-                            </form>
-                        <% } %>
-                        
-                        <button class="btn btn-secondary btn-sm" onclick="mostrarNoMapa(<%= entrega.latitude %>, <%= entrega.longitude %>)">
-                            📍 Ver no Mapa
-                        </button>
-                        
-                        <form action="/entregas/delete/<%= entrega.id %>" method="POST" style="display: inline;">
-                            <button type="submit" class="btn btn-danger btn-sm" 
-                                    onclick="return confirm('Excluir esta entrega?')">
-                                🗑️ Excluir
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            <% }) %>
-        <% } else { %>
-            <div class="alert alert-info">
-                <p>Nenhuma entrega cadastrada para hoje.</p>
-            </div>
-        <% } %>
-    </div>
-
-    <!-- Formulário para nova entrega -->
-    <div class="form-container">
-        <h2>➕ Nova Entrega</h2>
-        <form action="/entregas" method="POST">
-            <div class="form-group">
-                <label for="data_entrega">Data da Entrega</label>
-                <input type="date" id="data_entrega" name="data_entrega" 
-                       value="<%= dataFiltro %>" required class="form-control">
-            </div>
-
-            <div class="form-group">
-                <label for="cliente_id">Cliente (Opcional)</label>
-                <select id="cliente_id" name="cliente_id" class="form-control">
-                    <option value="">Selecione um cliente...</option>
-                    <% clientes.forEach(cliente => { %>
-                        <option value="<%= cliente.id %>" 
-                                data-endereco="<%= cliente.endereco %>">
-                            <%= cliente.nome %>
-                        </option>
-                    <% }) %>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="cliente_nome">Nome do Cliente *</label>
-                <input type="text" id="cliente_nome" name="cliente_nome" 
-                       required class="form-control">
-            </div>
-
-            <div class="form-group">
-                <label for="endereco_completo">Endereço Completo *</label>
-                <textarea id="endereco_completo" name="endereco_completo" 
-                          rows="3" required class="form-control"
-                          placeholder="Rua, número, bairro, cidade, CEP"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="valor_entrega">Valor da Entrega (R$)</label>
-                <input type="number" id="valor_entrega" name="valor_entrega" 
-                       step="0.01" min="0" class="form-control">
-            </div>
-
-            <div class="form-group">
-                <label for="observacoes">Observações</label>
-                <textarea id="observacoes" name="observacoes" 
-                          rows="2" class="form-control"></textarea>
-            </div>
-
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                ➕ Adicionar Entrega
-            </button>
-        </form>
-    </div>
-</div>
-
-<!-- Scripts -->
-<script>
-// Variáveis globais
-let mapa;
-let marcadores = [];
-let rotaAtual = null;
-
-// Inicializar mapa quando a página carregar
-document.addEventListener('DOMContentLoaded', function() {
-    inicializarMapa();
-    configurarFormulario();
-    carregarEntregasNoMapa();
-});
-
-// Inicializar mapa usando OpenStreetMap (gratuito)
-function inicializarMapa() {
-    // Usando Leaflet (OpenStreetMap)
-    mapa = L.map('mapa').setView([-8.0476, -34.8770], 11); // Recife, PE
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(mapa);
-
-    // Marcador da sede da empresa
-    L.marker([-8.0476, -34.8770])
-        .addTo(mapa)
-        .bindPopup('🏢 OF Distribuidora - Sede')
-        .openPopup();
-}
-
-// Carregar entregas no mapa
-function carregarEntregasNoMapa() {
-    const entregas = document.querySelectorAll('.entrega-item');
-    
-    entregas.forEach((item, index) => {
-        const lat = parseFloat(item.dataset.lat);
-        const lng = parseFloat(item.dataset.lng);
-        const endereco = item.dataset.endereco;
-        const clienteNome = item.querySelector('h4').textContent;
-        
-        if (lat && lng) {
-            const marcador = L.marker([lat, lng])
-                .addTo(mapa)
-                .bindPopup(`
-                    <strong>${clienteNome}</strong><br>
-                    📍 ${endereco}<br>
-                    🔢 Ordem: ${index + 1}
-                `);
-            
-            marcadores.push(marcador);
-        }
-    });
-}
-
-// Configurar formulário
-function configurarFormulario() {
-    const clienteSelect = document.getElementById('cliente_id');
-    const clienteNome = document.getElementById('cliente_nome');
-    const endereco = document.getElementById('endereco_completo');
-
-    clienteSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        if (selectedOption.value) {
-            clienteNome.value = selectedOption.textContent.trim();
-            if (selectedOption.dataset.endereco) {
-                endereco.value = selectedOption.dataset.endereco;
-            }
-        }
-    });
-}
-
-// Otimizar rota
-async function otimizarRota() {
-    try {
-        const dataEntrega = document.getElementById('data_entrega').value;
-        
-        const response = await fetch('/entregas/otimizar-rota', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ data_entrega: dataEntrega })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert(`✅ ${result.message}`);
-            location.reload(); // Recarregar para mostrar nova ordem
-        } else {
-            alert(`❌ ${result.message}`);
-        }
-    } catch (error) {
-        console.error('Erro ao otimizar rota:', error);
-        alert('❌ Erro ao otimizar rota');
-    }
-}
-
-// Mostrar todas no mapa
-function mostrarTodasNoMapa() {
-    if (marcadores.length > 0) {
-        const group = new L.featureGroup(marcadores);
-        mapa.fitBounds(group.getBounds().pad(0.1));
-    }
-}
-
-// Mostrar entrega específica no mapa
-function mostrarNoMapa(lat, lng) {
-    if (lat && lng) {
-        mapa.setView([lat, lng], 16);
-        
-        // Destacar marcador temporariamente
-        const marcador = L.circleMarker([lat, lng], {
-            color: 'red',
-            fillColor: '#f03',
-            fillOpacity: 0.5,
-            radius: 20
-        }).addTo(mapa);
-        
-        setTimeout(() => {
-            mapa.removeLayer(marcador);
-        }, 3000);
-    }
-}
-
-// Exportar rota (placeholder)
-function exportarRota() {
-    // Aqui você pode implementar exportação para PDF, Excel, etc.
-    alert('🚧 Funcionalidade em desenvolvimento');
-}
-</script>
-
-<!-- Incluir Leaflet.js (OpenStreetMap) -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <%- include('partials/footer') %>
