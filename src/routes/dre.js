@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db');
+const pool = require('../config/database');
 
 router.get('/', async (req, res) => {
     const ano = req.query.ano || new Date().getFullYear();
