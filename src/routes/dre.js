@@ -53,7 +53,7 @@ router.get('/', async (req, res) => {
             { label: 'Despesas Operacionais', tipo: 'header', css: 'dre-header' },
             { label: 'Despesas Comerciais', tipo: 'item' },
             { label: 'Despesas Administrativas', tipo: 'item' },
-            { label: 'Despesas Operacionais', tipo: 'item' },
+            { label: 'Despesas Operacionais (Item)', tipo: 'item' },
             { label: 'Lucro / Prejuízo Operacional', tipo: 'total', css: 'dre-total-l1' },
 
             { label: 'Receitas e Despesas Financeiras', tipo: 'header', css: 'dre-header' },
@@ -97,7 +97,7 @@ router.get('/', async (req, res) => {
             resultados['Comissões Sobre Vendas'][i] = -comissoes;
             resultados['Descontos Incondicionais'][i] = -descontos;
             resultados['Devoluções de Vendas'][i] = -devolucoes;
-            resultados['Deduções da Receita Bruta'][i] = -(impVendas + comissoes + descontos + devolucoes); // HEADER CALCULADO
+            resultados['Deduções da Receita Bruta'][i] = (-impVendas) + (-comissoes) + (-descontos) + (-devolucoes); // HEADER = SOMA DOS ITENS JÁ NEGATIVOS
             resultados['Receita Líquida de Vendas'][i] = resultados['Receita Bruta de Vendas'][i] + resultados['Deduções da Receita Bruta'][i];
             
             // CUSTOS OPERACIONAIS
@@ -108,7 +108,7 @@ router.get('/', async (req, res) => {
             resultados['Custo dos Produtos Vendidos'][i] = -custoProdutos;
             resultados['Custo das Vendas de Produtos'][i] = -custoVendas;
             resultados['Custo dos Serviços Prestados'][i] = -custoServicos;
-            resultados['Custos Operacionais'][i] = -(custoProdutos + custoVendas + custoServicos); // HEADER CALCULADO
+            resultados['Custos Operacionais'][i] = (-custoProdutos) + (-custoVendas) + (-custoServicos); // HEADER = SOMA DOS ITENS JÁ NEGATIVOS
             resultados['Lucro Bruto'][i] = resultados['Receita Líquida de Vendas'][i] + resultados['Custos Operacionais'][i];
 
             // DESPESAS OPERACIONAIS
@@ -118,11 +118,9 @@ router.get('/', async (req, res) => {
             
             resultados['Despesas Comerciais'][i] = -despComerciais;
             resultados['Despesas Administrativas'][i] = -despAdmin;
-            resultados['Despesas Operacionais'][i] = -despOperacionais;
-            const totalDespOperacionais = -(despComerciais + despAdmin + despOperacionais);
-            // Corrigindo: não sobrescrever o item individual
-            resultados['Despesas Operacionais (Total)'] = resultados['Despesas Operacionais (Total)'] || Array(12).fill(0);
-            resultados['Despesas Operacionais (Total)'][i] = totalDespOperacionais; // HEADER CALCULADO
+            resultados['Despesas Operacionais (Item)'][i] = -despOperacionais; // Item individual
+            const totalDespOperacionais = (-despComerciais) + (-despAdmin) + (-despOperacionais);
+            resultados['Despesas Operacionais'][i] = totalDespOperacionais; // Header
             resultados['Lucro / Prejuízo Operacional'][i] = resultados['Lucro Bruto'][i] + totalDespOperacionais;
 
             // RECEITAS E DESPESAS FINANCEIRAS
@@ -131,7 +129,7 @@ router.get('/', async (req, res) => {
             
             resultados['Receitas e Rendimentos Financeiros'][i] = recFinanceiras;
             resultados['Despesas Financeiras'][i] = -despFinanceiras;
-            resultados['Receitas e Despesas Financeiras'][i] = recFinanceiras - despFinanceiras; // HEADER CALCULADO
+            resultados['Receitas e Despesas Financeiras'][i] = recFinanceiras + (-despFinanceiras); // RECEITAS - DESPESAS
 
             // OUTRAS RECEITAS E DESPESAS NÃO OPERACIONAIS
             const outrasRec = getValores('Outras Receitas Não Operacionais')[i];
@@ -139,7 +137,7 @@ router.get('/', async (req, res) => {
             
             resultados['Outras Receitas Não Operacionais'][i] = outrasRec;
             resultados['Outras Despesas Não Operacionais'][i] = -outrasDesp;
-            resultados['Outras Receitas e Despesas Não Operacionais'][i] = outrasRec - outrasDesp; // HEADER CALCULADO
+            resultados['Outras Receitas e Despesas Não Operacionais'][i] = outrasRec + (-outrasDesp); // RECEITAS - DESPESAS
             
             // LUCRO LÍQUIDO
             resultados['Lucro / Prejuízo Líquido'][i] = resultados['Lucro / Prejuízo Operacional'][i] + 
@@ -152,7 +150,7 @@ router.get('/', async (req, res) => {
             
             resultados['Investimentos em Imobilizado'][i] = -invest;
             resultados['Empréstimos e Dívidas'][i] = -emprestimos;
-            resultados['Despesas com Investimentos e Empréstimos'][i] = -(invest + emprestimos); // HEADER CALCULADO
+            resultados['Despesas com Investimentos e Empréstimos'][i] = (-invest) + (-emprestimos); // SOMA DOS ITENS JÁ NEGATIVOS
             
             // LUCRO FINAL
             resultados['Lucro / Prejuízo Final'][i] = resultados['Lucro / Prejuízo Líquido'][i] + 
