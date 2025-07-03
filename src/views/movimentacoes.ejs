@@ -65,12 +65,22 @@
         </div>
         
         <!-- CONTROLE DE FLUXO DE CAIXA -->
-        <div class="form-group" style="flex: 1; display: flex; align-items: center; justify-content: center; margin-top: 25px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="registrar_fluxo_caixa" name="registrar_fluxo_caixa" style="transform: scale(1.1);">
-            <label for="registrar_fluxo_caixa" style="margin: 0; font-weight: normal; white-space: nowrap;">
-              Registrar no fluxo de caixa
-            </label>
+        <div class="form-group" style="flex: 1;">
+          <label style="margin-bottom: 5px; display: block; font-size: 14px;">Fluxo de Caixa</label>
+          <div id="fluxo-caixa-container" class="fluxo-caixa-border fluxo-caixa-checked" style="
+            padding: 8px 12px; 
+            border: 2px solid #28a745; 
+            border-radius: 4px; 
+            background-color: #fff;
+            transition: border-color 0.3s ease, background-color 0.2s ease;
+            cursor: pointer;
+          " onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='#fff'">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="registrar_fluxo_caixa" name="registrar_fluxo_caixa" style="transform: scale(1.1); cursor: pointer;">
+              <label for="registrar_fluxo_caixa" style="margin: 0; font-weight: normal; cursor: pointer; user-select: none;">
+                Registrar no fluxo de caixa
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -216,6 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Campos de fluxo de caixa
     const registrarFluxoCaixaCheckbox = document.getElementById('registrar_fluxo_caixa');
+    const fluxoCaixaContainer = document.getElementById('fluxo-caixa-container');
 
     // ===== FUNÇÃO PARA DEFINIR DATA PADRÃO =====
     function definirDataPadrao() {
@@ -249,6 +260,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const valorTotal = quantidade * precoUnitario;
         
         valorTotalInput.value = valorTotal.toFixed(2);
+    }
+
+    // ===== FUNÇÃO PARA CONTROLAR COR DA BORDA DO FLUXO DE CAIXA =====
+    function atualizarCorFluxoCaixa() {
+        if (!registrarFluxoCaixaCheckbox || !fluxoCaixaContainer) return;
+        
+        if (registrarFluxoCaixaCheckbox.checked) {
+            fluxoCaixaContainer.style.borderColor = '#28a745'; // Verde
+            fluxoCaixaContainer.className = 'fluxo-caixa-border fluxo-caixa-checked';
+        } else {
+            fluxoCaixaContainer.style.borderColor = '#dc3545'; // Vermelho
+            fluxoCaixaContainer.className = 'fluxo-caixa-border fluxo-caixa-unchecked';
+        }
     }
 
     // ===== FUNÇÃO PARA GERAR CAMPOS DE VENCIMENTO =====
@@ -309,6 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Marcar fluxo de caixa por padrão para entradas
             if (registrarFluxoCaixaCheckbox) {
                 registrarFluxoCaixaCheckbox.checked = true;
+                atualizarCorFluxoCaixa();
             }
             
         } else if (tipo === 'SAIDA') {
@@ -324,7 +349,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Limpa campos de entrada
             if (fornecedorSelect) fornecedorSelect.value = '';
-            if (registrarFluxoCaixaCheckbox) registrarFluxoCaixaCheckbox.checked = false;
+            if (registrarFluxoCaixaCheckbox) {
+                registrarFluxoCaixaCheckbox.checked = false;
+                atualizarCorFluxoCaixa();
+            }
             
             // Gera campos de vencimento
             gerarCamposDeVencimento();
@@ -337,7 +365,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (saidaFields) saidaFields.style.display = 'none';
             if (clienteNomeSelect) clienteNomeSelect.required = false;
             if (fornecedorSelect) fornecedorSelect.required = false;
-            if (registrarFluxoCaixaCheckbox) registrarFluxoCaixaCheckbox.checked = false;
+            if (registrarFluxoCaixaCheckbox) {
+                registrarFluxoCaixaCheckbox.checked = false;
+                atualizarCorFluxoCaixa();
+            }
         }
     }
 
@@ -369,11 +400,28 @@ document.addEventListener('DOMContentLoaded', function() {
         dataMovimentacaoInput.addEventListener('change', gerarCamposDeVencimento);
     }
 
+    // Event listeners para controle de fluxo de caixa
+    if (registrarFluxoCaixaCheckbox) {
+        registrarFluxoCaixaCheckbox.addEventListener('change', atualizarCorFluxoCaixa);
+    }
+
+    // Tornar o container do fluxo de caixa clicável
+    if (fluxoCaixaContainer) {
+        fluxoCaixaContainer.addEventListener('click', function(e) {
+            // Evitar double-click se clicou diretamente no checkbox
+            if (e.target.type !== 'checkbox') {
+                registrarFluxoCaixaCheckbox.checked = !registrarFluxoCaixaCheckbox.checked;
+                atualizarCorFluxoCaixa();
+            }
+        });
+    }
+
     // ===== CHAMADAS INICIAIS =====
     console.log('Inicializando...'); // Debug
     definirDataPadrao();
     mostrarUnidade();
     toggleFields(); // Esta é a chamada importante!
+    atualizarCorFluxoCaixa(); // Atualizar cor inicial
     
     console.log('Inicialização completa'); // Debug
 });
