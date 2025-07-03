@@ -21,12 +21,11 @@
         <tbody>
           <% estrutura.forEach(linha => { %>
             <% 
-              // Pega o array de 12 valores mensais para a linha atual e garante que são números válidos
+              // Pega valores calculados para a linha atual
               const valoresMensais = (resultados[linha.label] || Array(12).fill(0)).map(v => {
                 const valor = parseFloat(v);
                 return isNaN(valor) ? 0 : valor;
               });
-              // Calcula a soma para a coluna "Total Ano"
               const totalAnual = valoresMensais.reduce((a, b) => a + b, 0); 
             %>
             <tr class="<%= linha.css || '' %> <%= linha.tipo === 'header' ? 'dre-header' : '' %>">
@@ -38,11 +37,15 @@
 
               <% valoresMensais.forEach(valor => { %>
                 <td class="text-right <%= valor < 0 ? 'saldo-negativo' : '' %>">
-                  <% if (linha.tipo === 'header') { %>
-                    -
-                  <% } else { %>
-                    <% if (Math.abs(valor) >= 0.01) { %>
+                  <% if (Math.abs(valor) >= 0.01) { %>
+                    <% if (linha.tipo === 'header' || linha.tipo === 'total') { %>
+                      <strong>R$ <%= valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></strong>
+                    <% } else { %>
                       R$ <%= valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                    <% } %>
+                  <% } else { %>
+                    <% if (linha.tipo === 'header' || linha.tipo === 'total') { %>
+                      <strong>-</strong>
                     <% } else { %>
                       -
                     <% } %>
@@ -51,21 +54,17 @@
               <% }) %>
 
               <td class="text-right <%= totalAnual < 0 ? 'saldo-negativo' : '' %>">
-                <% if (linha.tipo === 'header') { %>
-                  -
-                <% } else { %>
-                  <% if (Math.abs(totalAnual) >= 0.01) { %>
-                    <% if (linha.tipo === 'total') { %>
-                      <strong>R$ <%= totalAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></strong>
-                    <% } else { %>
-                      R$ <%= totalAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                    <% } %>
+                <% if (Math.abs(totalAnual) >= 0.01) { %>
+                  <% if (linha.tipo === 'header' || linha.tipo === 'total') { %>
+                    <strong>R$ <%= totalAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></strong>
                   <% } else { %>
-                    <% if (linha.tipo === 'total') { %>
-                      <strong>-</strong>
-                    <% } else { %>
-                      -
-                    <% } %>
+                    R$ <%= totalAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                  <% } %>
+                <% } else { %>
+                  <% if (linha.tipo === 'header' || linha.tipo === 'total') { %>
+                    <strong>-</strong>
+                  <% } else { %>
+                    -
                   <% } %>
                 <% } %>
               </td>
@@ -78,7 +77,6 @@
 </div>
 
 <style>
-/* Estilos específicos para a tabela DRE */
 .dre-table th, .dre-table td {
   padding: 10px 8px;
   white-space: nowrap;
@@ -127,6 +125,10 @@
 
 .text-right {
   text-align: right;
+}
+
+.container-wide {
+  max-width: 1600px;
 }
 </style>
 
