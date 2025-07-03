@@ -50,26 +50,28 @@
 
     <!-- CAMPOS PARA ENTRADA (Fornecedor + Fluxo de Caixa) -->
     <div id="entrada-fields" style="display: none;">
-      <div class="form-group">
-        <label for="fornecedor_id">Fornecedor</label>
-        <select id="fornecedor_id" name="fornecedor_id">
-          <option value="">Selecione um fornecedor</option>
-          <% fornecedores.forEach(f => { %>
-            <option value="<%= f.id %>"><%= f.nome %></option>
-          <% }) %>
-        </select>
-        <small style="display: block; margin-top: 5px;">
-          <a href="/fornecedores" target="_blank">+ Cadastrar novo fornecedor</a>
-        </small>
-      </div>
-      
-      <!-- CONTROLE DE FLUXO DE CAIXA -->
-      <div class="form-group">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <input type="checkbox" id="registrar_fluxo_caixa" name="registrar_fluxo_caixa" style="transform: scale(1.1);">
-          <label for="registrar_fluxo_caixa" style="margin: 0; font-weight: normal;">
-            Registrar no fluxo de caixa
-          </label>
+      <div class="form-row">
+        <div class="form-group" style="flex: 2;">
+          <label for="fornecedor_id">Fornecedor</label>
+          <select id="fornecedor_id" name="fornecedor_id">
+            <option value="">Selecione um fornecedor</option>
+            <% fornecedores.forEach(f => { %>
+              <option value="<%= f.id %>"><%= f.nome %></option>
+            <% }) %>
+          </select>
+          <small style="display: block; margin-top: 5px;">
+            <a href="/fornecedores" target="_blank">+ Cadastrar novo fornecedor</a>
+          </small>
+        </div>
+        
+        <!-- CONTROLE DE FLUXO DE CAIXA -->
+        <div class="form-group" style="flex: 1; display: flex; align-items: center; justify-content: center; margin-top: 25px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="registrar_fluxo_caixa" name="registrar_fluxo_caixa" style="transform: scale(1.1);">
+            <label for="registrar_fluxo_caixa" style="margin: 0; font-weight: normal; white-space: nowrap;">
+              Registrar no fluxo de caixa
+            </label>
+          </div>
         </div>
       </div>
     </div>
