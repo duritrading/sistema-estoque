@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <!-- CAMPOS PARA ENTRADA (Fornecedor) -->
+    <!-- CAMPOS PARA ENTRADA (Fornecedor + Fluxo de Caixa) -->
     <div id="entrada-fields" style="display: none;">
       <div class="form-group">
         <label for="fornecedor_id">Fornecedor</label>
@@ -61,6 +61,25 @@
         <small style="display: block; margin-top: 5px;">
           <a href="/fornecedores" target="_blank">+ Cadastrar novo fornecedor</a>
         </small>
+      </div>
+      
+      <!-- CONTROLE DE FLUXO DE CAIXA -->
+      <div class="form-group" style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid #007bff;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <input type="checkbox" id="registrar_fluxo_caixa" name="registrar_fluxo_caixa" style="transform: scale(1.2);">
+          <label for="registrar_fluxo_caixa" style="margin: 0; font-weight: bold; color: #007bff;">
+            💰 Registrar esta entrada no fluxo de caixa
+          </label>
+        </div>
+        <small style="color: #666; display: block; margin-top: 8px; margin-left: 32px;">
+          ℹ️ Marque esta opção apenas se esta entrada representar uma saída de dinheiro real (compra paga). 
+          Deixe desmarcado para entradas que não afetam o caixa (doações, consignações, etc.).
+        </small>
+        <div id="fluxo_aviso" style="display: none; background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin-top: 10px; border-radius: 4px; margin-left: 32px;">
+          <small style="color: #856404;">
+            ⚠️ <strong>Atenção:</strong> Esta entrada será registrada como <strong>DÉBITO</strong> no fluxo de caixa (saída de dinheiro para compra de produtos).
+          </small>
+        </div>
       </div>
     </div>
 
@@ -201,6 +220,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const fornecedorSelect = document.getElementById('fornecedor_id');
     const parcelasInput = document.getElementById('total_parcelas');
     const vencimentosContainer = document.getElementById('vencimentos-container');
+    
+    // Campos de fluxo de caixa
+    const registrarFluxoCaixaCheckbox = document.getElementById('registrar_fluxo_caixa');
+    const fluxoAviso = document.getElementById('fluxo_aviso');
 
     // ===== FUNÇÃO PARA DEFINIR DATA PADRÃO =====
     function definirDataPadrao() {
@@ -234,6 +257,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const valorTotal = quantidade * precoUnitario;
         
         valorTotalInput.value = valorTotal.toFixed(2);
+        
+        // Mostrar/esconder aviso de fluxo de caixa
+        toggleFluxoAviso();
+    }
+
+    // ===== FUNÇÃO PARA TOGGLE DO AVISO DE FLUXO =====
+    function toggleFluxoAviso() {
+        if (!registrarFluxoCaixaCheckbox || !fluxoAviso || !valorTotalInput) return;
+        
+        const valorTotal = parseFloat(valorTotalInput.value) || 0;
+        const fluxoMarcado = registrarFluxoCaixaCheckbox.checked;
+        
+        if (fluxoMarcado && valorTotal > 0) {
+            fluxoAviso.style.display = 'block';
+        } else {
+            fluxoAviso.style.display = 'none';
+        }
     }
 
     // ===== FUNÇÃO PARA GERAR CAMPOS DE VENCIMENTO =====
@@ -291,6 +331,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Limpa campos de saída
             if (clienteNomeSelect) clienteNomeSelect.value = '';
             
+            // Marcar fluxo de caixa por padrão para entradas
+            if (registrarFluxoCaixaCheckbox) {
+                registrarFluxoCaixaCheckbox.checked = true;
+                toggleFluxoAviso();
+            }
+            
         } else if (tipo === 'SAIDA') {
             console.log('Mostrando campos de SAÍDA'); // Debug
             
@@ -304,6 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Limpa campos de entrada
             if (fornecedorSelect) fornecedorSelect.value = '';
+            if (registrarFluxoCaixaCheckbox) registrarFluxoCaixaCheckbox.checked = false;
             
             // Gera campos de vencimento
             gerarCamposDeVencimento();
@@ -316,7 +363,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (saidaFields) saidaFields.style.display = 'none';
             if (clienteNomeSelect) clienteNomeSelect.required = false;
             if (fornecedorSelect) fornecedorSelect.required = false;
+            if (registrarFluxoCaixaCheckbox) registrarFluxoCaixaCheckbox.checked = false;
         }
+        
+        toggleFluxoAviso();
     }
 
     // ===== ADICIONAR EVENT LISTENERS =====
@@ -345,6 +395,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (dataMovimentacaoInput) {
         dataMovimentacaoInput.addEventListener('change', gerarCamposDeVencimento);
+    }
+
+    // Event listener para checkbox de fluxo de caixa
+    if (registrarFluxoCaixaCheckbox) {
+        registrarFluxoCaixaCheckbox.addEventListener('change', toggleFluxoAviso);
     }
 
     // ===== CHAMADAS INICIAIS =====

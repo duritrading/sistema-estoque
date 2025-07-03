@@ -50,13 +50,13 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ROTA POST ATUALIZADA COM CAMPO DE DATA
+// ROTA POST ATUALIZADA COM CONTROLE DE FLUXO DE CAIXA
 router.post('/', async (req, res) => {
   if (!pool) return res.status(500).send('Erro de configuração.');
   
   try {
     const {
-      data_movimentacao, // NOVO CAMPO
+      data_movimentacao,
       produto_id,
       tipo,
       quantidade,
@@ -67,7 +67,8 @@ router.post('/', async (req, res) => {
       documento,
       observacao,
       total_parcelas,
-      vencimentos
+      vencimentos,
+      registrar_fluxo_caixa // NOVO CAMPO
     } = req.body;
 
     // Validações básicas
@@ -164,7 +165,7 @@ router.post('/', async (req, res) => {
       rca || null,
       documento || null,
       observacao || null,
-      dataMovimentacao // USAR A DATA PERSONALIZADA
+      dataMovimentacao
     ]);
 
     const movimentacaoId = movimentacaoResult.rows[0].id;
@@ -194,17 +195,22 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Se for ENTRADA, pode registrar no fluxo de caixa COM A DATA PERSONALIZADA
-    if (tipo === 'ENTRADA' && valor_total) {
+    // CONTROLE DE FLUXO DE CAIXA PARA ENTRADAS
+    // Só registra se for ENTRADA, tiver valor_total E o usuário marcou a opção
+    if (tipo === 'ENTRADA' && valor_total && registrar_fluxo_caixa === 'on') {
       await pool.query(`
         INSERT INTO fluxo_caixa (
           data_operacao, tipo, valor, categoria_id, descricao, status
         ) VALUES ($1, 'DEBITO', $2, 3, $3, 'PAGO')
       `, [
-        data_movimentacao, // USAR A DATA DA MOVIMENTAÇÃO
+        data_movimentacao,
         valor_total, 
         `Compra de produtos - Doc: ${documento || 'S/N'}`
       ]);
+      
+      console.log(`💰 Entrada registrada no fluxo de caixa: R$ ${valor_total.toLocaleString('pt-BR')}`);
+    } else if (tipo === 'ENTRADA' && valor_total && !registrar_fluxo_caixa) {
+      console.log(`📦 Entrada registrada APENAS no estoque (sem fluxo de caixa): R$ ${valor_total.toLocaleString('pt-BR')}`);
     }
 
     // Log da operação
