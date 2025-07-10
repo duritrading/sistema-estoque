@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
             const faturamentoMesResult = await pool.query(`
                 SELECT COALESCE(SUM(valor_total), 0) as total
                 FROM movimentacoes
-                WHERE tipo = 'saida'
+                WHERE tipo = 'SAIDA'
                 AND created_at >= $1
                 AND created_at <= $2
             `, [inicioMes, fimMes]);
@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
             const faturamentoMesPassadoResult = await pool.query(`
                 SELECT COALESCE(SUM(valor_total), 0) as total
                 FROM movimentacoes
-                WHERE tipo = 'saida'
+                WHERE tipo = 'SAIDA'
                 AND created_at >= $1
                 AND created_at <= $2
             `, [inicioMesPassado, fimMesPassado]);
@@ -56,18 +56,18 @@ router.get('/', async (req, res) => {
             console.error('Erro ao calcular faturamento:', err);
         }
 
-        // 2. LUCRO DO MÊS - versão simplificada
+        // 2. LUCRO DO MÊS - versão corrigida
         try {
             const lucroMesResult = await pool.query(`
                 SELECT 
                     COALESCE(SUM(valor_total), 0) as vendas
                 FROM movimentacoes
-                WHERE tipo = 'saida'
+                WHERE tipo = 'SAIDA'
                 AND created_at >= $1
                 AND created_at <= $2
             `, [inicioMes, fimMes]);
             
-            // Por enquanto, consideramos margem de 30% como padrão
+            // Margem de 30% como padrão
             dashboardData.lucroMes = parseFloat(lucroMesResult.rows[0].vendas) * 0.3;
         } catch (err) {
             console.error('Erro ao calcular lucro:', err);
@@ -118,7 +118,7 @@ router.get('/', async (req, res) => {
                     DATE(created_at) as dia,
                     COALESCE(SUM(valor_total), 0) as total
                 FROM movimentacoes
-                WHERE tipo = 'saida'
+                WHERE tipo = 'SAIDA'
                 AND created_at >= CURRENT_DATE - INTERVAL '7 days'
                 GROUP BY DATE(created_at)
                 ORDER BY dia
@@ -128,7 +128,7 @@ router.get('/', async (req, res) => {
             console.error('Erro ao buscar vendas diárias:', err);
         }
 
-        // 6. TOP PRODUTOS - versão simplificada sem JOIN
+        // 6. TOP PRODUTOS - corrigido sem JOIN problemático
         try {
             const topProdutosResult = await pool.query(`
                 SELECT 
@@ -136,7 +136,7 @@ router.get('/', async (req, res) => {
                     SUM(quantidade) as quantidade_vendida,
                     SUM(valor_total) as valor_total
                 FROM movimentacoes
-                WHERE tipo = 'saida'
+                WHERE tipo = 'SAIDA'
                 AND created_at >= $1
                 AND created_at <= $2
                 GROUP BY produto_id
@@ -162,18 +162,28 @@ router.get('/', async (req, res) => {
             console.error('Erro ao buscar top produtos:', err);
         }
 
-        // 7. PRODUTOS CRÍTICOS
+        // 7. PRODUTOS CRÍTICOS - corrigido com cálculo dinâmico do estoque
         try {
             const produtosCriticosResult = await pool.query(`
                 SELECT 
-                    id,
-                    descricao as nome,
-                    quantidade_estoque,
-                    estoque_minimo,
-                    preco_venda
-                FROM produtos
-                WHERE quantidade_estoque <= estoque_minimo
-                ORDER BY quantidade_estoque ASC
+                    p.id,
+                    p.descricao as nome,
+                    p.estoque_minimo,
+                    p.preco_custo,
+                    COALESCE(SUM(CASE 
+                        WHEN m.tipo = 'ENTRADA' THEN m.quantidade 
+                        WHEN m.tipo = 'SAIDA' THEN -m.quantidade 
+                        ELSE 0 
+                    END), 0) as saldo_atual
+                FROM produtos p
+                LEFT JOIN movimentacoes m ON p.id = m.produto_id
+                GROUP BY p.id, p.descricao, p.estoque_minimo, p.preco_custo
+                HAVING COALESCE(SUM(CASE 
+                    WHEN m.tipo = 'ENTRADA' THEN m.quantidade 
+                    WHEN m.tipo = 'SAIDA' THEN -m.quantidade 
+                    ELSE 0 
+                END), 0) <= p.estoque_minimo
+                ORDER BY saldo_atual ASC
                 LIMIT 10
             `);
             dashboardData.produtosCriticos = produtosCriticosResult.rows;
@@ -181,19 +191,35 @@ router.get('/', async (req, res) => {
             console.error('Erro ao buscar produtos críticos:', err);
         }
 
-        // 8. VALOR DO ESTOQUE
+        // 8. VALOR DO ESTOQUE - corrigido com cálculo dinâmico
         try {
             const valorEstoqueResult = await pool.query(`
                 SELECT 
-                    COALESCE(SUM(quantidade_estoque * preco_custo), 0) as custo_total,
-                    COALESCE(SUM(quantidade_estoque * preco_venda), 0) as valor_venda,
-                    COUNT(*) as total_produtos,
-                    COUNT(CASE WHEN quantidade_estoque = 0 THEN 1 END) as produtos_zerados
-                FROM produtos
+                    COUNT(DISTINCT p.id) as total_produtos,
+                    COALESCE(SUM(
+                        CASE WHEN saldos.saldo_atual > 0 
+                        THEN saldos.saldo_atual * p.preco_custo 
+                        ELSE 0 
+                        END
+                    ), 0) as custo_total,
+                    COUNT(CASE WHEN saldos.saldo_atual = 0 THEN 1 END) as produtos_zerados
+                FROM produtos p
+                LEFT JOIN (
+                    SELECT 
+                        produto_id,
+                        COALESCE(SUM(CASE 
+                            WHEN tipo = 'ENTRADA' THEN quantidade 
+                            WHEN tipo = 'SAIDA' THEN -quantidade 
+                            ELSE 0 
+                        END), 0) as saldo_atual
+                    FROM movimentacoes
+                    GROUP BY produto_id
+                ) saldos ON p.id = saldos.produto_id
             `);
+            
             dashboardData.valorEstoque = {
                 custo: parseFloat(valorEstoqueResult.rows[0].custo_total),
-                venda: parseFloat(valorEstoqueResult.rows[0].valor_venda),
+                venda: parseFloat(valorEstoqueResult.rows[0].custo_total) * 1.3, // Margem 30%
                 totalProdutos: parseInt(valorEstoqueResult.rows[0].total_produtos),
                 produtosZerados: parseInt(valorEstoqueResult.rows[0].produtos_zerados)
             };
@@ -220,16 +246,28 @@ router.get('/', async (req, res) => {
             console.error('Erro ao buscar alertas de contas:', err);
         }
 
-        // 10. PRODUTOS PARADOS - versão simplificada
+        // 10. PRODUTOS PARADOS - corrigido
         try {
             const produtosParadosResult = await pool.query(`
                 SELECT 
-                    id,
-                    descricao as nome,
-                    quantidade_estoque,
-                    COALESCE(preco_custo * quantidade_estoque, 0) as valor_parado
-                FROM produtos
-                WHERE quantidade_estoque > 0
+                    p.id,
+                    p.descricao as nome,
+                    p.preco_custo,
+                    COALESCE(saldos.saldo_atual, 0) as quantidade_estoque,
+                    COALESCE(saldos.saldo_atual * p.preco_custo, 0) as valor_parado
+                FROM produtos p
+                LEFT JOIN (
+                    SELECT 
+                        produto_id,
+                        COALESCE(SUM(CASE 
+                            WHEN tipo = 'ENTRADA' THEN quantidade 
+                            WHEN tipo = 'SAIDA' THEN -quantidade 
+                            ELSE 0 
+                        END), 0) as saldo_atual
+                    FROM movimentacoes
+                    GROUP BY produto_id
+                ) saldos ON p.id = saldos.produto_id
+                WHERE COALESCE(saldos.saldo_atual, 0) > 0
                 ORDER BY valor_parado DESC
                 LIMIT 5
             `);
@@ -240,7 +278,7 @@ router.get('/', async (req, res) => {
                     const ultimaVenda = await pool.query(`
                         SELECT MAX(created_at) as ultima_venda
                         FROM movimentacoes
-                        WHERE produto_id = $1 AND tipo = 'saida'
+                        WHERE produto_id = $1 AND tipo = 'SAIDA'
                     `, [produto.id]);
                     produto.ultima_venda = ultimaVenda.rows[0]?.ultima_venda;
                 } catch (err) {
