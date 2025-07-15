@@ -1,430 +1,1213 @@
+<!-- src/views/movimentacoes.ejs - Layout profissional -->
 <%- include('partials/header', {
-  titulo: 'Movimentações de Estoque',
-  subtitulo: 'Entradas e saídas de produtos',
-  user: locals.user
+  titulo: 'Gestão de Movimentações',
+  subtitulo: 'Controle de estoque e operações',
+  user: locals.user,
+  currentPage: 'movimentacoes'
 }) %>
 
-<div class="card">
-  <h2>➕ Nova Movimentação</h2>
-  <form action="/movimentacoes" method="POST">
-    <!-- CAMPO DE DATA -->
-    <div class="form-group">
-      <label for="data_movimentacao">Data da Movimentação *</label>
-      <input type="date" id="data_movimentacao" name="data_movimentacao" required>
-      <small style="color: #666; display: block; margin-top: 5px;">
-        ℹ️ Selecione a data em que a movimentação realmente ocorreu (permite lançamentos retroativos)
-      </small>
+<div class="movimentacoes-workspace">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-info">
+        <h1 class="page-title">Movimentações de Estoque</h1>
+        <p class="page-description">Gerencie entradas e saídas de produtos com controle total</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn-primary" onclick="openMovimentacaoModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Nova Movimentação
+        </button>
+      </div>
     </div>
+  </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label for="produto_id">Produto *</label>
-        <select id="produto_id" name="produto_id" required>
-          <option value="">Selecione um produto</option>
-          <% produtos.forEach(p => { %>
-            <option value="<%= p.id %>"><%= p.codigo %> - <%= p.descricao %></option>
-          <% }) %>
-        </select>
-        <span id="unidade_produto" style="margin-left: 10px; font-weight: bold; color: #555;"></span>
-      </div>
-      <div class="form-group">
-        <label for="tipo">Tipo *</label>
-        <select id="tipo" name="tipo" required>
-          <option value="">Selecione o tipo</option>
-          <option value="ENTRADA">Entrada</option>
-          <option value="SAIDA">Saída</option>
-        </select>
-      </div>
-    </div>
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label for="quantidade">Quantidade *</label>
-        <input type="number" id="quantidade" name="quantidade" step="0.001" min="0.001" required>
-      </div>
-      <div class="form-group">
-        <label for="preco_unitario">Preço Unitário (R$)</label>
-        <input type="number" id="preco_unitario" name="preco_unitario" step="0.01" min="0">
-      </div>
-    </div>
-
-    <!-- CAMPOS PARA ENTRADA (Fornecedor + Fluxo de Caixa) -->
-    <div id="entrada-fields" style="display: none;">
-      <div class="form-row">
-        <div class="form-group" style="flex: 2;">
-          <label for="fornecedor_id">Fornecedor</label>
-          <select id="fornecedor_id" name="fornecedor_id">
-            <option value="">Selecione um fornecedor</option>
-            <% fornecedores.forEach(f => { %>
-              <option value="<%= f.id %>"><%= f.nome %></option>
-            <% }) %>
-          </select>
-          <small style="display: block; margin-top: 5px;">
-            <a href="/fornecedores" target="_blank">+ Cadastrar novo fornecedor</a>
-          </small>
+  <!-- Filters Section -->
+  <div class="filters-panel">
+    <div class="filters-card">
+      <div class="filters-header">
+        <div class="filter-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
+          </svg>
         </div>
-        
-        <!-- CONTROLE DE FLUXO DE CAIXA -->
-        <div class="form-group" style="flex: 1;">
-          <label style="margin-bottom: 5px; display: block; font-size: 14px;">Fluxo de Caixa</label>
-          <div id="fluxo-caixa-container" class="fluxo-caixa-border fluxo-caixa-checked" style="
-            padding: 8px 12px; 
-            border: 2px solid #28a745; 
-            border-radius: 4px; 
-            background-color: #fff;
-            transition: border-color 0.3s ease, background-color 0.2s ease;
-            cursor: pointer;
-          " onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='#fff'">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <input type="checkbox" id="registrar_fluxo_caixa" name="registrar_fluxo_caixa" style="transform: scale(1.1); cursor: pointer;">
-              <label for="registrar_fluxo_caixa" style="margin: 0; font-weight: normal; cursor: pointer; user-select: none;">
-                Registrar no fluxo de caixa
-              </label>
-            </div>
+        <h3>Filtros de Busca</h3>
+      </div>
+      
+      <form class="filters-form" method="GET">
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>Tipo de Movimento</label>
+            <select name="tipo" class="filter-input">
+              <option value="">Todos os tipos</option>
+              <option value="ENTRADA">Entrada</option>
+              <option value="SAIDA">Saída</option>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <label>Produto</label>
+            <select name="produto_id" class="filter-input">
+              <option value="">Todos os produtos</option>
+              <% produtos.forEach(produto => { %>
+                <option value="<%= produto.id %>"><%= produto.codigo %> - <%= produto.descricao %></option>
+              <% }) %>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <label>Data Inicial</label>
+            <input type="date" name="data_inicial" class="filter-input">
+          </div>
+          
+          <div class="filter-group">
+            <label>Data Final</label>
+            <input type="date" name="data_final" class="filter-input">
           </div>
         </div>
+        
+        <div class="filter-actions">
+          <button type="submit" class="btn-filter">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            Aplicar Filtros
+          </button>
+          <button type="button" class="btn-clear" onclick="clearFilters()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            Limpar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid">
+    <div class="stat-card entrada">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5,12 12,5 19,12"></polyline>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <h3>Entradas do Mês</h3>
+        <div class="stat-value">
+          <%= movimentacoes.filter(m => m.tipo === 'ENTRADA').length %>
+        </div>
+        <div class="stat-label">movimentações</div>
       </div>
     </div>
 
-    <!-- CAMPOS PARA SAÍDA (Cliente e RCA) -->
-    <div id="saida-fields" style="display: none;">
-      <div class="form-row">
+    <div class="stat-card saida">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <polyline points="19,12 12,19 5,12"></polyline>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <h3>Saídas do Mês</h3>
+        <div class="stat-value">
+          <%= movimentacoes.filter(m => m.tipo === 'SAIDA').length %>
+        </div>
+        <div class="stat-label">movimentações</div>
+      </div>
+    </div>
+
+    <div class="stat-card total">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <h3>Total de Movimentações</h3>
+        <div class="stat-value">
+          <%= movimentacoes.length %>
+        </div>
+        <div class="stat-label">registros</div>
+      </div>
+    </div>
+
+    <div class="stat-card value">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <h3>Valor Total</h3>
+        <div class="stat-value">
+          R$ <%= movimentacoes.reduce((sum, m) => sum + (parseFloat(m.valor_total) || 0), 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+        </div>
+        <div class="stat-label">movimentado</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="data-table-container">
+    <div class="table-header">
+      <h3>Histórico de Movimentações</h3>
+      <div class="table-actions">
+        <button class="btn-export">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7,10 12,15 17,10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Exportar
+        </button>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>
+              <div class="th-content">
+                <span>Data</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="m7 15 5 5 5-5"></path>
+                  <path d="m7 9 5-5 5 5"></path>
+                </svg>
+              </div>
+            </th>
+            <th>
+              <div class="th-content">
+                <span>Tipo</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-content">
+                <span>Produto</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-content">
+                <span>Quantidade</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-content">
+                <span>Valor Unit.</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-content">
+                <span>Valor Total</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-content">
+                <span>Origem/Destino</span>
+              </div>
+            </th>
+            <th>
+              <div class="th-content">
+                <span>Ações</span>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (movimentacoes.length > 0) { %>
+            <% movimentacoes.forEach(mov => { %>
+              <tr class="table-row">
+                <td>
+                  <div class="cell-content">
+                    <span class="date-display">
+                      <%= new Date(mov.created_at).toLocaleDateString('pt-BR') %>
+                    </span>
+                    <span class="time-display">
+                      <%= new Date(mov.created_at).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) %>
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <span class="type-badge <%= mov.tipo.toLowerCase() %>">
+                    <% if (mov.tipo === 'ENTRADA') { %>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="5,12 12,5 19,12"></polyline>
+                      </svg>
+                    <% } else { %>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <polyline points="19,12 12,19 5,12"></polyline>
+                      </svg>
+                    <% } %>
+                    <%= mov.tipo %>
+                  </span>
+                </td>
+                <td>
+                  <div class="product-info">
+                    <span class="product-code"><%= mov.codigo %></span>
+                    <span class="product-name"><%= mov.descricao %></span>
+                  </div>
+                </td>
+                <td>
+                  <div class="quantity-display">
+                    <span class="quantity-value"><%= mov.quantidade %></span>
+                    <span class="quantity-unit">un</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="currency-value">
+                    R$ <%= parseFloat(mov.preco_unitario || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+                  </span>
+                </td>
+                <td>
+                  <span class="currency-value total">
+                    R$ <%= parseFloat(mov.valor_total || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+                  </span>
+                </td>
+                <td>
+                  <div class="origin-destination">
+                    <% if (mov.tipo === 'ENTRADA' && mov.fornecedor_nome) { %>
+                      <span class="supplier-name"><%= mov.fornecedor_nome %></span>
+                    <% } else if (mov.tipo === 'SAIDA' && mov.cliente_nome) { %>
+                      <span class="client-name"><%= mov.cliente_nome %></span>
+                    <% } else { %>
+                      <span class="no-info">-</span>
+                    <% } %>
+                  </div>
+                </td>
+                <td>
+                  <div class="action-buttons">
+                    <button class="btn-action view" title="Visualizar">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </button>
+                    <button class="btn-action edit" title="Editar">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                    </button>
+                    <button class="btn-action delete" title="Excluir">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3,6 5,6 21,6"></polyline>
+                        <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="8" class="empty-state">
+                <div class="empty-content">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                  </svg>
+                  <h3>Nenhuma movimentação encontrada</h3>
+                  <p>Comece criando sua primeira movimentação de estoque</p>
+                  <button class="btn-primary" onclick="openMovimentacaoModal()">
+                    Nova Movimentação
+                  </button>
+                </div>
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="table-pagination">
+      <div class="pagination-info">
+        Mostrando <%= movimentacoes.length %> de <%= movimentacoes.length %> registros
+      </div>
+      <div class="pagination-controls">
+        <button class="pagination-btn" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15,18 9,12 15,6"></polyline>
+          </svg>
+          Anterior
+        </button>
+        <div class="pagination-pages">
+          <button class="pagination-page active">1</button>
+        </div>
+        <button class="pagination-btn" disabled>
+          Próximo
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9,18 15,12 9,6"></polyline>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Nova Movimentação -->
+<div id="movimentacaoModal" class="modal-overlay">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h2>Nova Movimentação</h2>
+      <button class="modal-close" onclick="closeMovimentacaoModal()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <form action="/movimentacoes" method="POST" class="modal-form">
+      <div class="form-grid">
         <div class="form-group">
-          <label for="cliente_nome">Cliente *</label>
-          <select id="cliente_nome" name="cliente_nome" class="form-control">
-            <option value="">Selecione um cliente</option>
-            <% clientes.forEach(cliente => { %>
-              <option value="<%= cliente.nome %>"><%= cliente.nome %></option>
+          <label for="data_movimentacao">Data da Movimentação</label>
+          <input type="date" id="data_movimentacao" name="data_movimentacao" 
+                 value="<%= new Date().toISOString().split('T')[0] %>" required>
+        </div>
+
+        <div class="form-group">
+          <label for="tipo">Tipo de Movimento</label>
+          <select id="tipo" name="tipo" required onchange="updateFormFields()">
+            <option value="">Selecione o tipo</option>
+            <option value="ENTRADA">Entrada</option>
+            <option value="SAIDA">Saída</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="produto_id">Produto</label>
+          <select id="produto_id" name="produto_id" required>
+            <option value="">Selecione o produto</option>
+            <% produtos.forEach(produto => { %>
+              <option value="<%= produto.id %>"><%= produto.codigo %> - <%= produto.descricao %></option>
             <% }) %>
           </select>
-          <small style="display: block; margin-top: 5px;">
-            <a href="/clientes" target="_blank">+ Cadastrar novo cliente</a>
-          </small>
         </div>
+
+        <div class="form-group">
+          <label for="quantidade">Quantidade</label>
+          <input type="number" id="quantidade" name="quantidade" step="0.001" required 
+                 placeholder="0.000">
+        </div>
+
+        <div class="form-group">
+          <label for="preco_unitario">Preço Unitário</label>
+          <input type="number" id="preco_unitario" name="preco_unitario" step="0.01" 
+                 placeholder="0,00">
+        </div>
+
+        <div class="form-group" id="fornecedor_group" style="display: none;">
+          <label for="fornecedor_id">Fornecedor</label>
+          <select id="fornecedor_id" name="fornecedor_id">
+            <option value="">Selecione o fornecedor</option>
+            <% fornecedores.forEach(fornecedor => { %>
+              <option value="<%= fornecedor.id %>"><%= fornecedor.nome %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="form-group" id="cliente_group" style="display: none;">
+          <label for="cliente_nome">Cliente</label>
+          <input type="text" id="cliente_nome" name="cliente_nome" placeholder="Nome do cliente">
+        </div>
+
         <div class="form-group">
           <label for="rca">RCA</label>
-          <select id="rca" name="rca" class="form-control">
-            <option value="">Selecione um RCA</option>
+          <select id="rca" name="rca">
+            <option value="">Selecione o RCA</option>
             <% rcas.forEach(rca => { %>
               <option value="<%= rca.nome %>"><%= rca.nome %></option>
             <% }) %>
           </select>
         </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-            <label for="total_parcelas">Nº de Parcelas</label>
-            <input type="number" id="total_parcelas" name="total_parcelas" min="1" value="1">
+
+        <div class="form-group full-width">
+          <label for="observacao">Observações</label>
+          <textarea id="observacao" name="observacao" rows="3" 
+                    placeholder="Observações adicionais..."></textarea>
         </div>
       </div>
-      <div id="vencimentos-container" class="form-row"></div>
-    </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label for="documento">Documento</label>
-        <input type="text" id="documento" name="documento" placeholder="NF, Pedido, etc.">
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeMovimentacaoModal()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn-submit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20,6 9,17 4,12"></polyline>
+          </svg>
+          Salvar Movimentação
+        </button>
       </div>
-      <div class="form-group">
-        <label for="valor_total">Valor Total (R$)</label>
-        <input type="number" id="valor_total" name="valor_total" step="0.01" min="0" readonly>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label for="observacao">Observações</label>
-      <textarea id="observacao" name="observacao" rows="3"></textarea>
-    </div>
-
-    <button type="submit" class="btn">Registrar Movimentação</button>
-  </form>
+    </form>
+  </div>
 </div>
 
-<div class="card">
-  <h2>📋 Últimas Movimentações</h2>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Data</th>
-        <th>Produto</th>
-        <th>Tipo</th>
-        <th>Quantidade</th>
-        <th>Valor Unit.</th>
-        <th>Valor Total</th>
-        <th>Cliente/Fornecedor</th>
-        <th>Documento</th>
-        <th>Parcelas</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% movimentacoes.forEach(m => { %>
-        <tr>
-          <td><%= new Date(m.created_at).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
-          <td><%= m.codigo %> - <%= m.descricao %></td>
-          <td><span class="badge <%= m.tipo === 'ENTRADA' ? 'badge-success' : 'badge-danger' %>"><%= m.tipo %></span></td>
-          <td><%= parseFloat(m.quantidade).toLocaleString('pt-BR') %></td>
-          <td>
-            <% if (m.preco_unitario) { %>
-              R$ <%= parseFloat(m.preco_unitario).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-            <% } else { %>
-              -
-            <% } %>
-          </td>
-          <td>
-            <% if (m.valor_total) { %>
-              <strong>R$ <%= parseFloat(m.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></strong>
-            <% } else { %>
-              -
-            <% } %>
-          </td>
-          <td><%= m.tipo === 'ENTRADA' ? (m.fornecedor_nome || '-') : (m.cliente_nome || '-') %></td>
-          <td><%= m.documento || '-' %></td>
-          <td><%= m.total_parcelas || '-' %></td>
-          <td>
-            <form action="/movimentacoes/delete/<%= m.id %>" method="POST" onsubmit="return confirm('ATENÇÃO: Excluir uma movimentação é uma ação irreversível e irá apagar também todas as parcelas de faturamento associadas a ela. Deseja continuar?');">
-              <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
-            </form>
-          </td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
-</div>
+<style>
+/* Main Layout */
+.movimentacoes-workspace {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+  background: #f8fafc;
+  min-height: 100vh;
+}
 
-<!-- Dados dos produtos para o JavaScript -->
-<script type="application/json" id="produtos-data">
-  <%- JSON.stringify(produtos) %>
-</script>
+/* Page Header */
+.page-header {
+  margin-bottom: 32px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 8px 0;
+}
+
+.page-description {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+}
+
+/* Filters Panel */
+.filters-panel {
+  margin-bottom: 32px;
+}
+
+.filters-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.filters-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.filter-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.filters-header h3 {
+  color: #1a202c;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.filter-group label {
+  display: block;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-filter, .btn-clear {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-filter {
+  background: #6366f1;
+  color: white;
+  border: none;
+}
+
+.btn-clear {
+  background: #f9fafb;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e2e8f0;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.stat-card.entrada::before { background: linear-gradient(90deg, #10b981, #059669); }
+.stat-card.saida::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
+.stat-card.total::before { background: linear-gradient(90deg, #6366f1, #4f46e5); }
+.stat-card.value::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.stat-card.entrada .stat-icon { background: linear-gradient(135deg, #10b981, #059669); }
+.stat-card.saida .stat-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.stat-card.total .stat-icon { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+.stat-card.value .stat-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+.stat-content h3 {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0 0 4px 0;
+}
+
+.stat-value {
+  color: #1a202c;
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.stat-label {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+/* Data Table */
+.data-table-container {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.table-header h3 {
+  color: #1a202c;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.btn-export {
+  background: #f8fafc;
+  color: #6b7280;
+  border: 1px solid #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-export:hover {
+  background: #f1f5f9;
+  color: #374151;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  background: #f8fafc;
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.data-table td {
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+.table-row:hover {
+  background: #f8fafc;
+}
+
+.cell-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.date-display {
+  color: #1a202c;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.time-display {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.type-badge.entrada {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.type-badge.saida {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.product-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.product-code {
+  color: #1a202c;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.product-name {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.quantity-display {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.quantity-value {
+  color: #1a202c;
+  font-weight: 600;
+}
+
+.quantity-unit {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.currency-value {
+  color: #1a202c;
+  font-weight: 500;
+}
+
+.currency-value.total {
+  font-weight: 600;
+}
+
+.origin-destination .supplier-name,
+.origin-destination .client-name {
+  color: #1a202c;
+  font-size: 0.875rem;
+}
+
+.origin-destination .no-info {
+  color: #9ca3af;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-action.view {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.btn-action.edit {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.btn-action.delete {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.btn-action:hover {
+  transform: scale(1.05);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 64px 32px;
+}
+
+.empty-content {
+  color: #6b7280;
+}
+
+.empty-content svg {
+  margin-bottom: 16px;
+  color: #d1d5db;
+}
+
+.empty-content h3 {
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+/* Pagination */
+.table-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.pagination-info {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-pages {
+  display: flex;
+  gap: 4px;
+}
+
+.pagination-page {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.pagination-page.active {
+  background: #6366f1;
+  color: white;
+  border-color: #6366f1;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.modal-header h2 {
+  color: #1a202c;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-close {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #f8fafc;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: #f1f5f9;
+  color: #374151;
+}
+
+.modal-form {
+  padding: 24px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 24px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-cancel {
+  padding: 12px 24px;
+  background: #f8fafc;
+  color: #6b7280;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-submit {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .movimentacoes-workspace {
+    padding: 16px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .pagination-controls {
+    flex-wrap: wrap;
+  }
+}
+</style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // ===== OBTER ELEMENTOS DO DOM =====
-    const produtosDataElement = document.getElementById('produtos-data');
-    if (!produtosDataElement) return;
-    
-    const produtos = JSON.parse(produtosDataElement.textContent);
+// Modal Functions
+function openMovimentacaoModal() {
+  document.getElementById('movimentacaoModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
 
-    // Elementos do formulário
-    const produtoSelect = document.getElementById('produto_id');
-    const tipoSelect = document.getElementById('tipo');
-    const quantidadeInput = document.getElementById('quantidade');
-    const precoUnitarioInput = document.getElementById('preco_unitario');
-    const valorTotalInput = document.getElementById('valor_total');
-    const spanUnidade = document.getElementById('unidade_produto');
-    const dataMovimentacaoInput = document.getElementById('data_movimentacao');
-    
-    // Containers de campos específicos
-    const entradaFields = document.getElementById('entrada-fields');
-    const saidaFields = document.getElementById('saida-fields');
-    
-    // Campos específicos
-    const clienteNomeSelect = document.getElementById('cliente_nome');
-    const fornecedorSelect = document.getElementById('fornecedor_id');
-    const parcelasInput = document.getElementById('total_parcelas');
-    const vencimentosContainer = document.getElementById('vencimentos-container');
-    
-    // Campos de fluxo de caixa
-    const registrarFluxoCaixaCheckbox = document.getElementById('registrar_fluxo_caixa');
-    const fluxoCaixaContainer = document.getElementById('fluxo-caixa-container');
+function closeMovimentacaoModal() {
+  document.getElementById('movimentacaoModal').classList.remove('active');
+  document.body.style.overflow = 'auto';
+}
 
-    // ===== FUNÇÃO PARA DEFINIR DATA PADRÃO =====
-    function definirDataPadrao() {
-        if (dataMovimentacaoInput) {
-            const hoje = new Date();
-            const dataFormatada = hoje.toISOString().split('T')[0];
-            dataMovimentacaoInput.value = dataFormatada;
-        }
-    }
+// Update form fields based on type
+function updateFormFields() {
+  const tipo = document.getElementById('tipo').value;
+  const fornecedorGroup = document.getElementById('fornecedor_group');
+  const clienteGroup = document.getElementById('cliente_group');
+  
+  if (tipo === 'ENTRADA') {
+    fornecedorGroup.style.display = 'block';
+    clienteGroup.style.display = 'none';
+  } else if (tipo === 'SAIDA') {
+    fornecedorGroup.style.display = 'none';
+    clienteGroup.style.display = 'block';
+  } else {
+    fornecedorGroup.style.display = 'none';
+    clienteGroup.style.display = 'none';
+  }
+}
 
-    // ===== FUNÇÃO PARA MOSTRAR UNIDADE =====
-    function mostrarUnidade() {
-        if (!produtoSelect || !spanUnidade) return;
-        const produtoId = produtoSelect.value;
-        spanUnidade.textContent = '';
-        
-        if (produtoId) {
-            const produtoSelecionado = produtos.find(p => p.id == produtoId);
-            if (produtoSelecionado) {
-                spanUnidade.textContent = `(${produtoSelecionado.unidade || 'UN'})`;
-            }
-        }
-    }
+// Clear filters
+function clearFilters() {
+  document.querySelectorAll('.filter-input').forEach(input => {
+    input.value = '';
+  });
+}
 
-    // ===== FUNÇÃO PARA CALCULAR VALOR TOTAL =====
-    function calcularValorTotal() {
-        if (!quantidadeInput || !precoUnitarioInput || !valorTotalInput) return;
-        
-        const quantidade = parseFloat(quantidadeInput.value) || 0;
-        const precoUnitario = parseFloat(precoUnitarioInput.value) || 0;
-        const valorTotal = quantidade * precoUnitario;
-        
-        valorTotalInput.value = valorTotal.toFixed(2);
-    }
+// Auto-calculate total value
+document.getElementById('quantidade').addEventListener('input', calculateTotal);
+document.getElementById('preco_unitario').addEventListener('input', calculateTotal);
 
-    // ===== FUNÇÃO PARA CONTROLAR COR DA BORDA DO FLUXO DE CAIXA =====
-    function atualizarCorFluxoCaixa() {
-        if (!registrarFluxoCaixaCheckbox || !fluxoCaixaContainer) return;
-        
-        if (registrarFluxoCaixaCheckbox.checked) {
-            fluxoCaixaContainer.style.borderColor = '#28a745'; // Verde
-            fluxoCaixaContainer.className = 'fluxo-caixa-border fluxo-caixa-checked';
-        } else {
-            fluxoCaixaContainer.style.borderColor = '#dc3545'; // Vermelho
-            fluxoCaixaContainer.className = 'fluxo-caixa-border fluxo-caixa-unchecked';
-        }
-    }
+function calculateTotal() {
+  const quantidade = parseFloat(document.getElementById('quantidade').value) || 0;
+  const preco = parseFloat(document.getElementById('preco_unitario').value) || 0;
+  const total = quantidade * preco;
+  
+  // You can add a total field display here if needed
+}
 
-    // ===== FUNÇÃO PARA GERAR CAMPOS DE VENCIMENTO =====
-    function gerarCamposDeVencimento() {
-        if (!parcelasInput || !vencimentosContainer) return;
-        
-        const numParcelas = parseInt(parcelasInput.value) || 0;
-        vencimentosContainer.innerHTML = '';
+// Close modal on outside click
+document.getElementById('movimentacaoModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeMovimentacaoModal();
+  }
+});
 
-        if (numParcelas > 0) {
-            // Usar data da movimentação como base, ou hoje se não fornecida
-            const baseDate = dataMovimentacaoInput && dataMovimentacaoInput.value 
-                ? new Date(dataMovimentacaoInput.value) 
-                : new Date();
-            
-            for (let i = 1; i <= numParcelas; i++) {
-                const dataVencimento = new Date(baseDate);
-                dataVencimento.setDate(baseDate.getDate() + (i * 30));
-                const dataFormatada = dataVencimento.toISOString().split('T')[0];
-                
-                const formGroup = document.createElement('div');
-                formGroup.className = 'form-group';
-                formGroup.innerHTML = `
-                  <label for="vencimento_parcela_${i}">Vencimento Parcela ${i}</label>
-                  <input type="date" id="vencimento_parcela_${i}" name="vencimentos[]" value="${dataFormatada}" required class="form-control">
-                `;
-                vencimentosContainer.appendChild(formGroup);
-            }
-        }
-    }
-
-    // ===== FUNÇÃO PRINCIPAL: TOGGLE FIELDS =====
-    function toggleFields() {
-        console.log('toggleFields chamada'); // Debug
-        
-        if (!tipoSelect) {
-            console.log('tipoSelect não encontrado'); // Debug
-            return;
-        }
-        
-        const tipo = tipoSelect.value;
-        console.log('Tipo selecionado:', tipo); // Debug
-        
-        if (tipo === 'ENTRADA') {
-            console.log('Mostrando campos de ENTRADA'); // Debug
-            
-            // Mostra campos de entrada, esconde de saída
-            if (entradaFields) entradaFields.style.display = 'block';
-            if (saidaFields) saidaFields.style.display = 'none';
-            
-            // Ajusta campos obrigatórios
-            if (clienteNomeSelect) clienteNomeSelect.required = false;
-            if (fornecedorSelect) fornecedorSelect.required = false;
-            
-            // Limpa campos de saída
-            if (clienteNomeSelect) clienteNomeSelect.value = '';
-            
-            // Marcar fluxo de caixa por padrão para entradas
-            if (registrarFluxoCaixaCheckbox) {
-                registrarFluxoCaixaCheckbox.checked = true;
-                atualizarCorFluxoCaixa();
-            }
-            
-        } else if (tipo === 'SAIDA') {
-            console.log('Mostrando campos de SAÍDA'); // Debug
-            
-            // Mostra campos de saída, esconde de entrada
-            if (entradaFields) entradaFields.style.display = 'none';
-            if (saidaFields) saidaFields.style.display = 'block';
-            
-            // Ajusta campos obrigatórios
-            if (clienteNomeSelect) clienteNomeSelect.required = true;
-            if (fornecedorSelect) fornecedorSelect.required = false;
-            
-            // Limpa campos de entrada
-            if (fornecedorSelect) fornecedorSelect.value = '';
-            if (registrarFluxoCaixaCheckbox) {
-                registrarFluxoCaixaCheckbox.checked = false;
-                atualizarCorFluxoCaixa();
-            }
-            
-            // Gera campos de vencimento
-            gerarCamposDeVencimento();
-            
-        } else {
-            console.log('Nenhum tipo selecionado, escondendo todos os campos'); // Debug
-            
-            // Esconde todos se nenhum tipo selecionado
-            if (entradaFields) entradaFields.style.display = 'none';
-            if (saidaFields) saidaFields.style.display = 'none';
-            if (clienteNomeSelect) clienteNomeSelect.required = false;
-            if (fornecedorSelect) fornecedorSelect.required = false;
-            if (registrarFluxoCaixaCheckbox) {
-                registrarFluxoCaixaCheckbox.checked = false;
-                atualizarCorFluxoCaixa();
-            }
-        }
-    }
-
-    // ===== ADICIONAR EVENT LISTENERS =====
-    if (produtoSelect) {
-        produtoSelect.addEventListener('change', mostrarUnidade);
-    }
-
-    if (quantidadeInput) {
-        quantidadeInput.addEventListener('input', calcularValorTotal);
-    }
-
-    if (precoUnitarioInput) {
-        precoUnitarioInput.addEventListener('input', calcularValorTotal);
-    }
-
-    if (tipoSelect) {
-        tipoSelect.addEventListener('change', function() {
-            console.log('Tipo alterado para:', this.value); // Debug
-            toggleFields();
-        });
-    }
-
-    if (parcelasInput) {
-        parcelasInput.addEventListener('input', gerarCamposDeVencimento);
-    }
-
-    if (dataMovimentacaoInput) {
-        dataMovimentacaoInput.addEventListener('change', gerarCamposDeVencimento);
-    }
-
-    // Event listeners para controle de fluxo de caixa
-    if (registrarFluxoCaixaCheckbox) {
-        registrarFluxoCaixaCheckbox.addEventListener('change', atualizarCorFluxoCaixa);
-    }
-
-    // Tornar o container do fluxo de caixa clicável
-    if (fluxoCaixaContainer) {
-        fluxoCaixaContainer.addEventListener('click', function(e) {
-            // Evitar double-click se clicou diretamente no checkbox
-            if (e.target.type !== 'checkbox') {
-                registrarFluxoCaixaCheckbox.checked = !registrarFluxoCaixaCheckbox.checked;
-                atualizarCorFluxoCaixa();
-            }
-        });
-    }
-
-    // ===== CHAMADAS INICIAIS =====
-    console.log('Inicializando...'); // Debug
-    definirDataPadrao();
-    mostrarUnidade();
-    toggleFields(); // Esta é a chamada importante!
-    atualizarCorFluxoCaixa(); // Atualizar cor inicial
-    
-    console.log('Inicialização completa'); // Debug
+// Form validation
+document.querySelector('.modal-form').addEventListener('submit', function(e) {
+  const tipo = document.getElementById('tipo').value;
+  const produto = document.getElementById('produto_id').value;
+  const quantidade = document.getElementById('quantidade').value;
+  
+  if (!tipo || !produto || !quantidade) {
+    e.preventDefault();
+    alert('Por favor, preencha todos os campos obrigatórios.');
+  }
 });
 </script>
-    
+
 <%- include('partials/footer') %>
