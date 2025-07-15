@@ -203,3 +203,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .btn-modal.confirm:hover {
   background: #218838;
 }
+
+.container {
+  padding: 24px;
+  max-width: none;
+  margin: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .container {
+    padding: 16px;
+  }
+}
