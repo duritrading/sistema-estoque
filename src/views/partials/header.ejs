@@ -1,4 +1,4 @@
-<!-- src/views/partials/header.ejs - Sidebar sem emojis, apenas ícones SVG -->
+<!-- src/views/partials/header.ejs - Corrigir posicionamento do conteúdo -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -26,7 +26,8 @@
       box-sizing: border-box;
     }
 
-    body {
+    html, body {
+      height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       background-color: #f8fafc;
       overflow-x: hidden;
@@ -412,15 +413,26 @@
       background: #f8fafc;
     }
 
-    /* Main Content */
+    /* Main Content - CORRIGIDO */
     .main-content {
       margin-left: var(--sidebar-width);
       transition: var(--transition);
       min-height: 100vh;
+      width: calc(100vw - var(--sidebar-width));
+      position: relative;
     }
 
     .sidebar.collapsed + .main-content {
       margin-left: var(--sidebar-collapsed);
+      width: calc(100vw - var(--sidebar-collapsed));
+    }
+
+    /* Container para páginas - ADICIONADO */
+    .page-container {
+      width: 100%;
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
     }
 
     /* Tooltip for collapsed state */
@@ -459,6 +471,7 @@
 
       .main-content {
         margin-left: 0;
+        width: 100vw;
       }
 
       .mobile-overlay {
@@ -817,6 +830,9 @@
 
   <!-- Main Content -->
   <div class="main-content" id="mainContent">
+    <div class="page-container">
+    <!-- O conteúdo das páginas vai aqui -->
+
     <script>
       // Sidebar Toggle Functions
       function toggleSidebar() {
@@ -911,6 +927,5 @@
         }
       });
     </script>
-  </div>
 </body>
 </html>
