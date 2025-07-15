@@ -1,30 +1,22 @@
+<!-- src/views/login.ejs - Login profissional exclusivo -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <link rel="icon" type="image/png" href="/logo-of.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - OF Distribuidora</title>
+  <title>OF Distribuidora - Acesso Executivo</title>
+  <link rel="icon" type="image/png" href="/logo-of.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { 
-      margin: 0; 
-      padding: 0; 
-      box-sizing: border-box; 
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    
-    :root {
-      --primary-blue: #082d4e;
-      --primary-gold: #c9a961;
-      --primary-gold-hover: #b89751;
-      --light-gray: #f5f7fa;
-      --text-gray: #6c757d;
-      --error-red: #dc3545;
-      --success-green: #28a745;
-    }
-    
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-      background: linear-gradient(135deg, var(--primary-blue) 0%, #2d5a8e 100%);
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #475569 75%, #64748b 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -32,256 +24,608 @@
       position: relative;
       overflow: hidden;
     }
-    
-    /* Padrão decorativo de fundo */
-    body::before {
-      content: '';
+
+    /* Background Effects */
+    .bg-effects {
       position: absolute;
-      width: 200%;
-      height: 200%;
-      background-image: 
-        radial-gradient(circle at 20% 50%, rgba(201, 169, 97, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(201, 169, 97, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 40% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
-      animation: float 20s ease-in-out infinite;
-    }
-    
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0) rotate(0deg); }
-      33% { transform: translate(-20px, -20px) rotate(1deg); }
-      66% { transform: translate(20px, -10px) rotate(-1deg); }
-    }
-    
-    .login-container {
-      background: white;
-      padding: 3rem;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      top: 0;
+      left: 0;
       width: 100%;
-      max-width: 420px;
-      text-align: center;
-      position: relative;
+      height: 100%;
       z-index: 1;
     }
-    
-    .logo-container {
+
+    .bg-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: gridFloat 20s ease-in-out infinite;
+    }
+
+    .floating-elements {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
+
+    .floating-element {
+      position: absolute;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
+      border-radius: 50%;
+      filter: blur(1px);
+      animation: float 15s ease-in-out infinite;
+    }
+
+    .floating-element:nth-child(1) {
+      width: 120px;
+      height: 120px;
+      top: 10%;
+      left: 15%;
+      animation-delay: 0s;
+    }
+
+    .floating-element:nth-child(2) {
+      width: 80px;
+      height: 80px;
+      top: 60%;
+      right: 20%;
+      animation-delay: -5s;
+    }
+
+    .floating-element:nth-child(3) {
+      width: 200px;
+      height: 200px;
+      bottom: 10%;
+      left: 10%;
+      animation-delay: -10s;
+    }
+
+    .floating-element:nth-child(4) {
+      width: 60px;
+      height: 60px;
+      top: 30%;
+      right: 10%;
+      animation-delay: -7s;
+    }
+
+    /* Main Container */
+    .login-workspace {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: 1fr 450px;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    /* Brand Section */
+    .brand-showcase {
+      color: white;
+      animation: slideInLeft 0.8s ease-out;
+    }
+
+    .brand-header {
       margin-bottom: 2rem;
-      animation: fadeInDown 0.8s ease-out;
     }
-    
-    .logo {
-      width: 150px;
-      height: auto;
-      margin: 0 auto 1.5rem;
-      display: block;
+
+    .brand-logo {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border-radius: 20px;
+      padding: 12px;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      animation: logoGlow 3s ease-in-out infinite;
     }
-    
-    .company-name {
-      color: var(--primary-blue);
-      font-size: 1.8rem;
+
+    .brand-title {
+      font-size: 3.5rem;
       font-weight: 700;
-      letter-spacing: 2px;
+      background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 50%, #cbd5e1 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+      line-height: 1.1;
+    }
+
+    .brand-subtitle {
+      font-size: 1.25rem;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-bottom: 3rem;
+    }
+
+    .brand-features {
+      list-style: none;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+      color: #e2e8f0;
+    }
+
+    .feature-icon {
+      width: 24px;
+      height: 24px;
+      margin-right: 1rem;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Login Card */
+    .login-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 3rem;
+      box-shadow: 
+        0 32px 64px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      position: relative;
+      animation: slideInRight 0.8s ease-out;
+    }
+
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #6366f1, #a855f7, #06b6d4, #10b981);
+      border-radius: 24px 24px 0 0;
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .login-title {
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: #1e293b;
       margin-bottom: 0.5rem;
     }
-    
-    .tagline {
-      color: var(--text-gray);
-      font-size: 0.9rem;
-      margin-bottom: 2rem;
+
+    .login-description {
+      color: #64748b;
+      font-size: 1rem;
     }
-    
+
+    /* Form Styles */
+    .login-form {
+      space-y: 1.5rem;
+    }
+
     .form-group {
       margin-bottom: 1.5rem;
-      text-align: left;
-      animation: fadeInUp 0.8s ease-out;
-      animation-fill-mode: both;
     }
-    
-    .form-group:nth-child(1) { animation-delay: 0.1s; }
-    .form-group:nth-child(2) { animation-delay: 0.2s; }
-    
-    .form-group label {
+
+    .form-label {
       display: block;
-      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
       font-weight: 600;
-      color: var(--primary-blue);
-      font-size: 0.9rem;
+      color: #374151;
+      margin-bottom: 0.5rem;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.05em;
     }
-    
-    .form-group input {
+
+    .form-input {
       width: 100%;
-      padding: 14px 16px;
-      border: 2px solid #e2e8f0;
-      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
       font-size: 1rem;
+      background: rgba(255, 255, 255, 0.8);
       transition: all 0.3s ease;
-      background: var(--light-gray);
+      position: relative;
     }
-    
-    .form-group input:focus {
+
+    .form-input:focus {
       outline: none;
-      border-color: var(--primary-gold);
+      border-color: #6366f1;
       background: white;
-      box-shadow: 0 0 0 4px rgba(201, 169, 97, 0.1);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      transform: translateY(-1px);
     }
-    
-    .btn-login {
+
+    .form-input::placeholder {
+      color: #9ca3af;
+    }
+
+    /* Submit Button */
+    .submit-button {
       width: 100%;
-      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-hover) 100%);
+      padding: 1rem 1.5rem;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
       color: white;
       border: none;
-      padding: 14px 24px;
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: 1rem;
       font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       cursor: pointer;
       transition: all 0.3s ease;
-      margin-bottom: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      animation: fadeInUp 0.8s ease-out 0.3s;
-      animation-fill-mode: both;
+      position: relative;
+      overflow: hidden;
+      margin-top: 2rem;
     }
-    
-    .btn-login:hover {
+
+    .submit-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .submit-button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(201, 169, 97, 0.3);
+      box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4);
     }
-    
-    .btn-login:active {
+
+    .submit-button:hover::before {
+      left: 100%;
+    }
+
+    .submit-button:active {
       transform: translateY(0);
     }
-    
+
+    /* Alert Styles */
     .alert {
-      padding: 1rem;
-      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
       margin-bottom: 1.5rem;
+      font-size: 0.875rem;
       font-weight: 500;
-      font-size: 0.9rem;
-      animation: shake 0.5s ease-out;
+      animation: alertSlide 0.3s ease-out;
     }
-    
+
     .alert-danger {
-      background: #fee;
-      color: var(--error-red);
-      border: 1px solid #fcc;
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+      border: 1px solid rgba(239, 68, 68, 0.2);
     }
-    
+
     .alert-success {
-      background: #efe;
-      color: var(--success-green);
-      border: 1px solid #cfc;
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.2);
     }
-    
-    .footer-info {
+
+    /* Footer */
+    .login-footer {
+      text-align: center;
       margin-top: 2rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #e2e8f0;
-      color: var(--text-gray);
-      font-size: 0.85rem;
-      animation: fadeIn 1s ease-out 0.5s;
-      animation-fill-mode: both;
+      padding-top: 2rem;
+      border-top: 1px solid #e5e7eb;
+      color: #6b7280;
+      font-size: 0.875rem;
     }
-    
-    .footer-info a {
-      color: var(--primary-gold);
-      text-decoration: none;
-      font-weight: 600;
+
+    .security-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
     }
-    
-    .footer-info a:hover {
-      text-decoration: underline;
-    }
-    
-    /* Animações */
-    @keyframes fadeInDown {
+
+    /* Animations */
+    @keyframes slideInLeft {
       from {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translateX(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes logoGlow {
+      0%, 100% {
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      }
+      50% {
+        box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
+      }
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+      33% {
+        transform: translateY(-20px) rotate(2deg);
+      }
+      66% {
+        transform: translateY(10px) rotate(-2deg);
+      }
+    }
+
+    @keyframes gridFloat {
+      0%, 100% {
+        transform: translate(0, 0);
+      }
+      50% {
+        transform: translate(10px, 10px);
+      }
+    }
+
+    @keyframes alertSlide {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
       }
       to {
         opacity: 1;
         transform: translateY(0);
       }
     }
-    
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .login-workspace {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        max-width: 500px;
       }
-      to {
-        opacity: 1;
-        transform: translateY(0);
+
+      .brand-showcase {
+        text-align: center;
+      }
+
+      .brand-title {
+        font-size: 2.5rem;
+      }
+
+      .brand-features {
+        display: none;
       }
     }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+
+    @media (max-width: 640px) {
+      .login-workspace {
+        padding: 1rem;
+      }
+
+      .login-card {
+        padding: 2rem;
+      }
+
+      .brand-title {
+        font-size: 2rem;
+      }
     }
-    
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-      20%, 40%, 60%, 80% { transform: translateX(5px); }
+
+    /* Loading State */
+    .submit-button.loading {
+      pointer-events: none;
+      opacity: 0.7;
     }
-    
-    /* Responsividade */
-    @media (max-width: 480px) {
-      .login-container {
-        margin: 1rem;
-        padding: 2rem 1.5rem;
-      }
-      
-      .logo {
-        width: 120px;
-      }
-      
-      .company-name {
-        font-size: 1.5rem;
-      }
+
+    .submit-button.loading::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <div class="logo-container">
-      <!-- Logo OF Distribuidora -->
-      <img src="/logo-of.png" alt="OF Distribuidora" class="logo">
-      
-      <h1 class="company-name">OF DISTRIBUIDORA</h1>
-      <p class="tagline">Sistema de Gestão Integrada</p>
-    </div>
-
-    <% if (locals.error) { %>
-      <div class="alert alert-danger"><%= error %></div>
-    <% } %>
-    <% if (locals.success) { %>
-      <div class="alert alert-success"><%= success %></div>
-    <% } %>
-
-    <form action="/login" method="POST">
-      <input type="hidden" name="redirect" value="<%= locals.redirectUrl || '/' %>">
-
-      <div class="form-group">
-        <label for="username">Usuário</label>
-        <input type="text" id="username" name="username" required autocomplete="username" placeholder="Digite seu usuário">
-      </div>
-
-      <div class="form-group">
-        <label for="password">Senha</label>
-        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Digite sua senha">
-      </div>
-
-      <button type="submit" class="btn-login">Entrar no Sistema</button>
-    </form>
-
-    <div class="footer-info">
-      <p>&copy; 2025 OF Distribuidora. Todos os direitos reservados.</p>
+  <!-- Background Effects -->
+  <div class="bg-effects">
+    <div class="bg-grid"></div>
+    <div class="floating-elements">
+      <div class="floating-element"></div>
+      <div class="floating-element"></div>
+      <div class="floating-element"></div>
+      <div class="floating-element"></div>
     </div>
   </div>
+
+  <!-- Main Content -->
+  <div class="login-workspace">
+    <!-- Brand Showcase -->
+    <div class="brand-showcase">
+      <div class="brand-header">
+        <img src="/logo-of.png" alt="OF Distribuidora" class="brand-logo">
+        <h1 class="brand-title">OF DISTRIBUIDORA</h1>
+        <p class="brand-subtitle">Sistema Executivo de Gestão Empresarial</p>
+      </div>
+
+      <ul class="brand-features">
+        <li class="feature-item">
+          <div class="feature-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <polyline points="20,6 9,17 4,12"></polyline>
+            </svg>
+          </div>
+          Dashboard executivo em tempo real
+        </li>
+        <li class="feature-item">
+          <div class="feature-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <polyline points="20,6 9,17 4,12"></polyline>
+            </svg>
+          </div>
+          Controle financeiro integrado
+        </li>
+        <li class="feature-item">
+          <div class="feature-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <polyline points="20,6 9,17 4,12"></polyline>
+            </svg>
+          </div>
+          Gestão logística inteligente
+        </li>
+        <li class="feature-item">
+          <div class="feature-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <polyline points="20,6 9,17 4,12"></polyline>
+            </svg>
+          </div>
+          Análises preditivas avançadas
+        </li>
+      </ul>
+    </div>
+
+    <!-- Login Card -->
+    <div class="login-card">
+      <div class="login-header">
+        <h2 class="login-title">Acesso Executivo</h2>
+        <p class="login-description">Entre com suas credenciais corporativas</p>
+      </div>
+
+      <% if (locals.error) { %>
+        <div class="alert alert-danger">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px; vertical-align: middle;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+          </svg>
+          <%= error %>
+        </div>
+      <% } %>
+
+      <% if (locals.success) { %>
+        <div class="alert alert-success">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px; vertical-align: middle;">
+            <polyline points="20,6 9,17 4,12"></polyline>
+          </svg>
+          <%= success %>
+        </div>
+      <% } %>
+
+      <form action="/login" method="POST" class="login-form" id="loginForm">
+        <input type="hidden" name="redirect" value="<%= locals.redirectUrl || '/' %>">
+
+        <div class="form-group">
+          <label for="username" class="form-label">Usuário Executivo</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            class="form-input" 
+            required 
+            autocomplete="username" 
+            placeholder="Digite seu usuário corporativo"
+            value="<%= locals.username || '' %>"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Senha de Acesso</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            class="form-input" 
+            required 
+            autocomplete="current-password" 
+            placeholder="Digite sua senha segura"
+          >
+        </div>
+
+        <button type="submit" class="submit-button" id="submitBtn">
+          <span>Acessar Sistema Executivo</span>
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <div class="security-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          Conexão Segura SSL
+        </div>
+        <p style="margin-top: 1rem;">© 2025 OF Distribuidora. Sistema proprietário desenvolvido exclusivamente.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Enhanced form interaction
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.classList.add('loading');
+      submitBtn.innerHTML = '<span>Autenticando...</span>';
+    });
+
+    // Input animation effects
+    document.querySelectorAll('.form-input').forEach(input => {
+      input.addEventListener('focus', function() {
+        this.parentElement.style.transform = 'scale(1.02)';
+      });
+      
+      input.addEventListener('blur', function() {
+        this.parentElement.style.transform = 'scale(1)';
+      });
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        document.getElementById('loginForm').submit();
+      }
+    });
+
+    // Auto-focus first input
+    document.getElementById('username').focus();
+  </script>
 </body>
 </html>
