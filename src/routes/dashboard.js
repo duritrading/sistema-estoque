@@ -7,11 +7,23 @@ router.get('/', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     
     try {
-        const hoje = new Date();
-        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-        const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
-        const inicioMesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
-        const fimMesPassado = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+        // Obter datas dos filtros ou usar padrão do mês atual
+        const { dataInicial, dataFinal } = req.query;
+        
+        let inicioMes, fimMes;
+        if (dataInicial && dataFinal) {
+            inicioMes = new Date(dataInicial);
+            fimMes = new Date(dataFinal);
+        } else {
+            const hoje = new Date();
+            inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+        }
+        
+        const inicioMesPassado = new Date(inicioMes);
+        inicioMesPassado.setMonth(inicioMesPassado.getMonth() - 1);
+        const fimMesPassado = new Date(fimMes);
+        fimMesPassado.setMonth(fimMesPassado.getMonth() - 1);
 
         const dashboardData = {};
 
@@ -145,10 +157,12 @@ router.get('/', async (req, res) => {
 
         dashboardData.inadimplencia = inadimplenciaResult.rows[0];
 
-        res.render('dashboard', { 
+         res.render('dashboard', { 
             user: res.locals.user,
             currentPage: 'dashboard',
-            dashboardData 
+            dashboardData,
+            filtros: { dataInicial: dataInicial || inicioMes.toISOString().split('T')[0], 
+                      dataFinal: dataFinal || fimMes.toISOString().split('T')[0] }
         });
 
     } catch (error) {
@@ -156,5 +170,7 @@ router.get('/', async (req, res) => {
         res.status(500).send('Erro ao carregar dashboard: ' + error.message);
     }
 });
+
+
 
 module.exports = router;
