@@ -55,25 +55,25 @@
                 </span>
               </td>
               <td>
-  <div style="display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap;">
-    
-    <!-- Botão Marcar como Paga com Modal -->
-    <button type="button" class="btn btn-sm btn-success" 
-            onclick="abrirModalPagamento('<%= conta.id %>', '<%= conta.cliente_nome %>', '<%= conta.valor %>', '<%= conta.numero_parcela %>', '<%= conta.total_parcelas %>')"
-            title="Marcar como paga">
-      <span style="white-space: nowrap;">✓ Marcar como Paga</span>
-    </button>
+                <div style="display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap;">
+                  
+                  <!-- Botão Marcar como Paga com Modal -->
+                  <button type="button" class="btn btn-sm btn-success" 
+                          onclick="abrirModalPagamento('<%= conta.id %>', '<%= conta.cliente_nome %>', '<%= conta.valor %>', '<%= conta.numero_parcela %>', '<%= conta.total_parcelas %>')"
+                          title="Marcar como paga">
+                    <span style="white-space: nowrap;">✓ Marcar como Paga</span>
+                  </button>
 
-    <!-- Botão Excluir -->
-    <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" style="display: inline;" 
-          onsubmit="return confirm('⚠️ ATENÇÃO: Excluir esta conta irá:\n\n• Remover permanentemente do sistema\n• Não poderá ser recuperada\n\nAPENAS para contas lançadas por engano!\n\nDeseja continuar?');">
-      <button type="submit" class="btn btn-sm btn-danger" title="Excluir conta (apenas contas manuais)">
-        <span style="white-space: nowrap;">🗑️ Excluir</span>
-      </button>
-    </form>
-    
-  </div>
-</td>
+                  <!-- Botão Excluir -->
+                  <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" style="display: inline;" 
+                        onsubmit="return confirm('⚠️ ATENÇÃO: Excluir esta conta irá:\n\n• Remover permanentemente do sistema\n• Não poderá ser recuperada\n\nAPENAS para contas lançadas por engano!\n\nDeseja continuar?');">
+                    <button type="submit" class="btn btn-sm btn-danger" title="Excluir conta (apenas contas manuais)">
+                      <span style="white-space: nowrap;">🗑️ Excluir</span>
+                    </button>
+                  </form>
+                  
+                </div>
+              </td>
             </tr>
           <% }) %>
         </tbody>
@@ -87,39 +87,41 @@
 </div>
 
 <!-- Modal para seleção de data de pagamento -->
-<div id="modalPagamento" class="modal-overlay" style="display: none;">
-  <div class="modal-content">
-    <h3 style="margin-top: 0; color: #2d5a8e; display: flex; align-items: center; gap: 10px;">
-      💰 Registrar Pagamento
-    </h3>
+<div id="modalPagamento" class="modal-overlay-pagamento">
+  <div class="modal-content-pagamento">
+    <div class="modal-header-pagamento">
+      <h3>💰 Registrar Pagamento</h3>
+      <button type="button" class="btn-close-modal" onclick="fecharModalPagamento()">×</button>
+    </div>
     
     <form id="formPagamento" method="POST">
-      <div class="form-row">
-        <label>Cliente:</label>
-        <div style="color: #333; font-weight: bold; font-size: 16px;" id="clienteNome"></div>
+      <div class="modal-body-pagamento">
+        <div class="info-row">
+          <label>Cliente:</label>
+          <div class="info-value" id="clienteNome"></div>
+        </div>
+        
+        <div class="info-row">
+          <label>Parcela:</label>
+          <div class="info-value" id="parcelaInfo"></div>
+        </div>
+        
+        <div class="info-row">
+          <label>Valor:</label>
+          <div class="info-value valor-destaque" id="valorConta"></div>
+        </div>
+        
+        <div class="form-group-modal">
+          <label for="dataPagamento">Data do Pagamento: <span class="required">*</span></label>
+          <input type="date" id="dataPagamento" name="data_pagamento" required class="input-date">
+        </div>
       </div>
       
-      <div class="form-row">
-        <label>Parcela:</label>
-        <div style="color: #666;" id="parcelaInfo"></div>
-      </div>
-      
-      <div class="form-row">
-        <label>Valor:</label>
-        <div style="color: #28a745; font-size: 20px; font-weight: bold;" id="valorConta"></div>
-      </div>
-      
-      <div class="form-row">
-        <label for="dataPagamento">Data do Pagamento: <span style="color: #dc3545;">*</span></label>
-        <input type="date" id="dataPagamento" name="data_pagamento" required
-               style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
-      </div>
-      
-      <div class="modal-buttons">
-        <button type="button" onclick="fecharModalPagamento()" class="btn-modal cancel">
+      <div class="modal-footer-pagamento">
+        <button type="button" onclick="fecharModalPagamento()" class="btn-modal-cancel">
           Cancelar
         </button>
-        <button type="submit" class="btn-modal confirm">
+        <button type="submit" class="btn-modal-confirm">
           ✓ Confirmar Pagamento
         </button>
       </div>
@@ -127,7 +129,9 @@
   </div>
 </div>
 
+<!-- CSS COMPLETO E CORRIGIDO PARA O MODAL -->
 <style>
+/* ====== ESTILOS BÁSICOS DA PÁGINA ====== */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -138,61 +142,30 @@
 .stat-card {
   background: white;
   padding: 25px;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  border-left: 5px solid;
-  transition: transform 0.2s;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.stat-card.danger {
-  border-left-color: #dc3545;
-}
-
-.stat-card.warning {
-  border-left-color: #ffc107;
-}
-
-.stat-card.info {
-  border-left-color: #17a2b8;
-}
-
-.stat-card h3 {
-  margin: 0 0 15px 0;
-  font-size: 16px;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-}
+.stat-card.danger { border-color: #dc3545; }
+.stat-card.warning { border-color: #ffc107; }
+.stat-card.info { border-color: #17a2b8; }
 
 .stat-value {
   font-size: 32px;
   font-weight: bold;
-  margin: 0;
-  line-height: 1.2;
+  margin: 15px 0 5px 0;
 }
 
-.text-danger {
-  color: #dc3545 !important;
-}
-
-.text-warning {
-  color: #f39c12 !important;
-}
-
-.text-info {
-  color: #17a2b8 !important;
-}
+.text-danger { color: #dc3545; }
+.text-warning { color: #ffc107; }
+.text-info { color: #17a2b8; }
 
 .stat-label {
-  font-size: 13px;
-  color: #999;
-  margin: 8px 0 0 0;
+  color: #666;
+  font-size: 14px;
+  margin: 0;
 }
 
 .table-responsive {
@@ -201,79 +174,68 @@
 }
 
 .inadimplencia-table {
-  min-width: 800px;
   width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.inadimplencia-table th,
+.inadimplencia-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
 }
 
 .inadimplencia-table th {
   background-color: #f8f9fa;
   font-weight: 600;
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 0.5px;
-  padding: 15px 12px;
-  border-bottom: 2px solid #dee2e6;
+  color: #333;
 }
 
-.inadimplencia-table td {
-  padding: 12px;
-  vertical-align: middle;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.inadimplencia-table tbody tr:hover {
-  background-color: #f8f9fa;
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
 }
 
 .btn-sm {
-  padding: 6px 16px;
-  font-size: 13px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
 }
 
 .btn-success {
   background-color: #28a745;
   color: white;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 600;
 }
 
 .btn-success:hover {
   background-color: #218838;
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
 }
 
 .btn-danger {
   background-color: #dc3545;
   color: white;
-  border: 1px solid #dc3545;
 }
 
 .btn-danger:hover {
   background-color: #c82333;
-  border-color: #bd2130;
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
-}
-
-/* Melhorar o layout dos botões em mobile */
-@media (max-width: 768px) {
-  .btn-sm {
-    padding: 4px 8px;
-    font-size: 11px;
-  }
-  
-  .btn-sm span {
-    font-size: 11px;
-  }
 }
 
 .badge-danger {
   background-color: #dc3545;
   color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .text-center {
@@ -289,107 +251,194 @@
   margin-top: 20px;
 }
 
-/* === ESTILOS DO MODAL === */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(3px);
+/* ====== MODAL ESTILOS COMPLETOS E CORRIGIDOS ====== */
+.modal-overlay-pagamento {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  z-index: 99999 !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  backdrop-filter: blur(4px) !important;
 }
 
-.modal-content {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 450px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  animation: modalSlideIn 0.3s ease-out;
-  position: relative;
+.modal-overlay-pagamento.show {
+  display: flex !important;
+}
+
+.modal-content-pagamento {
+  background: white !important;
+  border-radius: 16px !important;
+  width: 90% !important;
+  max-width: 500px !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+  animation: modalSlideIn 0.3s ease-out !important;
+  position: relative !important;
+}
+
+.modal-header-pagamento {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 24px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+.modal-header-pagamento h3 {
+  margin: 0 !important;
+  color: #2d5a8e !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+}
+
+.btn-close-modal {
+  width: 35px !important;
+  height: 35px !important;
+  border: none !important;
+  background: #e2e8f0 !important;
+  border-radius: 50% !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  font-size: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s !important;
+}
+
+.btn-close-modal:hover {
+  background: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.modal-body-pagamento {
+  padding: 24px !important;
+}
+
+.info-row {
+  margin-bottom: 16px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 12px 0 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.info-row label {
+  font-weight: 600 !important;
+  color: #374151 !important;
+  font-size: 14px !important;
+  margin: 0 !important;
+}
+
+.info-value {
+  color: #111827 !important;
+  font-weight: 500 !important;
+  font-size: 16px !important;
+}
+
+.valor-destaque {
+  color: #059669 !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+}
+
+.form-group-modal {
+  margin-top: 24px !important;
+}
+
+.form-group-modal label {
+  display: block !important;
+  margin-bottom: 8px !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  font-size: 14px !important;
+}
+
+.required {
+  color: #dc2626 !important;
+}
+
+.input-date {
+  width: 100% !important;
+  padding: 12px !important;
+  border: 2px solid #d1d5db !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  transition: border-color 0.3s !important;
+  box-sizing: border-box !important;
+}
+
+.input-date:focus {
+  outline: none !important;
+  border-color: #059669 !important;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1) !important;
+}
+
+.modal-footer-pagamento {
+  display: flex !important;
+  gap: 12px !important;
+  justify-content: flex-end !important;
+  padding: 20px 24px !important;
+  border-top: 1px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+  border-radius: 0 0 16px 16px !important;
+}
+
+.btn-modal-cancel {
+  padding: 12px 24px !important;
+  border: 1px solid #d1d5db !important;
+  background: white !important;
+  color: #6b7280 !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s !important;
+}
+
+.btn-modal-cancel:hover {
+  background: #f9fafb !important;
+  border-color: #9ca3af !important;
+  color: #374151 !important;
+}
+
+.btn-modal-confirm {
+  padding: 12px 24px !important;
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s !important;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3) !important;
+}
+
+.btn-modal-confirm:hover {
+  background: linear-gradient(135deg, #047857, #065f46) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4) !important;
 }
 
 @keyframes modalSlideIn {
   from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-30px);
+    opacity: 0 !important;
+    transform: scale(0.9) translateY(-30px) !important;
   }
   to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+    opacity: 1 !important;
+    transform: scale(1) translateY(0) !important;
   }
-}
-
-.form-row {
-  margin-bottom: 20px;
-}
-
-.form-row label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #333;
-  font-size: 14px;
-}
-
-.form-row input[type="date"] {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #e1e5e9;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border-color 0.3s;
-}
-
-.form-row input[type="date"]:focus {
-  outline: none;
-  border-color: #28a745;
-  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
-}
-
-.modal-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 25px;
-}
-
-.btn-modal {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.2s;
-  min-width: 120px;
-}
-
-.btn-modal.cancel {
-  background: #6c757d;
-  color: white;
-}
-
-.btn-modal.cancel:hover {
-  background: #5a6268;
-  transform: translateY(-1px);
-}
-
-.btn-modal.confirm {
-  background: #28a745;
-  color: white;
-}
-
-.btn-modal.confirm:hover {
-  background: #218838;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
 }
 
 /* Responsividade */
@@ -400,11 +449,11 @@
   }
   
   .stat-value {
-    font-size: 28px;
+    font-size: 24px;
   }
   
   .inadimplencia-table {
-    font-size: 14px;
+    font-size: 12px;
   }
   
   .inadimplencia-table th,
@@ -412,86 +461,138 @@
     padding: 8px;
   }
 
-  .modal-content {
-    width: 95%;
-    padding: 20px;
-    margin: 10px;
+  .modal-content-pagamento {
+    width: 95% !important;
+    margin: 10px !important;
   }
 
-  .modal-buttons {
-    flex-direction: column;
+  .modal-footer-pagamento {
+    flex-direction: column !important;
   }
 
-  .btn-modal {
-    width: 100%;
+  .btn-modal-cancel,
+  .btn-modal-confirm {
+    width: 100% !important;
   }
 }
 </style>
 
+<!-- JAVASCRIPT CORRIGIDO E OTIMIZADO -->
 <script>
+console.log('🔧 Script de inadimplência carregado');
+
 function abrirModalPagamento(contaId, clienteNome, valor, numeroParcela, totalParcelas) {
-  // Preencher dados do modal
-  document.getElementById('clienteNome').textContent = clienteNome;
-  document.getElementById('parcelaInfo').textContent = `${numeroParcela}/${totalParcelas}`;
-  document.getElementById('valorConta').textContent = 'R$ ' + parseFloat(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+  console.log('🎯 Abrindo modal para conta:', contaId);
   
-  // Definir ação do formulário
-  document.getElementById('formPagamento').action = '/inadimplencia/marcar-paga/' + contaId;
-  
-  // Definir data padrão como hoje
-  const hoje = new Date().toISOString().split('T')[0];
-  document.getElementById('dataPagamento').value = hoje;
-  
-  // Mostrar modal
-  document.getElementById('modalPagamento').style.display = 'flex';
-  
-  // Focar no campo de data
-  setTimeout(() => {
-    document.getElementById('dataPagamento').focus();
-  }, 100);
+  try {
+    // Verificar se elementos existem
+    const modalEl = document.getElementById('modalPagamento');
+    const formEl = document.getElementById('formPagamento');
+    const clienteEl = document.getElementById('clienteNome');
+    const parcelaEl = document.getElementById('parcelaInfo');
+    const valorEl = document.getElementById('valorConta');
+    const dataEl = document.getElementById('dataPagamento');
+
+    if (!modalEl || !formEl || !clienteEl || !parcelaEl || !valorEl || !dataEl) {
+      console.error('❌ Elementos do modal não encontrados!');
+      alert('Erro interno: Elementos do modal não encontrados. Recarregue a página.');
+      return;
+    }
+
+    // Preencher dados do modal
+    clienteEl.textContent = clienteNome;
+    parcelaEl.textContent = `${numeroParcela}/${totalParcelas}`;
+    valorEl.textContent = 'R$ ' + parseFloat(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    
+    // Definir ação do formulário
+    formEl.action = '/inadimplencia/marcar-paga/' + contaId;
+    
+    // Definir data padrão como hoje
+    const hoje = new Date().toISOString().split('T')[0];
+    dataEl.value = hoje;
+    
+    // Mostrar modal
+    modalEl.classList.add('show');
+    modalEl.style.display = 'flex';
+    
+    console.log('✅ Modal aberto com sucesso');
+    
+    // Focar no campo de data após abertura
+    setTimeout(() => {
+      dataEl.focus();
+    }, 300);
+    
+  } catch (error) {
+    console.error('❌ Erro ao abrir modal:', error);
+    alert('Erro ao abrir modal de pagamento. Recarregue a página e tente novamente.');
+  }
 }
 
 function fecharModalPagamento() {
-  document.getElementById('modalPagamento').style.display = 'none';
+  console.log('🔒 Fechando modal de pagamento');
+  
+  const modalEl = document.getElementById('modalPagamento');
+  if (modalEl) {
+    modalEl.classList.remove('show');
+    modalEl.style.display = 'none';
+  }
 }
 
-// Fechar modal clicando fora do conteúdo
-document.getElementById('modalPagamento').addEventListener('click', function(e) {
-  if (e.target === this) {
-    fecharModalPagamento();
-  }
-});
-
-// Fechar modal com ESC
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    fecharModalPagamento();
-  }
-});
-
-// Validação do formulário
-document.getElementById('formPagamento').addEventListener('submit', function(e) {
-  const dataPagamento = document.getElementById('dataPagamento').value;
+// Aguardar carregamento completo da página
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('📄 DOM carregado, configurando eventos...');
   
-  if (!dataPagamento) {
-    e.preventDefault();
-    alert('Por favor, selecione a data do pagamento.');
+  const modalEl = document.getElementById('modalPagamento');
+  const formEl = document.getElementById('formPagamento');
+  
+  if (!modalEl || !formEl) {
+    console.error('❌ Elementos críticos não encontrados!');
     return;
   }
-  
-  // Verificar se a data não é muito futura (máximo hoje)
-  const hoje = new Date().toISOString().split('T')[0];
-  if (dataPagamento > hoje) {
-    e.preventDefault();
-    alert('A data de pagamento não pode ser no futuro.');
-    return;
-  }
-  
-  // Confirmar ação
-  const confirmacao = confirm('Confirma o recebimento desta parcela na data selecionada?');
-  if (!confirmacao) {
-    e.preventDefault();
-  }
+
+  // Fechar modal clicando fora do conteúdo
+  modalEl.addEventListener('click', function(e) {
+    if (e.target === modalEl) {
+      fecharModalPagamento();
+    }
+  });
+
+  // Fechar modal com ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      fecharModalPagamento();
+    }
+  });
+
+  // Validação do formulário
+  formEl.addEventListener('submit', function(e) {
+    const dataPagamento = document.getElementById('dataPagamento').value;
+    
+    if (!dataPagamento) {
+      e.preventDefault();
+      alert('Por favor, selecione a data do pagamento.');
+      return;
+    }
+    
+    // Verificar se a data não é muito futura (máximo hoje)
+    const hoje = new Date().toISOString().split('T')[0];
+    if (dataPagamento > hoje) {
+      e.preventDefault();
+      alert('A data de pagamento não pode ser no futuro.');
+      return;
+    }
+    
+    // Confirmar ação
+    const confirmacao = confirm('Confirma o recebimento desta parcela na data selecionada?');
+    if (!confirmacao) {
+      e.preventDefault();
+      return;
+    }
+    
+    console.log('✅ Formulário validado e enviado');
+  });
+
+  console.log('✅ Eventos configurados com sucesso');
 });
 </script>
 
