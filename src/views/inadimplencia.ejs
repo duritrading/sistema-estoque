@@ -1,30 +1,35 @@
 <%- include('partials/header', {
   titulo: 'Inadimplência',
-  subtitulo: 'Análise de contas vencidas e não pagas',
+  subtitulo: 'Gerenciamento de contas vencidas',
   user: locals.user
 }) %>
 
 <div class="container-professional">
-  <!-- Cards de Estatísticas -->
+  <!-- ESTATÍSTICAS -->
   <div class="stats-container">
     <div class="stat-card stat-danger">
       <div class="stat-icon">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 9v4l2 2"></path>
           <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
         </svg>
       </div>
       <div class="stat-content">
         <h3 class="stat-title">Total em Atraso</h3>
         <p class="stat-value stat-value-danger">R$ <%= totalEmAtraso.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p>
-        <p class="stat-description">Vencidas e não pagas</p>
+        <p class="stat-description">Valor total vencido</p>
       </div>
     </div>
     
     <div class="stat-card stat-warning">
       <div class="stat-icon">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14,2 14,8 20,8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10,9 9,9 8,9"></polyline>
         </svg>
       </div>
       <div class="stat-content">
@@ -67,206 +72,190 @@
     </div>
     
     <% if (contasVencidas.length > 0) { %>
-  <div class="table-container">
-    <table class="professional-table">
-      <thead>
-        <tr>
-          <th class="th-cliente">Cliente</th>
-          <th class="th-produto">Produto</th>
-          <th class="th-descricao">Descrição</th> <!-- NOVA COLUNA ADICIONADA -->
-          <th class="th-parcela">Parcela</th>
-          <th class="th-valor">Valor</th>
-          <th class="th-vencimento">Vencimento</th>
-          <th class="th-dias">Dias em Atraso</th>
-          <th class="th-acoes">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% contasVencidas.forEach(conta => { %>
-          <tr class="table-row">
-            <td class="td-cliente">
-              <div class="client-info">
-                <div class="client-avatar">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
-                </div>
-                <span class="client-name"><%= conta.cliente_nome %></span>
-              </div>
-            </td>
-            <td class="td-produto">
-              <span class="product-name"><%= conta.produto_descricao || '-' %></span>
-            </td>
-            <!-- NOVA COLUNA DE DESCRIÇÃO -->
-            <td class="td-descricao">
-              <span class="description-text"><%= conta.conta_descricao || '-' %></span>
-            </td>
-            <td class="td-parcela">
-              <span class="installment-badge"><%= conta.numero_parcela %>/<%= conta.total_parcelas %></span>
-            </td>
-            <td class="td-valor">
-              <span class="value-amount">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></span>
-            </td>
-            <td class="td-vencimento">
-              <span class="due-date"><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></span>
-            </td>
-            <td class="td-dias">
-              <span class="overdue-badge <%= conta.dias_atraso > 90 ? 'overdue-critical' : conta.dias_atraso > 30 ? 'overdue-high' : 'overdue-medium' %>">
-                <%= conta.dias_atraso %> dias
-              </span>
-            </td>
-            <td class="td-acoes">
-              <div class="action-group">
-                <button class="action-btn action-btn-pay" onclick="abrirModalPagamento(<%= conta.id %>, '<%= conta.cliente_nome %>', <%= conta.valor %>, <%= conta.numero_parcela %>, <%= conta.total_parcelas %>)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 11l3 3L22 4"></path>
-                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
-                  </svg>
-                  Marcar como Pago
-                </button>
-                <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta conta?')">
-                  <button type="submit" class="action-btn action-btn-delete">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="3,6 5,6 21,6"></polyline>
-                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                    </svg>
-                    Excluir
-                  </button>
-                </form>
-              </div>
-            </td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
+      <div class="table-container">
+        <table class="professional-table">
+          <thead>
+            <tr>
+              <th class="th-cliente">Cliente</th>
+              <th class="th-produto">Produto</th>
+              <th class="th-descricao">Descrição</th>
+              <th class="th-parcela">Parcela</th>
+              <th class="th-valor">Valor</th>
+              <th class="th-vencimento">Vencimento</th>
+              <th class="th-dias">Dias em Atraso</th>
+              <th class="th-acoes">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% contasVencidas.forEach(conta => { %>
+              <tr class="table-row">
+                <td class="td-cliente">
+                  <div class="client-info">
+                    <div class="client-avatar">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                    </div>
+                    <span class="client-name"><%= conta.cliente_nome %></span>
+                  </div>
+                </td>
+                <td class="td-produto">
+                  <span class="product-name"><%= conta.produto_descricao || '-' %></span>
+                </td>
+                <td class="td-descricao">
+                  <span class="description-text"><%= conta.conta_descricao || '-' %></span>
+                </td>
+                <td class="td-parcela">
+                  <span class="installment-badge"><%= conta.numero_parcela %>/<%= conta.total_parcelas %></span>
+                </td>
+                <td class="td-valor">
+                  <span class="value-amount">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></span>
+                </td>
+                <td class="td-vencimento">
+                  <span class="due-date"><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></span>
+                </td>
+                <td class="td-dias">
+                  <span class="overdue-badge <%= conta.dias_atraso > 90 ? 'overdue-critical' : conta.dias_atraso > 30 ? 'overdue-high' : 'overdue-medium' %>">
+                    <%= conta.dias_atraso %> dias
+                  </span>
+                </td>
+                <td class="td-acoes">
+                  <div class="action-group">
+                    <button class="action-btn action-pay" onclick="abrirModalPagamento(<%= conta.id %>, '<%= conta.cliente_nome %>', <%= conta.valor %>, <%= conta.numero_parcela %>, <%= conta.total_parcelas %>)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 11l3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                      </svg>
+                      Marcar como Pago
+                    </button>
+                    <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" class="inline-form" onsubmit="return confirm('Tem certeza que deseja excluir esta conta?')">
+                      <button type="submit" class="action-btn action-delete">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3,6 5,6 21,6"></polyline>
+                          <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                        </svg>
+                        Excluir
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 12l2 2 4-4"></path>
+            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+          </svg>
+        </div>
+        <h3 class="empty-title">Nenhuma conta vencida</h3>
+        <p class="empty-description">Todas as contas estão em dia! 🎉</p>
+      </div>
+    <% } %>
   </div>
-<% } else { %>
-  <div class="empty-state">
-    <div class="empty-icon">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M9 12l2 2 4-4"></path>
-        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
-      </svg>
-    </div>
-    <h3 class="empty-title">Nenhuma conta vencida</h3>
-    <p class="empty-description">Todas as contas estão em dia! 🎉</p>
-  </div>
-<% } %>
+</div>
 
-<!-- Modal para seleção de data de pagamento -->
+<!-- MODAL DE PAGAMENTO -->
 <div id="modalPagamento" class="modal-overlay-pagamento">
   <div class="modal-content-pagamento">
     <div class="modal-header-pagamento">
       <div class="modal-title-container">
         <div class="modal-title-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path>
+            <path d="M9 11l3 3L22 4"></path>
+            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
           </svg>
         </div>
         <h3 class="modal-title">Registrar Pagamento</h3>
       </div>
       <button type="button" class="btn-close-modal" onclick="fecharModalPagamento()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
     </div>
     
-    <form id="formPagamento" method="POST">
-      <div class="modal-body-pagamento">
-        <div class="payment-info-grid">
-          <div class="info-row">
-            <label class="info-label">Cliente</label>
-            <div class="info-value" id="clienteNome"></div>
-          </div>
-          
-          <div class="info-row">
-            <label class="info-label">Parcela</label>
-            <div class="info-value" id="parcelaInfo"></div>
-          </div>
-          
-          <div class="info-row">
-            <label class="info-label">Valor</label>
-            <div class="info-value valor-destaque" id="valorConta"></div>
-          </div>
+    <div class="modal-body-pagamento">
+      <div class="payment-info-grid">
+        <div class="info-row">
+          <p class="info-label">Cliente:</p>
+          <p class="info-value" id="clienteNome">-</p>
         </div>
-        
-        <div class="form-group-modal">
-          <label for="dataPagamento" class="form-label">
-            Data do Pagamento
-            <span class="required-indicator">*</span>
-          </label>
-          <input type="date" id="dataPagamento" name="data_pagamento" required class="input-date">
-          <div class="field-hint">Selecione a data em que o pagamento foi realizado</div>
+        <div class="info-row">
+          <p class="info-label">Parcela:</p>
+          <p class="info-value" id="parcelaInfo">-</p>
+        </div>
+        <div class="info-row">
+          <p class="info-label">Valor:</p>
+          <p class="info-value valor-destaque" id="valorConta">R$ 0,00</p>
         </div>
       </div>
       
-      <div class="modal-footer-pagamento">
-        <button type="button" onclick="fecharModalPagamento()" class="btn-modal-cancel">
-          Cancelar
-        </button>
-        <button type="submit" class="btn-modal-confirm">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20,6 9,17 4,12"></polyline>
-          </svg>
-          Confirmar Pagamento
-        </button>
-      </div>
-    </form>
+      <form id="formPagamento" method="POST">
+        <div class="form-group-modal">
+          <label for="dataPagamento" class="form-label">
+            Data do Pagamento <span class="required-indicator">*</span>
+          </label>
+          <input type="date" id="dataPagamento" name="data_pagamento" class="input-date" required>
+          <p class="field-hint">Selecione a data em que o pagamento foi realmente recebido</p>
+        </div>
+      </form>
+    </div>
+    
+    <div class="modal-footer-pagamento">
+      <button type="button" class="btn-modal-cancel" onclick="fecharModalPagamento()">
+        Cancelar
+      </button>
+      <button type="submit" form="formPagamento" class="btn-modal-confirm">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4"></path>
+          <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+        </svg>
+        Confirmar Pagamento
+      </button>
+    </div>
   </div>
 </div>
 
-<!-- CSS PROFISSIONAL ENTERPRISE -->
 <style>
-/* ====== LAYOUT PRINCIPAL ====== */
+/* ====== CONTAINER E LAYOUT ====== */
 .container-professional {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 32px 40px;
-  background-color: #f8fafc;
-  min-height: calc(100vh - 120px);
+  padding: 40px 32px;
+  background: #f8fafc;
+  min-height: 100vh;
 }
 
-/* ====== CARDS DE ESTATÍSTICAS ====== */
+/* ====== ESTATÍSTICAS ====== */
 .stats-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 32px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
   margin-bottom: 40px;
 }
 
 .stat-card {
   background: white;
-  border-radius: 16px;
   padding: 32px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
+  border-radius: 16px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
 }
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-}
-
-.stat-card.stat-danger::before { background: linear-gradient(90deg, #dc2626, #ef4444); }
-.stat-card.stat-warning::before { background: linear-gradient(90deg, #d97706, #f59e0b); }
-.stat-card.stat-info::before { background: linear-gradient(90deg, #0891b2, #06b6d4); }
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 5px rgba(0, 0, 0, 0.15);
 }
 
 .stat-icon {
@@ -379,6 +368,7 @@
   width: 100%;
   border-collapse: collapse;
   margin: 0;
+  min-width: 1200px;
 }
 
 .professional-table thead {
@@ -433,6 +423,59 @@
 .product-name {
   font-size: 14px;
   color: #64748b;
+}
+
+/* ====== NOVA COLUNA DESCRIÇÃO ====== */
+.th-descricao {
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.td-descricao {
+  padding: 24px 16px;
+  max-width: 300px;
+}
+
+.description-text {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+  line-height: 1.4;
+  display: block;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-height: 3.2em;
+  overflow: hidden;
+  position: relative;
+}
+
+.description-text::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 30px;
+  height: 1.2em;
+  background: linear-gradient(to right, transparent, white);
+  pointer-events: none;
+}
+
+.td-descricao:hover .description-text {
+  max-height: none;
+  overflow: visible;
+  background: #f9fafb;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  position: relative;
+  white-space: pre-wrap;
+}
+
+.td-descricao:hover .description-text::after {
+  display: none;
 }
 
 .installment-badge {
@@ -793,6 +836,21 @@
   .professional-table td {
     padding: 16px;
   }
+  
+  .th-descricao {
+    min-width: 150px;
+    max-width: 200px;
+  }
+  
+  .td-descricao {
+    padding: 16px 12px;
+    max-width: 200px;
+  }
+  
+  .description-text {
+    font-size: 13px;
+    max-height: 2.6em;
+  }
 }
 
 @media (max-width: 768px) {
@@ -841,6 +899,12 @@
   .btn-modal-confirm {
     width: 100% !important;
     justify-content: center !important;
+  }
+  
+  /* Em mobile, esconder coluna de descrição por padrão */
+  .th-descricao,
+  .td-descricao {
+    display: none;
   }
 }
 </style>
