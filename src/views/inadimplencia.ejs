@@ -4,116 +4,205 @@
   user: locals.user
 }) %>
 
-<div class="stats-grid">
-  <div class="stat-card danger">
-    <h3>Total em Atraso</h3>
-    <p class="stat-value text-danger">R$ <%= totalEmAtraso.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p>
-    <p class="stat-label">Vencidas e não pagas</p>
+<div class="container-professional">
+  <!-- Cards de Estatísticas -->
+  <div class="stats-container">
+    <div class="stat-card stat-danger">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 9v4l2 2"></path>
+          <circle cx="12" cy="12" r="10"></circle>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <h3 class="stat-title">Total em Atraso</h3>
+        <p class="stat-value stat-value-danger">R$ <%= totalEmAtraso.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p>
+        <p class="stat-description">Vencidas e não pagas</p>
+      </div>
+    </div>
+    
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <h3 class="stat-title">Contas Vencidas</h3>
+        <p class="stat-value stat-value-warning"><%= contasVencidas.length %></p>
+        <p class="stat-description">Parcelas em atraso</p>
+      </div>
+    </div>
+    
+    <div class="stat-card stat-info">
+      <div class="stat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 00-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 010 7.75"></path>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <h3 class="stat-title">Clientes Inadimplentes</h3>
+        <p class="stat-value stat-value-info"><%= clientesInadimplentes %></p>
+        <p class="stat-description">Com parcelas vencidas</p>
+      </div>
+    </div>
   </div>
-  
-  <div class="stat-card warning">
-    <h3>Contas Vencidas</h3>
-    <p class="stat-value text-warning"><%= contasVencidas.length %></p>
-    <p class="stat-label">Parcelas em atraso</p>
-  </div>
-  
-  <div class="stat-card info">
-    <h3>Clientes Inadimplentes</h3>
-    <p class="stat-value text-info"><%= clientesInadimplentes %></p>
-    <p class="stat-label">Com parcelas vencidas</p>
-  </div>
-</div>
 
-<div class="card">
-  <h2>📊 Parcelas Vencidas e Não Pagas</h2>
-  
-  <% if (contasVencidas.length > 0) { %>
-    <div class="table-responsive">
-      <table class="table inadimplencia-table">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Produto</th>
-            <th>Parcela</th>
-            <th>Valor</th>
-            <th>Vencimento</th>
-            <th>Dias em Atraso</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% contasVencidas.forEach(conta => { %>
+  <!-- Tabela de Parcelas -->
+  <div class="content-card">
+    <div class="card-header">
+      <div class="header-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 17H7A5 5 0 017 7h2a3 3 0 013 3v2.5A1.5 1.5 0 0010.5 14H9a1 1 0 00-1 1v2z"></path>
+          <path d="M17 17h2a5 5 0 000-10h-2a3 3 0 00-3 3v2.5A1.5 1.5 0 0015.5 14H17a1 1 0 011 1v2z"></path>
+        </svg>
+      </div>
+      <div class="header-content">
+        <h2 class="card-title">Parcelas Vencidas e Não Pagas</h2>
+        <p class="card-subtitle">Gerencie contas em atraso e registre pagamentos</p>
+      </div>
+    </div>
+    
+    <% if (contasVencidas.length > 0) { %>
+      <div class="table-container">
+        <table class="professional-table">
+          <thead>
             <tr>
-              <td><strong><%= conta.cliente_nome %></strong></td>
-              <td><%= conta.produto_descricao || '-' %></td>
-              <td style="white-space: nowrap;"><%= conta.numero_parcela %>/<%= conta.total_parcelas %></td>
-              <td style="white-space: nowrap;">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
-              <td style="white-space: nowrap;"><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></td>
-              <td class="text-center">
-                <span class="badge badge-danger" style="font-size: 14px; padding: 6px 12px;">
-                  <%= Math.floor(conta.dias_atraso) %> dias
-                </span>
-              </td>
-              <td>
-                <div style="display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap;">
-                  
-                  <!-- Botão Marcar como Paga com Modal -->
-                  <button type="button" class="btn btn-sm btn-success" 
-                          onclick="abrirModalPagamento('<%= conta.id %>', '<%= conta.cliente_nome %>', '<%= conta.valor %>', '<%= conta.numero_parcela %>', '<%= conta.total_parcelas %>')"
-                          title="Marcar como paga">
-                    <span style="white-space: nowrap;">✓ Marcar como Paga</span>
-                  </button>
-
-                  <!-- Botão Excluir -->
-                  <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" style="display: inline;" 
-                        onsubmit="return confirm('⚠️ ATENÇÃO: Excluir esta conta irá:\n\n• Remover permanentemente do sistema\n• Não poderá ser recuperada\n\nAPENAS para contas lançadas por engano!\n\nDeseja continuar?');">
-                    <button type="submit" class="btn btn-sm btn-danger" title="Excluir conta (apenas contas manuais)">
-                      <span style="white-space: nowrap;">🗑️ Excluir</span>
-                    </button>
-                  </form>
-                  
-                </div>
-              </td>
+              <th class="th-cliente">Cliente</th>
+              <th class="th-produto">Produto</th>
+              <th class="th-parcela">Parcela</th>
+              <th class="th-valor">Valor</th>
+              <th class="th-vencimento">Vencimento</th>
+              <th class="th-dias">Dias em Atraso</th>
+              <th class="th-acoes">Ações</th>
             </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-  <% } else { %>
-    <div class="alert alert-success">
-      <p style="margin: 0; text-align: center;">✅ Não há parcelas vencidas no momento!</p>
-    </div>
-  <% } %>
+          </thead>
+          <tbody>
+            <% contasVencidas.forEach(conta => { %>
+              <tr class="table-row">
+                <td class="td-cliente">
+                  <div class="client-info">
+                    <div class="client-avatar">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                    </div>
+                    <span class="client-name"><%= conta.cliente_nome %></span>
+                  </div>
+                </td>
+                <td class="td-produto">
+                  <span class="product-name"><%= conta.produto_descricao || '-' %></span>
+                </td>
+                <td class="td-parcela">
+                  <span class="installment-badge"><%= conta.numero_parcela %>/<%= conta.total_parcelas %></span>
+                </td>
+                <td class="td-valor">
+                  <span class="value-amount">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></span>
+                </td>
+                <td class="td-vencimento">
+                  <span class="due-date"><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></span>
+                </td>
+                <td class="td-dias">
+                  <span class="overdue-badge">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12,6 12,12 16,14"></polyline>
+                    </svg>
+                    <%= Math.floor(conta.dias_atraso) %> dias
+                  </span>
+                </td>
+                <td class="td-acoes">
+                  <div class="action-group">
+                    <button type="button" class="action-btn action-pay" 
+                            onclick="abrirModalPagamento('<%= conta.id %>', '<%= conta.cliente_nome %>', '<%= conta.valor %>', '<%= conta.numero_parcela %>', '<%= conta.total_parcelas %>')"
+                            title="Marcar como paga">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20,6 9,17 4,12"></polyline>
+                      </svg>
+                      Marcar como Paga
+                    </button>
+
+                    <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" class="inline-form" 
+                          onsubmit="return confirm('ATENÇÃO: Excluir esta conta irá:\n\n• Remover permanentemente do sistema\n• Não poderá ser recuperada\n\nAPENAS para contas lançadas por engano!\n\nDeseja continuar?');">
+                      <button type="submit" class="action-btn action-delete" title="Excluir conta">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3,6 5,6 21,6"></polyline>
+                          <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"></path>
+                        </svg>
+                        Excluir
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polyline points="20,6 9,17 4,12"></polyline>
+          </svg>
+        </div>
+        <h3 class="empty-title">Nenhuma parcela vencida</h3>
+        <p class="empty-description">Todas as contas estão em dia no momento.</p>
+      </div>
+    <% } %>
+  </div>
 </div>
 
 <!-- Modal para seleção de data de pagamento -->
 <div id="modalPagamento" class="modal-overlay-pagamento">
   <div class="modal-content-pagamento">
     <div class="modal-header-pagamento">
-      <h3>💰 Registrar Pagamento</h3>
-      <button type="button" class="btn-close-modal" onclick="fecharModalPagamento()">×</button>
+      <div class="modal-title-container">
+        <div class="modal-title-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path>
+          </svg>
+        </div>
+        <h3 class="modal-title">Registrar Pagamento</h3>
+      </div>
+      <button type="button" class="btn-close-modal" onclick="fecharModalPagamento()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
     
     <form id="formPagamento" method="POST">
       <div class="modal-body-pagamento">
-        <div class="info-row">
-          <label>Cliente:</label>
-          <div class="info-value" id="clienteNome"></div>
-        </div>
-        
-        <div class="info-row">
-          <label>Parcela:</label>
-          <div class="info-value" id="parcelaInfo"></div>
-        </div>
-        
-        <div class="info-row">
-          <label>Valor:</label>
-          <div class="info-value valor-destaque" id="valorConta"></div>
+        <div class="payment-info-grid">
+          <div class="info-row">
+            <label class="info-label">Cliente</label>
+            <div class="info-value" id="clienteNome"></div>
+          </div>
+          
+          <div class="info-row">
+            <label class="info-label">Parcela</label>
+            <div class="info-value" id="parcelaInfo"></div>
+          </div>
+          
+          <div class="info-row">
+            <label class="info-label">Valor</label>
+            <div class="info-value valor-destaque" id="valorConta"></div>
+          </div>
         </div>
         
         <div class="form-group-modal">
-          <label for="dataPagamento">Data do Pagamento: <span class="required">*</span></label>
+          <label for="dataPagamento" class="form-label">
+            Data do Pagamento
+            <span class="required-indicator">*</span>
+          </label>
           <input type="date" id="dataPagamento" name="data_pagamento" required class="input-date">
+          <div class="field-hint">Selecione a data em que o pagamento foi realizado</div>
         </div>
       </div>
       
@@ -122,148 +211,359 @@
           Cancelar
         </button>
         <button type="submit" class="btn-modal-confirm">
-          ✓ Confirmar Pagamento
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20,6 9,17 4,12"></polyline>
+          </svg>
+          Confirmar Pagamento
         </button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- CSS COMPLETO E CORRIGIDO PARA O MODAL -->
+<!-- CSS PROFISSIONAL ENTERPRISE -->
 <style>
-/* ====== ESTILOS BÁSICOS DA PÁGINA ====== */
-.stats-grid {
+/* ====== LAYOUT PRINCIPAL ====== */
+.container-professional {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 40px;
+  background-color: #f8fafc;
+  min-height: calc(100vh - 120px);
+}
+
+/* ====== CARDS DE ESTATÍSTICAS ====== */
+.stats-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 25px;
-  margin-bottom: 35px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 32px;
+  margin-bottom: 40px;
 }
 
 .stat-card {
   background: white;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.stat-card.danger { border-color: #dc3545; }
-.stat-card.warning { border-color: #ffc107; }
-.stat-card.info { border-color: #17a2b8; }
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.stat-card.stat-danger::before { background: linear-gradient(90deg, #dc2626, #ef4444); }
+.stat-card.stat-warning::before { background: linear-gradient(90deg, #d97706, #f59e0b); }
+.stat-card.stat-info::before { background: linear-gradient(90deg, #0891b2, #06b6d4); }
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-danger .stat-icon {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  color: #dc2626;
+}
+
+.stat-warning .stat-icon {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  color: #d97706;
+}
+
+.stat-info .stat-icon {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  color: #0891b2;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
 .stat-value {
-  font-size: 32px;
-  font-weight: bold;
-  margin: 15px 0 5px 0;
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  line-height: 1.1;
 }
 
-.text-danger { color: #dc3545; }
-.text-warning { color: #ffc107; }
-.text-info { color: #17a2b8; }
+.stat-value-danger { color: #dc2626; }
+.stat-value-warning { color: #d97706; }
+.stat-value-info { color: #0891b2; }
 
-.stat-label {
-  color: #666;
+.stat-description {
   font-size: 14px;
+  color: #64748b;
   margin: 0;
 }
 
-.table-responsive {
-  overflow-x: auto;
-  margin-top: 20px;
+/* ====== CARD DE CONTEÚDO ====== */
+.content-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
 }
 
-.inadimplencia-table {
+.card-header {
+  padding: 32px 40px 24px 40px;
+  border-bottom: 1px solid #f1f5f9;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.card-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+.card-subtitle {
+  font-size: 16px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ====== TABELA PROFISSIONAL ====== */
+.table-container {
+  overflow-x: auto;
+}
+
+.professional-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 15px;
+  margin: 0;
 }
 
-.inadimplencia-table th,
-.inadimplencia-table td {
-  padding: 12px;
+.professional-table thead {
+  background: #f8fafc;
+}
+
+.professional-table th {
+  padding: 20px 24px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e2e8f0;
 }
 
-.inadimplencia-table th {
-  background-color: #f8f9fa;
+.professional-table td {
+  padding: 24px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.table-row:hover {
+  background: #f8fafc;
+}
+
+/* Células específicas */
+.client-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.client-avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+}
+
+.client-name {
+  font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: #1e293b;
 }
 
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+.product-name {
   font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-block;
-  transition: all 0.2s;
+  color: #64748b;
 }
 
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
-.btn-success {
-  background-color: #28a745;
-  color: white;
-}
-
-.btn-success:hover {
-  background-color: #218838;
-  transform: translateY(-1px);
-}
-
-.btn-danger {
-  background-color: #dc3545;
-  color: white;
-}
-
-.btn-danger:hover {
-  background-color: #c82333;
-  transform: translateY(-1px);
-}
-
-.badge-danger {
-  background-color: #dc3545;
-  color: white;
+.installment-badge {
+  background: #f1f5f9;
+  color: #475569;
   padding: 6px 12px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 
-.text-center {
+.value-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.due-date {
+  font-size: 14px;
+  color: #64748b;
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.overdue-badge {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  color: #dc2626;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ====== AÇÕES ====== */
+.action-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.action-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.action-pay {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: white;
+  box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+}
+
+.action-pay:hover {
+  background: linear-gradient(135deg, #047857, #065f46);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.action-delete {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.action-delete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.inline-form {
+  display: inline;
+}
+
+/* ====== ESTADO VAZIO ====== */
+.empty-state {
+  padding: 80px 40px;
   text-align: center;
 }
 
-.alert-success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-  padding: 20px;
-  border-radius: 8px;
-  margin-top: 20px;
+.empty-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px auto;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #059669;
 }
 
-/* ====== MODAL ESTILOS COMPLETOS E CORRIGIDOS ====== */
+.empty-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.empty-description {
+  font-size: 16px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ====== MODAL PROFISSIONAL ====== */
 .modal-overlay-pagamento {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background: rgba(0, 0, 0, 0.7) !important;
+  background: rgba(15, 23, 42, 0.75) !important;
   z-index: 99999 !important;
   display: none !important;
   align-items: center !important;
   justify-content: center !important;
-  backdrop-filter: blur(4px) !important;
+  backdrop-filter: blur(8px) !important;
 }
 
 .modal-overlay-pagamento.show {
@@ -272,13 +572,13 @@
 
 .modal-content-pagamento {
   background: white !important;
-  border-radius: 16px !important;
+  border-radius: 20px !important;
   width: 90% !important;
-  max-width: 500px !important;
+  max-width: 560px !important;
   max-height: 90vh !important;
   overflow-y: auto !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
-  animation: modalSlideIn 0.3s ease-out !important;
+  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.25) !important;
+  animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
   position: relative !important;
 }
 
@@ -286,28 +586,45 @@
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  padding: 24px !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  background: #f8fafc !important;
-  border-radius: 16px 16px 0 0 !important;
+  padding: 32px 32px 24px 32px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9) !important;
+  border-radius: 20px 20px 0 0 !important;
 }
 
-.modal-header-pagamento h3 {
+.modal-title-container {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.modal-title-icon {
+  width: 40px !important;
+  height: 40px !important;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+}
+
+.modal-title {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
   margin: 0 !important;
-  color: #2d5a8e !important;
-  font-size: 18px !important;
-  font-weight: 600 !important;
 }
 
 .btn-close-modal {
-  width: 35px !important;
-  height: 35px !important;
+  width: 40px !important;
+  height: 40px !important;
   border: none !important;
-  background: #e2e8f0 !important;
-  border-radius: 50% !important;
+  background: #f1f5f9 !important;
+  border-radius: 10px !important;
   color: #64748b !important;
   cursor: pointer !important;
-  font-size: 20px !important;
+  font-size: 16px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -315,90 +632,106 @@
 }
 
 .btn-close-modal:hover {
-  background: #cbd5e1 !important;
+  background: #e2e8f0 !important;
   color: #475569 !important;
 }
 
 .modal-body-pagamento {
-  padding: 24px !important;
+  padding: 32px !important;
+}
+
+.payment-info-grid {
+  margin-bottom: 32px !important;
 }
 
 .info-row {
-  margin-bottom: 16px !important;
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  padding: 12px 0 !important;
-  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 16px 0 !important;
+  border-bottom: 1px solid #f8fafc !important;
 }
 
-.info-row label {
-  font-weight: 600 !important;
-  color: #374151 !important;
+.info-row:last-child {
+  border-bottom: none !important;
+}
+
+.info-label {
   font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
   margin: 0 !important;
 }
 
 .info-value {
-  color: #111827 !important;
-  font-weight: 500 !important;
   font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
 }
 
 .valor-destaque {
-  color: #059669 !important;
-  font-size: 20px !important;
+  font-size: 24px !important;
   font-weight: 700 !important;
+  color: #059669 !important;
 }
 
 .form-group-modal {
   margin-top: 24px !important;
 }
 
-.form-group-modal label {
+.form-label {
   display: block !important;
   margin-bottom: 8px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   color: #374151 !important;
-  font-size: 14px !important;
 }
 
-.required {
+.required-indicator {
   color: #dc2626 !important;
+  margin-left: 2px !important;
 }
 
 .input-date {
   width: 100% !important;
-  padding: 12px !important;
-  border: 2px solid #d1d5db !important;
-  border-radius: 8px !important;
-  font-size: 14px !important;
-  transition: border-color 0.3s !important;
+  padding: 16px !important;
+  border: 2px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  font-size: 16px !important;
+  transition: all 0.3s !important;
   box-sizing: border-box !important;
+  background: #fafbfc !important;
 }
 
 .input-date:focus {
   outline: none !important;
-  border-color: #059669 !important;
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1) !important;
+  border-color: #3b82f6 !important;
+  background: white !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+}
+
+.field-hint {
+  font-size: 12px !important;
+  color: #64748b !important;
+  margin-top: 6px !important;
 }
 
 .modal-footer-pagamento {
   display: flex !important;
-  gap: 12px !important;
+  gap: 16px !important;
   justify-content: flex-end !important;
-  padding: 20px 24px !important;
-  border-top: 1px solid #e2e8f0 !important;
-  background: #f8fafc !important;
-  border-radius: 0 0 16px 16px !important;
+  padding: 24px 32px 32px 32px !important;
+  border-top: 1px solid #f1f5f9 !important;
+  background: #fafbfc !important;
+  border-radius: 0 0 20px 20px !important;
 }
 
 .btn-modal-cancel {
-  padding: 12px 24px !important;
-  border: 1px solid #d1d5db !important;
+  padding: 14px 24px !important;
+  border: 2px solid #e2e8f0 !important;
   background: white !important;
-  color: #6b7280 !important;
-  border-radius: 8px !important;
+  color: #64748b !important;
+  border-radius: 10px !important;
   cursor: pointer !important;
   font-size: 14px !important;
   font-weight: 600 !important;
@@ -406,34 +739,37 @@
 }
 
 .btn-modal-cancel:hover {
-  background: #f9fafb !important;
-  border-color: #9ca3af !important;
-  color: #374151 !important;
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
 }
 
 .btn-modal-confirm {
-  padding: 12px 24px !important;
+  padding: 14px 24px !important;
   background: linear-gradient(135deg, #059669, #047857) !important;
   color: white !important;
   border: none !important;
-  border-radius: 8px !important;
+  border-radius: 10px !important;
   cursor: pointer !important;
   font-size: 14px !important;
   font-weight: 600 !important;
   transition: all 0.2s !important;
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
 }
 
 .btn-modal-confirm:hover {
   background: linear-gradient(135deg, #047857, #065f46) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4) !important;
+  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3) !important;
 }
 
 @keyframes modalSlideIn {
   from {
     opacity: 0 !important;
-    transform: scale(0.9) translateY(-30px) !important;
+    transform: scale(0.95) translateY(-20px) !important;
   }
   to {
     opacity: 1 !important;
@@ -441,51 +777,85 @@
   }
 }
 
-/* Responsividade */
-@media (max-width: 768px) {
-  .stats-grid {
+/* ====== RESPONSIVIDADE ====== */
+@media (max-width: 1024px) {
+  .container-professional {
+    padding: 24px 24px;
+  }
+  
+  .stats-container {
     grid-template-columns: 1fr;
-    gap: 15px;
+    gap: 20px;
+  }
+  
+  .card-header {
+    padding: 24px 24px 20px 24px;
+  }
+  
+  .professional-table th,
+  .professional-table td {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container-professional {
+    padding: 16px;
+  }
+  
+  .stat-card {
+    padding: 24px;
   }
   
   .stat-value {
-    font-size: 24px;
+    font-size: 28px;
   }
   
-  .inadimplencia-table {
-    font-size: 12px;
+  .professional-table {
+    font-size: 14px;
   }
   
-  .inadimplencia-table th,
-  .inadimplencia-table td {
-    padding: 8px;
+  .action-group {
+    flex-direction: column;
+    gap: 8px;
   }
-
+  
+  .action-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
   .modal-content-pagamento {
     width: 95% !important;
     margin: 10px !important;
   }
-
+  
+  .modal-header-pagamento,
+  .modal-body-pagamento,
+  .modal-footer-pagamento {
+    padding: 20px !important;
+  }
+  
   .modal-footer-pagamento {
     flex-direction: column !important;
   }
-
+  
   .btn-modal-cancel,
   .btn-modal-confirm {
     width: 100% !important;
+    justify-content: center !important;
   }
 }
 </style>
 
-<!-- JAVASCRIPT CORRIGIDO E OTIMIZADO -->
+<!-- JAVASCRIPT OTIMIZADO -->
 <script>
-console.log('🔧 Script de inadimplência carregado');
+console.log('🔧 Sistema de inadimplência carregado');
 
 function abrirModalPagamento(contaId, clienteNome, valor, numeroParcela, totalParcelas) {
   console.log('🎯 Abrindo modal para conta:', contaId);
   
   try {
-    // Verificar se elementos existem
     const modalEl = document.getElementById('modalPagamento');
     const formEl = document.getElementById('formPagamento');
     const clienteEl = document.getElementById('clienteNome');
@@ -499,25 +869,20 @@ function abrirModalPagamento(contaId, clienteNome, valor, numeroParcela, totalPa
       return;
     }
 
-    // Preencher dados do modal
     clienteEl.textContent = clienteNome;
     parcelaEl.textContent = `${numeroParcela}/${totalParcelas}`;
     valorEl.textContent = 'R$ ' + parseFloat(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
     
-    // Definir ação do formulário
     formEl.action = '/inadimplencia/marcar-paga/' + contaId;
     
-    // Definir data padrão como hoje
     const hoje = new Date().toISOString().split('T')[0];
     dataEl.value = hoje;
     
-    // Mostrar modal
     modalEl.classList.add('show');
     modalEl.style.display = 'flex';
     
     console.log('✅ Modal aberto com sucesso');
     
-    // Focar no campo de data após abertura
     setTimeout(() => {
       dataEl.focus();
     }, 300);
@@ -538,7 +903,6 @@ function fecharModalPagamento() {
   }
 }
 
-// Aguardar carregamento completo da página
 document.addEventListener('DOMContentLoaded', function() {
   console.log('📄 DOM carregado, configurando eventos...');
   
@@ -550,21 +914,18 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
 
-  // Fechar modal clicando fora do conteúdo
   modalEl.addEventListener('click', function(e) {
     if (e.target === modalEl) {
       fecharModalPagamento();
     }
   });
 
-  // Fechar modal com ESC
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       fecharModalPagamento();
     }
   });
 
-  // Validação do formulário
   formEl.addEventListener('submit', function(e) {
     const dataPagamento = document.getElementById('dataPagamento').value;
     
@@ -574,7 +935,6 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Verificar se a data não é muito futura (máximo hoje)
     const hoje = new Date().toISOString().split('T')[0];
     if (dataPagamento > hoje) {
       e.preventDefault();
@@ -582,7 +942,6 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Confirmar ação
     const confirmacao = confirm('Confirma o recebimento desta parcela na data selecionada?');
     if (!confirmacao) {
       e.preventDefault();
