@@ -1,33 +1,173 @@
+// src/config/database-sqlite.js - SQLite compatível com código PostgreSQL
+
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
-const dbPath = path.join(__dirname, '../../data/estoque.db');
+// Criar diretório data se não existir
+const dataDir = path.join(__dirname, '../../data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+  console.log('📁 Diretório data criado');
+}
+
+const dbPath = path.join(dataDir, 'estoque.db');
+console.log('📍 Conectando SQLite:', dbPath);
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
-    console.error('❌ Erro:', err);
+    console.error('❌ Erro SQLite:', err.message);
+    process.exit(1);
   } else {
-    console.log('✅ Banco conectado:', dbPath);
+    console.log('✅ SQLite conectado:', dbPath);
   }
 });
 
+// Função para converter queries PostgreSQL para SQLite
+function convertQuery(text, params = []) {
+  let query = text;
+  
+  // Converter placeholders PostgreSQL ($1, $2) para SQLite (?, ?)
+  let paramIndex = 1;
+  query = query.replace(/\$\d+/g, () => '?');
+  
+  // Converter tipos PostgreSQL para SQLite
+  query = query.replace(/SERIAL PRIMARY KEY/gi, 'INTEGER PRIMARY KEY AUTOINCREMENT');
+  query = query.replace(/DECIMAL\(\d+,\d+\)/gi, 'REAL');
+  query = query.replace(/VARCHAR\(\d+\)/gi, 'TEXT');
+  query = query.replace(/TIMESTAMP/gi, 'DATETIME');
+  query = query.replace(/BOOLEAN/gi, 'INTEGER');
+  query = query.replace(/DEFAULT CURRENT_TIMESTAMP/gi, "DEFAULT CURRENT_TIMESTAMP");
+  query = query.replace(/DEFAULT true/gi, 'DEFAULT 1');
+  query = query.replace(/DEFAULT false/gi, 'DEFAULT 0');
+  
+  // Converter CURRENT_DATE para SQLite
+  query = query.replace(/CURRENT_DATE/gi, "date('now')");
+  
+  // Converter operadores específicos do PostgreSQL
+  query = query.replace(/ILIKE/gi, 'LIKE');
+  
+  return { query, params };
+}
+
+// Wrapper para compatibilidade com PostgreSQL
+const sqlitePool = {
+  query: (text, params = []) => {
+    return new Promise((resolve, reject) => {
+      try {
+        const { query, params: convertedParams } = convertQuery(text, params);
+        
+        console.log('🔍 SQLite Query:', query);
+        console.log('📝 Params:', convertedParams);
+        
+        // Para INSERT, UPDATE, DELETE usar db.run
+        if (/^(INSERT|UPDATE|DELETE)/i.test(query.trim())) {
+          db.run(query, convertedParams, function(err) {
+            if (err) {
+              console.error('❌ SQLite Error:', err.message);
+              console.error('📝 Query:', query);
+              reject(err);
+              return;
+            }
+            
+            // Retornar formato compatível com PostgreSQL
+            const result = {
+              rows: [],
+              rowCount: this.changes || 0,
+              lastInsertId: this.lastID || null
+            };
+            
+            // Para INSERT com RETURNING, simular retorno
+            if (/RETURNING/i.test(text) && this.lastID) {
+              result.rows = [{ id: this.lastID }];
+            }
+            
+            resolve(result);
+          });
+        } else {
+          // Para SELECT usar db.all
+          db.all(query, convertedParams, (err, rows) => {
+            if (err) {
+              console.error('❌ SQLite Error:', err.message);
+              console.error('📝 Query:', query);
+              reject(err);
+              return;
+            }
+            
+            // Retornar formato compatível com PostgreSQL
+            resolve({
+              rows: rows || [],
+              rowCount: rows ? rows.length : 0
+            });
+          });
+        }
+        
+      } catch (error) {
+        console.error('❌ Query conversion error:', error.message);
+        reject(error);
+      }
+    });
+  },
+  
+  connect: () => {
+    return Promise.resolve({
+      release: () => {}
+    });
+  },
+  
+  end: () => {
+    return new Promise((resolve) => {
+      db.close((err) => {
+        if (err) console.error('Erro ao fechar SQLite:', err.message);
+        else console.log('✅ SQLite desconectado');
+        resolve();
+      });
+    });
+  }
+};
+
+// Inicializar tabelas básicas do sistema
 db.serialize(() => {
-  // Tabelas existentes (produtos, fornecedores, movimentacoes)
+  console.log('🔧 Inicializando tabelas SQLite...');
+  
+  // Criar tabela de usuários
+  db.run(`
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      nome_completo TEXT,
+      ativo INTEGER DEFAULT 1,
+      ultimo_login DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `, (err) => {
+    if (err) console.error('Erro tabela usuarios:', err.message);
+    else console.log('✅ Tabela usuarios OK');
+  });
+  
+  // Criar tabela de produtos
   db.run(`
     CREATE TABLE IF NOT EXISTS produtos (
-      id INTEGER PRIMARY KEY,
-      codigo TEXT UNIQUE,
-      descricao TEXT,
-      unidade TEXT,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT UNIQUE NOT NULL,
+      descricao TEXT NOT NULL,
+      unidade TEXT DEFAULT 'UN',
       categoria TEXT,
-      estoque_minimo INTEGER,
-      preco_custo REAL
+      estoque_minimo INTEGER DEFAULT 0,
+      preco_custo REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
-  `);
-
+  `, (err) => {
+    if (err) console.error('Erro tabela produtos:', err.message);
+    else console.log('✅ Tabela produtos OK');
+  });
+  
+  // Criar tabela de fornecedores
   db.run(`
     CREATE TABLE IF NOT EXISTS fornecedores (
-      id INTEGER PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       codigo TEXT UNIQUE,
       nome TEXT NOT NULL,
       contato TEXT,
@@ -38,183 +178,46 @@ db.serialize(() => {
       observacao TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS movimentacoes (
-      id INTEGER PRIMARY KEY,
-      produto_id INTEGER,
-      fornecedor_id INTEGER,
-      cliente_nome TEXT,
-      rca TEXT,
-      tipo TEXT CHECK (tipo IN ('ENTRADA', 'SAIDA')),
-      quantidade INTEGER,
-      preco_unitario REAL,
-      valor_total REAL,
-      documento TEXT,
-      observacao TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (produto_id) REFERENCES produtos (id),
-      FOREIGN KEY (fornecedor_id) REFERENCES fornecedores (id)
-    )
-  `);
-
-  // === SISTEMA FINANCEIRO SIMPLIFICADO ===
-
-  // Categorias financeiras
+  `, (err) => {
+    if (err) console.error('Erro tabela fornecedores:', err.message);
+    else console.log('✅ Tabela fornecedores OK');
+  });
+  
+  // Criar tabela de categorias financeiras
   db.run(`
     CREATE TABLE IF NOT EXISTS categorias_financeiras (
-      id INTEGER PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome TEXT NOT NULL,
       tipo TEXT CHECK (tipo IN ('RECEITA', 'DESPESA')) NOT NULL,
       ativo INTEGER DEFAULT 1
     )
-  `);
-
-  // Formas de pagamento
+  `, (err) => {
+    if (err) console.error('Erro tabela categorias_financeiras:', err.message);
+    else console.log('✅ Tabela categorias_financeiras OK');
+  });
+  
+  // Inserir categorias padrão
   db.run(`
-    CREATE TABLE IF NOT EXISTS formas_pagamento (
-      id INTEGER PRIMARY KEY,
-      nome TEXT NOT NULL,
-      sigla TEXT,
-      ativo INTEGER DEFAULT 1
-    )
+    INSERT OR IGNORE INTO categorias_financeiras (id, nome, tipo) VALUES 
+    (1, 'Receita de Vendas', 'RECEITA'),
+    (2, 'Receitas Financeiras', 'RECEITA'),
+    (3, 'Compra de Produtos', 'DESPESA'),
+    (4, 'Despesas Operacionais', 'DESPESA')
   `);
-
-  // Fluxo de caixa (tabela principal)
+  
+  // Criar usuário admin padrão
+  const bcrypt = require('bcrypt');
+  const adminPassword = bcrypt.hashSync('admin123', 10);
+  
   db.run(`
-    CREATE TABLE IF NOT EXISTS fluxo_caixa (
-      id INTEGER PRIMARY KEY,
-      data_operacao DATE NOT NULL,
-      tipo TEXT CHECK (tipo IN ('CREDITO', 'DEBITO')) NOT NULL,
-      valor REAL NOT NULL,
-      categoria_id INTEGER NOT NULL,
-      descricao TEXT NOT NULL,
-      forma_pagamento_id INTEGER,
-      movimentacao_id INTEGER,
-      status TEXT CHECK (status IN ('PAGO', 'PENDENTE')) DEFAULT 'PAGO',
-      observacao TEXT,
-      saldo_acumulado REAL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (categoria_id) REFERENCES categorias_financeiras (id),
-      FOREIGN KEY (forma_pagamento_id) REFERENCES formas_pagamento (id),
-      FOREIGN KEY (movimentacao_id) REFERENCES movimentacoes (id)
-    )
-  `);
-
-// Tabela para contas a receber (faturamento e inadimplência)
-db.run(`
-  CREATE TABLE IF NOT EXISTS contas_a_receber (
-    id INTEGER PRIMARY KEY,
-    movimentacao_id INTEGER NOT NULL,
-    cliente_nome TEXT,
-    numero_parcela INTEGER NOT NULL,
-    total_parcelas INTEGER NOT NULL,
-    valor REAL NOT NULL,
-    data_vencimento DATE NOT NULL,
-    data_pagamento DATE,
-    status TEXT CHECK (status IN ('Pendente', 'Pago', 'Atrasado')) NOT NULL DEFAULT 'Pendente',
-    fluxo_caixa_id INTEGER,
-    FOREIGN KEY (movimentacao_id) REFERENCES movimentacoes (id) ON DELETE CASCADE,
-    FOREIGN KEY (fluxo_caixa_id) REFERENCES fluxo_caixa (id) ON DELETE SET NULL
-  )
-`);
-
-  // Inserir categorias baseadas na planilha
-  db.run(`
-  INSERT OR IGNORE INTO categorias_financeiras (id, nome, tipo) VALUES 
-    (1, 'Receita de Vendas de Produtos e Serviços', 'RECEITA'),
-    (2, 'Receitas e Rendimentos Financeiros', 'RECEITA'),
-    (3, 'Custo dos Produtos Vendidos', 'DESPESA'),
-    (4, 'Comissões Sobre Vendas', 'DESPESA'),
-    (5, 'Despesas Administrativas', 'DESPESA'),
-    (6, 'Despesas Operacionais', 'DESPESA'),
-    (7, 'Despesas Financeiras', 'DESPESA'),
-    (8, 'Impostos Sobre Vendas', 'DESPESA'),
-    (9, 'Receita de Fretes e Entregas', 'RECEITA'),
-    (10, 'Descontos Incondicionais', 'DESPESA'),
-    (11, 'Devoluções de Vendas', 'DESPESA'),
-    (12, 'Custo das Vendas de Produtos', 'DESPESA'),
-    (13, 'Custo dos Serviços Prestados', 'DESPESA'),
-    (14, 'Despesas Comerciais', 'DESPESA'),
-    (15, 'Outras Receitas Não Operacionais', 'RECEITA'),
-    (16, 'Outras Despesas Não Operacionais', 'DESPESA'),
-    (17, 'Investimentos em Imobilizado', 'DESPESA'),
-    (18, 'Empréstimos e Dívidas', 'DESPESA')
-`);
-
-  // Inserir formas de pagamento
-  db.run(`
-    INSERT OR IGNORE INTO formas_pagamento (id, nome, sigla) VALUES 
-      (1, 'Dinheiro', 'DIN'),
-      (2, 'PIX', 'PIX'),
-      (3, 'Cartão Débito', 'CD'),
-      (4, 'Cartão Crédito', 'CC'),
-      (5, 'Boleto', 'BOL'),
-      (6, 'Transferência', 'TED'),
-      (7, 'Cheque', 'CHQ')
-  `);
-
-// Tabela para clientes
-db.run(`
-  CREATE TABLE IF NOT EXISTS clientes (
-    id INTEGER PRIMARY KEY,
-    codigo TEXT UNIQUE,
-    nome TEXT NOT NULL,
-    contato TEXT,
-    telefone TEXT,
-    email TEXT,
-    endereco TEXT,
-    cpf_cnpj TEXT,
-    observacao TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-
-// Tabela para RCAs (ATUALIZADA)
-db.run(`
-  CREATE TABLE IF NOT EXISTS rcas (
-    id INTEGER PRIMARY KEY,
-    nome TEXT NOT NULL,
-    praca TEXT,
-    cpf TEXT,
-    endereco TEXT,
-    cep TEXT,
-    telefone TEXT,
-    email TEXT,
-    observacao TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-//...
-
-  // Dados de exemplo existentes
-  db.run(`
-    INSERT OR IGNORE INTO produtos (codigo, descricao, unidade, categoria, estoque_minimo, preco_custo)
-    VALUES ('001', 'Arroz 5kg', 'PC', 'Alimentos', 20, 12.50)
-  `);
-
-  db.run(`
-    INSERT OR IGNORE INTO fornecedores (codigo, nome, contato, telefone, email)
-    VALUES 
-      ('FORN001', 'Distribuidora ABC Ltda', 'João Silva', '(11) 99999-9999', 'joao@abc.com'),
-      ('FORN002', 'Atacado XYZ S/A', 'Maria Santos', '(11) 88888-8888', 'maria@xyz.com')
-  `);
+    INSERT OR IGNORE INTO usuarios (username, email, password_hash, nome_completo)
+    VALUES ('admin', 'admin@sistema.com', ?, 'Administrador do Sistema')
+  `, [adminPassword], (err) => {
+    if (err) console.error('Erro criar admin:', err.message);
+    else console.log('✅ Usuário admin criado/verificado');
+  });
+  
+  console.log('🎯 Inicialização SQLite concluída');
 });
 
-db.run(`
-  CREATE TABLE IF NOT EXISTS contas_a_pagar (
-    id INTEGER PRIMARY KEY,
-    fornecedor_id INTEGER,
-    descricao TEXT NOT NULL,
-    valor REAL NOT NULL,
-    data_vencimento DATE NOT NULL,
-    data_pagamento DATE,
-    status TEXT CHECK (status IN ('Pendente', 'Pago', 'Atrasado')) NOT NULL DEFAULT 'Pendente',
-    fluxo_caixa_id INTEGER,
-    FOREIGN KEY (fornecedor_id) REFERENCES fornecedores (id),
-    FOREIGN KEY (fluxo_caixa_id) REFERENCES fluxo_caixa (id)
-  )
-`);
-
-module.exports = db;
+module.exports = sqlitePool;
