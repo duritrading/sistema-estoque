@@ -67,95 +67,92 @@
     </div>
     
     <% if (contasVencidas.length > 0) { %>
-      <div class="table-container">
-        <table class="professional-table">
-          <thead>
-            <tr>
-              <th class="th-cliente">Cliente</th>
-              <th class="th-produto">Produto</th>
-              <th class="th-parcela">Parcela</th>
-              <th class="th-valor">Valor</th>
-              <th class="th-vencimento">Vencimento</th>
-              <th class="th-dias">Dias em Atraso</th>
-              <th class="th-acoes">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% contasVencidas.forEach(conta => { %>
-              <tr class="table-row">
-                <td class="td-cliente">
-                  <div class="client-info">
-                    <div class="client-avatar">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                      </svg>
-                    </div>
-                    <span class="client-name"><%= conta.cliente_nome %></span>
-                  </div>
-                </td>
-                <td class="td-produto">
-                  <span class="product-name"><%= conta.produto_descricao || '-' %></span>
-                </td>
-                <td class="td-parcela">
-                  <span class="installment-badge"><%= conta.numero_parcela %>/<%= conta.total_parcelas %></span>
-                </td>
-                <td class="td-valor">
-                  <span class="value-amount">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></span>
-                </td>
-                <td class="td-vencimento">
-                  <span class="due-date"><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) %></span>
-                </td>
-                <td class="td-dias">
-                  <span class="overdue-badge">
+  <div class="table-container">
+    <table class="professional-table">
+      <thead>
+        <tr>
+          <th class="th-cliente">Cliente</th>
+          <th class="th-produto">Produto</th>
+          <th class="th-descricao">Descrição</th> <!-- NOVA COLUNA ADICIONADA -->
+          <th class="th-parcela">Parcela</th>
+          <th class="th-valor">Valor</th>
+          <th class="th-vencimento">Vencimento</th>
+          <th class="th-dias">Dias em Atraso</th>
+          <th class="th-acoes">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% contasVencidas.forEach(conta => { %>
+          <tr class="table-row">
+            <td class="td-cliente">
+              <div class="client-info">
+                <div class="client-avatar">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </div>
+                <span class="client-name"><%= conta.cliente_nome %></span>
+              </div>
+            </td>
+            <td class="td-produto">
+              <span class="product-name"><%= conta.produto_descricao || '-' %></span>
+            </td>
+            <!-- NOVA COLUNA DE DESCRIÇÃO -->
+            <td class="td-descricao">
+              <span class="description-text"><%= conta.conta_descricao || '-' %></span>
+            </td>
+            <td class="td-parcela">
+              <span class="installment-badge"><%= conta.numero_parcela %>/<%= conta.total_parcelas %></span>
+            </td>
+            <td class="td-valor">
+              <span class="value-amount">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></span>
+            </td>
+            <td class="td-vencimento">
+              <span class="due-date"><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></span>
+            </td>
+            <td class="td-dias">
+              <span class="overdue-badge <%= conta.dias_atraso > 90 ? 'overdue-critical' : conta.dias_atraso > 30 ? 'overdue-high' : 'overdue-medium' %>">
+                <%= conta.dias_atraso %> dias
+              </span>
+            </td>
+            <td class="td-acoes">
+              <div class="action-group">
+                <button class="action-btn action-btn-pay" onclick="abrirModalPagamento(<%= conta.id %>, '<%= conta.cliente_nome %>', <%= conta.valor %>, <%= conta.numero_parcela %>, <%= conta.total_parcelas %>)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 11l3 3L22 4"></path>
+                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                  </svg>
+                  Marcar como Pago
+                </button>
+                <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta conta?')">
+                  <button type="submit" class="action-btn action-btn-delete">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <polyline points="12,6 12,12 16,14"></polyline>
+                      <polyline points="3,6 5,6 21,6"></polyline>
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
                     </svg>
-                    <%= Math.floor(conta.dias_atraso) %> dias
-                  </span>
-                </td>
-                <td class="td-acoes">
-                  <div class="action-group">
-                    <button type="button" class="action-btn action-pay" 
-                            onclick="abrirModalPagamento('<%= conta.id %>', '<%= conta.cliente_nome %>', '<%= conta.valor %>', '<%= conta.numero_parcela %>', '<%= conta.total_parcelas %>')"
-                            title="Marcar como paga">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="20,6 9,17 4,12"></polyline>
-                      </svg>
-                      Marcar como Paga
-                    </button>
-
-                    <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" class="inline-form" 
-                          onsubmit="return confirm('ATENÇÃO: Excluir esta conta irá:\n\n• Remover permanentemente do sistema\n• Não poderá ser recuperada\n\nAPENAS para contas lançadas por engano!\n\nDeseja continuar?');">
-                      <button type="submit" class="action-btn action-delete" title="Excluir conta">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <polyline points="3,6 5,6 21,6"></polyline>
-                          <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"></path>
-                        </svg>
-                        Excluir
-                      </button>
-                    </form>
-                  </div>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-    <% } else { %>
-      <div class="empty-state">
-        <div class="empty-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <polyline points="20,6 9,17 4,12"></polyline>
-          </svg>
-        </div>
-        <h3 class="empty-title">Nenhuma parcela vencida</h3>
-        <p class="empty-description">Todas as contas estão em dia no momento.</p>
-      </div>
-    <% } %>
+                    Excluir
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
   </div>
-</div>
+<% } else { %>
+  <div class="empty-state">
+    <div class="empty-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M9 12l2 2 4-4"></path>
+        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+      </svg>
+    </div>
+    <h3 class="empty-title">Nenhuma conta vencida</h3>
+    <p class="empty-description">Todas as contas estão em dia! 🎉</p>
+  </div>
+<% } %>
 
 <!-- Modal para seleção de data de pagamento -->
 <div id="modalPagamento" class="modal-overlay-pagamento">
