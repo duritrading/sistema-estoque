@@ -37,9 +37,10 @@ app.use(helmet({
       ],
       scriptSrc: [
         "'self'", 
-        "'unsafe-inline'",  // Permite <script> inline
-        "'unsafe-eval'"     // Permite eval() se necessário
+        "'unsafe-inline'",
+        "'unsafe-eval'"
       ],
+      scriptSrcAttr: ["'unsafe-inline'"],  // ← LINHA CRÍTICA (permite onclick, onchange, etc)
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: [
         "'self'",
