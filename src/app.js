@@ -13,7 +13,11 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
+app.set('trust proxy', 1); // ← FIX PARA O ERRO
+
+// ========================================
 // SECURITY MIDDLEWARES
+// ========================================
 
 // 1. Helmet - Security Headers (OWASP) - COM GOOGLE FONTS
 app.use(helmet({
@@ -23,13 +27,13 @@ app.use(helmet({
       styleSrc: [
         "'self'", 
         "'unsafe-inline'",
-        "https://fonts.googleapis.com"  // ← ADICIONAR
+        "https://fonts.googleapis.com"
       ],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: [
         "'self'",
-        "https://fonts.gstatic.com"  // ← ADICIONAR
+        "https://fonts.gstatic.com"
       ],
       connectSrc: ["'self'"]
     },
