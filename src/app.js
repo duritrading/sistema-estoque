@@ -15,14 +15,23 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // SECURITY MIDDLEWARES
 
-// 1. Helmet - Security Headers (OWASP)
+// 1. Helmet - Security Headers (OWASP) - COM GOOGLE FONTS
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: [
+        "'self'", 
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com"  // ← ADICIONAR
+      ],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com"  // ← ADICIONAR
+      ],
+      connectSrc: ["'self'"]
     },
   },
   hsts: {
