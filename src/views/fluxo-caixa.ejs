@@ -217,6 +217,81 @@
   background: #dc2626;
 }
 
+/* TRANSACTION MODAL STYLES */
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close-btn:hover {
+  background: #f3f4f6;
+  color: var(--text-primary);
+}
+
+.form-row-modal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-field-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label-modal {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.field-input-modal {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.field-input-modal:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
+@media (max-width: 768px) {
+  .form-row-modal {
+    grid-template-columns: 1fr;
+  }
+  
+  .control-group.custom-dates {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .date-range {
+    width: 100%;
+  }
+  
+  .date-input {
+    width: 100%;
+    min-width: auto;
+  }
+}
+
 /* RESULTS MODAL */
 .results-list {
   max-height: 300px;
@@ -407,7 +482,16 @@
 <div class="fluxo-workspace">
   <!-- PAGE HEADER -->
   <div class="page-header">
-    <h1 class="page-title">💰 Fluxo de Caixa</h1>
+    <div class="header-content">
+      <h1 class="page-title">💰 Fluxo de Caixa</h1>
+      <button type="button" class="btn-new-transaction" onclick="abrirModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Novo Lançamento
+      </button>
+    </div>
   </div>
 
   <!-- METRICS -->
@@ -604,6 +688,113 @@
   </div>
 </div>
 
+<!-- NEW TRANSACTION MODAL -->
+<div class="modal-overlay" id="modalLancamento">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Novo Lançamento Financeiro
+      </div>
+      <button type="button" class="modal-close-btn" onclick="fecharModal()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    
+    <form action="/fluxo-caixa/lancamento" method="POST">
+      <div class="modal-body">
+        <div class="form-row-modal">
+          <div class="form-field-modal">
+            <label class="field-label-modal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              Data da Operação
+            </label>
+            <input type="date" class="field-input-modal" name="data_operacao" value="<%= hoje %>" required>
+          </div>
+          
+          <div class="form-field-modal">
+            <label class="field-label-modal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6,9 12,15 18,9"></polyline>
+              </svg>
+              Tipo de Movimento
+            </label>
+            <select class="field-input-modal" name="tipo" required>
+              <option value="">Selecione o tipo...</option>
+              <option value="CREDITO">Entrada (Crédito)</option>
+              <option value="DEBITO">Saída (Débito)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-modal">
+          <div class="form-field-modal">
+            <label class="field-label-modal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+              Valor (R$)
+            </label>
+            <input type="number" class="field-input-modal" name="valor" step="0.01" min="0.01" placeholder="0,00" required>
+          </div>
+          
+          <div class="form-field-modal">
+            <label class="field-label-modal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+              Categoria
+            </label>
+            <select class="field-input-modal" name="categoria_id" required>
+              <option value="">Selecione uma categoria...</option>
+              <% categorias.forEach(cat => { %>
+                <option value="<%= cat.id %>"><%= cat.nome %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-field-modal" style="grid-column: 1 / -1;">
+          <label class="field-label-modal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14,2 14,8 20,8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            Descrição
+          </label>
+          <input type="text" class="field-input-modal" name="descricao" placeholder="Descreva a movimentação financeira..." required>
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn-modal btn-modal-cancel" onclick="fecharModal()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn-modal btn-modal-confirm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20,6 9,17 4,12"></polyline>
+          </svg>
+          Salvar Lançamento
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 // Gestão de seleção
 function updateBulkActions() {
@@ -729,9 +920,21 @@ document.querySelectorAll('.modal-overlay').forEach(modal => {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.classList.remove('active');
+      document.body.style.overflow = 'auto';
     }
   });
 });
+
+// Funções para o modal de novo lançamento
+function abrirModal() {
+  document.getElementById('modalLancamento').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharModal() {
+  document.getElementById('modalLancamento').classList.remove('active');
+  document.body.style.overflow = 'auto';
+}
 </script>
 
 <%- include('partials/footer') %>
