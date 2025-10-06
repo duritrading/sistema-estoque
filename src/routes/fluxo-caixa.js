@@ -12,25 +12,58 @@ router.get('/', async (req, res) => {
     
     let dataInicio, dataFim;
     
+    // IMPLEMENTAÇÃO CORRIGIDA DE TODOS OS PERÍODOS
     if (periodo === 'hoje') {
       dataInicio = dataFim = hoje;
+      
     } else if (periodo === 'semana-atual') {
       const inicioSemana = new Date();
       inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
       dataInicio = inicioSemana.toISOString().split('T')[0];
       dataFim = hoje;
+      
     } else if (periodo === 'mes-atual') {
       const inicioMes = new Date();
       inicioMes.setDate(1);
       dataInicio = inicioMes.toISOString().split('T')[0];
       dataFim = hoje;
+      
+    } else if (periodo === 'mes-passado') {
+      // NOVO: Implementação mês passado
+      const hoje_date = new Date();
+      const primeiroDiaMesPassado = new Date(hoje_date.getFullYear(), hoje_date.getMonth() - 1, 1);
+      const ultimoDiaMesPassado = new Date(hoje_date.getFullYear(), hoje_date.getMonth(), 0);
+      dataInicio = primeiroDiaMesPassado.toISOString().split('T')[0];
+      dataFim = ultimoDiaMesPassado.toISOString().split('T')[0];
+      
+    } else if (periodo === 'ultimos-30') {
+      // NOVO: Implementação últimos 30 dias
+      const data30DiasAtras = new Date();
+      data30DiasAtras.setDate(data30DiasAtras.getDate() - 30);
+      dataInicio = data30DiasAtras.toISOString().split('T')[0];
+      dataFim = hoje;
+      
     } else if (periodo === 'ano-atual') {
       dataInicio = `${new Date().getFullYear()}-01-01`;
       dataFim = hoje;
-    } else if (periodo === 'personalizado' && req.query.data_inicio && req.query.data_fim) {
+      
+    } else if (periodo === 'custom' && req.query.data_inicio && req.query.data_fim) {
+      // FIX CRÍTICO: Mudou de 'personalizado' para 'custom'
       dataInicio = req.query.data_inicio;
       dataFim = req.query.data_fim;
+      
+      // VALIDAÇÃO: Garantir que data_inicio <= data_fim
+      if (new Date(dataInicio) > new Date(dataFim)) {
+        return res.render('error', {
+          user: res.locals.user,
+          titulo: 'Filtro Inválido',
+          mensagem: 'A data inicial não pode ser maior que a data final.',
+          voltar_url: '/fluxo-caixa'
+        });
+      }
+      
     } else {
+      // DEFAULT: Mês atual
       const inicioMes = new Date();
       inicioMes.setDate(1);
       dataInicio = inicioMes.toISOString().split('T')[0];
@@ -170,7 +203,6 @@ router.post('/bulk-delete', async (req, res) => {
     try {
         const { ids } = req.body;
         
-        // Validação básica
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -178,7 +210,6 @@ router.post('/bulk-delete', async (req, res) => {
             });
         }
 
-        // Limitar a 100 exclusões por vez (proteção)
         if (ids.length > 100) {
             return res.status(400).json({
                 success: false,
@@ -194,10 +225,8 @@ router.post('/bulk-delete', async (req, res) => {
             detalhes: []
         };
 
-        // Processar cada ID individualmente
         for (const id of ids) {
             try {
-                // Verificar se está vinculado a contas
                 const checkContas = await pool.query(`
                     SELECT COUNT(*) as count 
                     FROM contas_a_receber 
@@ -222,7 +251,6 @@ router.post('/bulk-delete', async (req, res) => {
                     continue;
                 }
 
-                // Excluir se não estiver vinculado
                 await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [id]);
                 resultados.excluidos++;
                 resultados.detalhes.push({
@@ -240,7 +268,6 @@ router.post('/bulk-delete', async (req, res) => {
             }
         }
 
-        // Responder com resumo
         return res.json({
             success: true,
             resultados
