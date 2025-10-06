@@ -1602,7 +1602,7 @@ async function executeBulkDelete() {
       showResults(data.resultados);
       
       setTimeout(() => {
-        window.location.reload();
+        window.location.href = window.location.href;
       }, 3000);
     } else {
       alert('Erro: ' + data.message);
