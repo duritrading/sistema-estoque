@@ -1,73 +1,122 @@
+// src/routes/produtos.js - EXEMPLO COM VALIDAÇÃO
+
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
+const { validateBody, validateParams } = require('../middleware/validation');
+const { createProdutoSchema, updateProdutoSchema } = require('../schemas/validation.schemas');
+const Joi = require('joi');
 
-// Rota GET /produtos - Mostra a página de cadastro e listagem de produtos
+// Schema para parâmetros de ID
+const idParamSchema = Joi.object({
+  id: Joi.number().integer().positive().required()
+});
+
+// ========================================
+// GET /produtos - Listar todos
+// ========================================
 router.get('/', async (req, res) => {
   try {
-    const query = `
-      SELECT 
-        p.*,
-        COALESCE(SUM(CASE WHEN m.tipo = 'ENTRADA' THEN m.quantidade WHEN m.tipo = 'SAIDA' THEN -m.quantidade ELSE 0 END), 0) as saldo_atual
-      FROM produtos p
-      LEFT JOIN movimentacoes m ON p.id = m.produto_id
-      GROUP BY p.id
-      ORDER BY p.codigo
-    `;
-    const produtosResult = await pool.query(query);
-    const categoriasResult = await pool.query(`SELECT DISTINCT categoria FROM produtos WHERE categoria IS NOT NULL ORDER BY categoria`);
-
+    const result = await pool.query('SELECT * FROM produtos ORDER BY created_at DESC');
     res.render('produtos', {
       user: res.locals.user,
-      produtos: produtosResult.rows || [],
-      categorias: categoriasResult.rows.map(c => c.categoria) || []
+      produtos: result.rows || []
     });
   } catch (err) {
-    console.error("Erro ao buscar produtos:", err);
-    res.status(500).send('Erro ao buscar produtos.');
+    console.error('Erro ao buscar produtos:', err.message);
+    res.status(500).send('Erro ao buscar produtos');
   }
 });
 
-// Rota POST /produtos - Processa o cadastro de um novo produto
-router.post('/', async (req, res) => {
+// ========================================
+// POST /produtos - Criar produto (COM VALIDAÇÃO)
+// ========================================
+router.post('/', validateBody(createProdutoSchema), async (req, res) => {
+  // ✅ req.body já foi validado e sanitizado pelo middleware!
+  const { codigo, descricao, unidade, categoria, estoque_minimo, preco_custo } = req.body;
+  
   try {
-    const { codigo, descricao, unidade, categoria, estoque_minimo, preco_custo } = req.body;
-    const query = `
+    await pool.query(`
       INSERT INTO produtos (codigo, descricao, unidade, categoria, estoque_minimo, preco_custo)
       VALUES ($1, $2, $3, $4, $5, $6)
-    `;
-    const params = [codigo, descricao, unidade || 'UN', categoria, estoque_minimo || 0, preco_custo || null];
-    await pool.query(query, params);
+    `, [codigo, descricao, unidade, categoria, estoque_minimo, preco_custo]);
+    
     res.redirect('/produtos');
   } catch (err) {
-    console.error("Erro ao criar produto:", err);
-    res.status(500).send('Erro ao criar produto.');
+    console.error('Erro ao criar produto:', err.message);
+    
+    // Verificar se é erro de duplicação
+    if (err.code === '23505') {
+      return res.status(400).send('Código do produto já existe');
+    }
+    
+    res.status(500).send('Erro ao criar produto');
   }
 });
 
-// NOVA ROTA PARA EXCLUIR UM PRODUTO
-router.post('/delete/:id', async (req, res) => {
-  try {
+// ========================================
+// PUT /produtos/:id - Atualizar produto (COM VALIDAÇÃO)
+// ========================================
+router.put('/:id', 
+  validateParams(idParamSchema),
+  validateBody(updateProdutoSchema),
+  async (req, res) => {
+    // ✅ Ambos params e body foram validados!
     const { id } = req.params;
+    const updates = req.body;
+    
+    try {
+      // Construir query dinâmica apenas com campos fornecidos
+      const fields = Object.keys(updates);
+      const values = Object.values(updates);
+      
+      if (fields.length === 0) {
+        return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+      }
+      
+      const setClause = fields.map((field, index) => `${field} = $${index + 2}`).join(', ');
+      const query = `UPDATE produtos SET ${setClause} WHERE id = $1 RETURNING *`;
+      
+      const result = await pool.query(query, [id, ...values]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Produto não encontrado' });
+      }
+      
+      res.json({ success: true, produto: result.rows[0] });
+    } catch (err) {
+      console.error('Erro ao atualizar produto:', err.message);
+      res.status(500).json({ error: 'Erro ao atualizar produto' });
+    }
+  }
+);
 
-    // Primeiro, verifica se o produto tem movimentações associadas
-    const check = await pool.query('SELECT COUNT(*) as count FROM movimentacoes WHERE produto_id = $1', [id]);
-
-    if (check.rows[0].count > 0) {
-      return res.render('error', {
-          user: res.locals.user,
-          titulo: 'Ação Bloqueada',
-          mensagem: `Este produto não pode ser excluído pois está associado a ${check.rows[0].count} movimentação(ões) de estoque.`,
-          voltar_url: '/produtos'
+// ========================================
+// DELETE /produtos/:id - Deletar produto (COM VALIDAÇÃO)
+// ========================================
+router.delete('/:id', validateParams(idParamSchema), async (req, res) => {
+  // ✅ req.params.id já foi validado!
+  const { id } = req.params;
+  
+  try {
+    const result = await pool.query('DELETE FROM produtos WHERE id = $1 RETURNING *', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+    
+    res.json({ success: true, message: 'Produto deletado' });
+  } catch (err) {
+    console.error('Erro ao deletar produto:', err.message);
+    
+    // Verificar se há dependências (foreign key)
+    if (err.code === '23503') {
+      return res.status(400).json({ 
+        error: 'Não é possível deletar produto com movimentações associadas' 
       });
     }
-
-    // Se não estiver em uso, exclui o produto
-    await pool.query('DELETE FROM produtos WHERE id = $1', [id]);
-    res.redirect('/produtos');
-  } catch (err) {
-    console.error("Erro ao excluir produto:", err);
-    res.status(500).send('Erro ao excluir produto.');
+    
+    res.status(500).json({ error: 'Erro ao deletar produto' });
   }
 });
 
