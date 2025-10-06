@@ -1,38 +1,87 @@
-// SISTEMA DE ESTOQUE COMPLETO + LOGIN INTEGRADO
-// Versão final com todas as funcionalidades + autenticação
+// SISTEMA DE ESTOQUE - VERSÃO PRODUCTION-READY
 
 const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const pool = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// SECURITY MIDDLEWARES
+
+// 1. Helmet - Security Headers (OWASP)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
+// 2. Rate Limiting - DDoS Protection
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Muitas requisições. Tente novamente em 15 minutos.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
+
+// Rate limit agressivo para login (5 tentativas)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
+  skipSuccessfulRequests: true,
+});
+
+// VIEW ENGINE & MIDDLEWARE
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 
-// Configuração de Sessões (CORRIGIDA)
+// SESSION CONFIGURATION (SECURE)
+
+if (!process.env.SESSION_SECRET && IS_PRODUCTION) {
+  console.error('❌ ERRO CRÍTICO: SESSION_SECRET não configurado em produção!');
+  console.error('Execute: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  process.exit(1);
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'sistema-estoque-2024-secret-key',
+  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: false, // SEMPRE false para desenvolvimento local
+    secure: IS_PRODUCTION,
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 horas
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'strict'
   },
-  name: 'sessionId' // Nome personalizado para o cookie
+  name: 'sid'
 }));
 
-// Função para executar SQL (compatível com seu código atual)
+// DATABASE HELPERS
+
 const db = {
   all: (query, params, callback) => {
     pool.query(query, params, (err, result) => {
@@ -54,234 +103,6 @@ const db = {
   }
 };
 
-// ========================================
-// ROTA DE HEALTH CHECK PARA O RENDER
-// ========================================
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
-
-// Middleware de autenticação (CORRIGIDO)
-// Middleware de autenticação (COM LIMPEZA DE SESSÃO CORROMPIDA)
-app.use((req, res, next) => {
-    console.log('🛡️ Middleware auth - URL:', req.path, 'Method:', req.method);
-    console.log('🎫 Session ID:', req.sessionID);
-    console.log('👤 User ID na sessão:', req.session?.userId);
-
-    // Rotas públicas
-    const publicRoutes = ['/login', '/logout', '/health', '/debug/usuarios', '/debug/test-login', '/debug/recriar-admin'];
-
-    if (publicRoutes.includes(req.path)) {
-        console.log('✅ Rota pública permitida:', req.path);
-        return next();
-    }
-
-    // Verificar se tem sessão válida
-    if (req.session && req.session.userId) {
-        console.log('✅ Usuário autenticado:', req.session.username, 'ID:', req.session.userId);
-        
-        res.locals.user = {
-            id: req.session.userId,
-            username: req.session.username,
-            nomeCompleto: req.session.nomeCompleto
-        };
-        
-        return next();
-    } else {
-        console.log('❌ Acesso negado - Session:', !!req.session, 'UserID:', req.session?.userId);
-        
-        // NOVO: Limpar sessão corrompida antes de redirecionar
-        if (req.session) {
-            console.log('🧹 Destruindo sessão corrompida');
-            req.session.destroy((err) => {
-                if (err) console.log('Erro ao destruir sessão:', err);
-                console.log('❌ Redirecionando para login');
-                return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
-            });
-        } else {
-            console.log('❌ Redirecionando para login');
-            return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
-        }
-    }
-});
-
-// Função para criar tabela de usuários
-async function createUsersTable() {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS usuarios (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        email VARCHAR(150) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        nome_completo VARCHAR(200),
-        ativo BOOLEAN DEFAULT true,
-        ultimo_login TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Verificar se existe usuário admin
-    const adminCheck = await pool.query('SELECT * FROM usuarios WHERE username = $1', ['admin']);
-    
-    if (adminCheck.rows.length === 0) {
-      // Criar usuário admin padrão
-      const defaultPassword = 'admin123';
-      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-      
-      await pool.query(`
-        INSERT INTO usuarios (username, email, password_hash, nome_completo)
-        VALUES ($1, $2, $3, $4)
-      `, ['admin', 'admin@sistema.com', hashedPassword, 'Administrador do Sistema']);
-      
-      console.log('✅ Usuário admin criado: admin / admin123');
-    }
-  } catch (error) {
-    console.error('Erro criar tabela usuários:', error);
-  }
-}
-
-// ========================================
-// ROTAS DE LOGIN (CORRIGIDAS)
-// ========================================
-// Página de Login
-app.get('/login', (req, res) => {
-  const redirectUrl = req.query.redirect || '/';
-  const error = req.query.error;
-  const success = req.query.success;
-
-  res.render('login', {
-    error,
-    success,
-    redirectUrl
-  });
-});
-
-// Processar Login (VERSÃO ÚNICA)
-app.post('/login', async (req, res) => {
-  const { username, password, redirect } = req.body;
-  
-  console.log('🔐 === INÍCIO DO LOGIN ===');
-  console.log('  - Username:', username);
-  console.log('  - Password length:', password ? password.length : 0);
-  console.log('  - Redirect:', redirect);
-  console.log('  - Session exists:', !!req.session);
-  
-  try {
-    console.log('🔍 Buscando usuário no banco...');
-    
-    // Buscar usuário
-    const userResult = await pool.query(
-      'SELECT * FROM usuarios WHERE username = $1 AND ativo = true',
-      [username]
-    );
-
-    console.log('👥 Usuários encontrados:', userResult.rows.length);
-
-    if (userResult.rows.length === 0) {
-      console.log('❌ Usuário não encontrado ou inativo');
-      return res.redirect('/login?error=' + encodeURIComponent('Usuário não encontrado ou inativo'));
-    }
-
-    const user = userResult.rows[0];
-    console.log('👤 Usuário encontrado:', {
-      id: user.id,
-      username: user.username,
-      ativo: user.ativo,
-      temSenha: user.password_hash ? 'SIM' : 'NÃO'
-    });
-
-    console.log('🔒 Verificando senha...');
-    
-    // Verificar senha
-    const passwordMatch = await bcrypt.compare(password, user.password_hash);
-    
-    console.log('🔑 Senha correta:', passwordMatch);
-
-    if (!passwordMatch) {
-      console.log('❌ Senha incorreta para usuário:', username);
-      return res.redirect('/login?error=' + encodeURIComponent('Senha incorreta'));
-    }
-
-    console.log('✅ Login bem-sucedido! Criando sessão...');
-
-    // Atualizar último login
-    await pool.query(
-      'UPDATE usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = $1',
-      [user.id]
-    );
-
-    console.log('📝 Último login atualizado');
-
-    // Criar sessão
-    req.session.userId = user.id;
-    req.session.username = user.username;
-    req.session.nomeCompleto = user.nome_completo;
-
-    console.log('🎫 Sessão criada:', {
-      userId: req.session.userId,
-      username: req.session.username,
-      sessionId: req.sessionID
-    });
-
-    // Salvar sessão explicitamente
-    req.session.save((err) => {
-      if (err) {
-        console.error('❌ Erro ao salvar sessão:', err);
-        return res.redirect('/login?error=' + encodeURIComponent('Erro ao criar sessão'));
-      }
-      
-      console.log('💾 Sessão salva com sucesso');
-      
-      // Redirecionar
-      const redirectUrl = redirect && redirect !== '/' ? redirect : '/';
-      
-      console.log('🔄 Redirecionando para:', redirectUrl);
-      console.log('=== FIM DO LOGIN ===');
-      
-      res.redirect(redirectUrl);
-    });
-
-  } catch (error) {
-    console.error('💥 Erro no login:', error);
-    console.error('Stack:', error.stack);
-    res.redirect('/login?error=' + encodeURIComponent('Erro interno do servidor'));
-  }
-});
-
-// ========================================
-// ROTA DE LOGOUT
-// ========================================
-app.get('/logout', (req, res) => {
-  console.log('🚪 Logout iniciado para usuário:', req.session?.username);
-  
-  if (req.session) {
-    // Destruir a sessão
-    req.session.destroy((err) => {
-      if (err) {
-        console.error('❌ Erro ao destruir sessão:', err);
-        return res.redirect('/?error=' + encodeURIComponent('Erro ao fazer logout'));
-      }
-      
-      console.log('✅ Sessão destruída com sucesso');
-      
-      // Limpar o cookie da sessão
-      res.clearCookie('sessionId');
-      
-      // Redirecionar para login com mensagem de sucesso
-      res.redirect('/login?success=' + encodeURIComponent('Logout realizado com sucesso'));
-    });
-  } else {
-    // Se não há sessão, redirecionar direto para login
-    console.log('ℹ️ Tentativa de logout sem sessão ativa');
-    res.redirect('/login');
-  }
-});
-
-// ========================================
-// SEU SISTEMA ATUAL (COM LOGIN INTEGRADO)
-// ========================================
-// Função auxiliar para obter saldo de produto (SUA FUNÇÃO ATUAL)
 function getSaldoProduto(produtoId) {
   return new Promise((resolve, reject) => {
     db.get(
@@ -301,14 +122,81 @@ function getSaldoProduto(produtoId) {
   });
 }
 
+// HEALTH CHECK
+
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// AUTHENTICATION MIDDLEWARE
+
+app.use((req, res, next) => {
+  const publicRoutes = ['/login', '/logout', '/health'];
+  
+  if (publicRoutes.includes(req.path)) {
+    return next();
+  }
+
+  if (req.session && req.session.userId) {
+    res.locals.user = {
+      id: req.session.userId,
+      username: req.session.username,
+      nomeCompleto: req.session.nomeCompleto
+    };
+    return next();
+  }
+
+  if (req.session) {
+    req.session.destroy(() => {
+      res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+    });
+  } else {
+    res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+  }
+});
+
+// DATABASE INITIALIZATION
+
+async function createUsersTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(150) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        nome_completo VARCHAR(200),
+        ativo BOOLEAN DEFAULT true,
+        ultimo_login TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    const adminCheck = await pool.query('SELECT * FROM usuarios WHERE username = $1', ['admin']);
+    
+    if (adminCheck.rows.length === 0) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await pool.query(`
+        INSERT INTO usuarios (username, email, password_hash, nome_completo)
+        VALUES ($1, $2, $3, $4)
+      `, ['admin', 'admin@sistema.com', hashedPassword, 'Administrador do Sistema']);
+      
+      if (!IS_PRODUCTION) {
+        console.log('✅ Usuário admin criado: admin / admin123');
+      }
+    }
+  } catch (error) {
+    console.error('Erro criar tabela usuários:', error.message);
+  }
+}
+
 async function initializeDatabase() {
   try {
     console.log('🔧 Inicializando banco PostgreSQL...');
 
-    // Criar tabela de usuários PRIMEIRO
     await createUsersTable();
 
-    // Suas tabelas originais
+    // Produtos
     await pool.query(`
       CREATE TABLE IF NOT EXISTS produtos (
         id SERIAL PRIMARY KEY,
@@ -322,29 +210,7 @@ async function initializeDatabase() {
       )
     `);
 
-    console.log('📝 Criando tabela contas_a_pagar...');
-await pool.query(`
-  CREATE TABLE IF NOT EXISTS contas_a_pagar (
-    id SERIAL PRIMARY KEY,
-    fornecedor_id INTEGER REFERENCES fornecedores(id),
-    descricao TEXT NOT NULL,
-    valor DECIMAL(10,2) NOT NULL,
-    data_vencimento DATE NOT NULL,
-    data_pagamento DATE,
-    status VARCHAR(20) NOT NULL DEFAULT 'Pendente',
-    fluxo_caixa_id INTEGER REFERENCES fluxo_caixa(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-
-try {
-  console.log('🔧 Verificando e atualizando tabela contas_a_pagar...');
-  await pool.query('ALTER TABLE contas_a_pagar ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorias_financeiras(id)');
-  console.log('✅ Tabela "contas_a_pagar" atualizada com sucesso.');
-} catch (err) {
-  console.error('⚠️  Não foi possível atualizar a tabela contas_a_pagar:', err.message);
-}
-
+    // Fornecedores
     await pool.query(`
       CREATE TABLE IF NOT EXISTS fornecedores (
         id SERIAL PRIMARY KEY,
@@ -360,6 +226,41 @@ try {
       )
     `);
 
+    // RCAs
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS rcas (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(200) NOT NULL,
+        praca VARCHAR(150),
+        cpf VARCHAR(20),
+        endereco TEXT,
+        cep VARCHAR(10),
+        telefone VARCHAR(20),
+        email VARCHAR(150),
+        observacao TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Clientes
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS clientes (
+        id SERIAL PRIMARY KEY,
+        codigo VARCHAR(50) UNIQUE,
+        nome VARCHAR(200) NOT NULL,
+        contato VARCHAR(150),
+        telefone VARCHAR(20),
+        email VARCHAR(150),
+        endereco TEXT,
+        cep VARCHAR(10),
+        cpf_cnpj VARCHAR(20),
+        rca_id INTEGER REFERENCES rcas(id),
+        observacao TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Movimentações
     await pool.query(`
       CREATE TABLE IF NOT EXISTS movimentacoes (
         id SERIAL PRIMARY KEY,
@@ -377,15 +278,17 @@ try {
       )
     `);
 
+    // Categorias Financeiras
     await pool.query(`
       CREATE TABLE IF NOT EXISTS categorias_financeiras (
         id SERIAL PRIMARY KEY,
         nome VARCHAR(100) NOT NULL,
-        tipo VARCHAR(10) CHECK (tipo IN ('CREDITO', 'DEBITO')),
+        tipo VARCHAR(10) CHECK (tipo IN ('CREDITO', 'DEBITO', 'RECEITA', 'DESPESA')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
+    // Fluxo de Caixa
     await pool.query(`
       CREATE TABLE IF NOT EXISTS fluxo_caixa (
         id SERIAL PRIMARY KEY,
@@ -399,41 +302,42 @@ try {
       )
     `);
 
-// ... (após o CREATE TABLE IF NOT EXISTS fluxo_caixa)
-try {
-    console.log('📝 Inserindo/Atualizando categorias financeiras...');
+    // Contas a Receber
     await pool.query(`
-        INSERT INTO categorias_financeiras (id, nome, tipo) VALUES
-            (1, 'Receita de Vendas de Produtos e Serviços', 'RECEITA'),
-            (2, 'Receitas e Rendimentos Financeiros', 'RECEITA'),
-            (3, 'Custo dos Produtos Vendidos', 'DESPESA'),
-            (4, 'Comissões Sobre Vendas', 'DESPESA'),
-            (5, 'Despesas Administrativas', 'DESPESA'),
-            (6, 'Despesas Operacionais', 'DESPESA'),
-            (7, 'Despesas Financeiras', 'DESPESA'),
-            (8, 'Impostos Sobre Vendas', 'DESPESA'),
-            (9, 'Receita de Fretes e Entregas', 'RECEITA'),
-            (10, 'Descontos Incondicionais', 'DESPESA'),
-            (11, 'Devoluções de Vendas', 'DESPESA'),
-            (12, 'Custo das Vendas de Produtos', 'DESPESA'),
-            (13, 'Custo dos Serviços Prestados', 'DESPESA'),
-            (14, 'Despesas Comerciais', 'DESPESA'),
-            (15, 'Outras Receitas Não Operacionais', 'RECEITA'),
-            (16, 'Outras Despesas Não Operacionais', 'DESPESA'),
-            (17, 'Investimentos em Imobilizado', 'DESPESA'),
-            (18, 'Empréstimos e Dívidas', 'DESPESA')
-        ON CONFLICT (id) DO UPDATE SET 
-            nome = EXCLUDED.nome,
-            tipo = EXCLUDED.tipo;
+      CREATE TABLE IF NOT EXISTS contas_a_receber (
+        id SERIAL PRIMARY KEY,
+        movimentacao_id INTEGER REFERENCES movimentacoes(id) ON DELETE CASCADE,
+        cliente_nome VARCHAR(200),
+        numero_parcela INTEGER NOT NULL,
+        total_parcelas INTEGER NOT NULL,
+        valor DECIMAL(10,2) NOT NULL,
+        data_vencimento DATE NOT NULL,
+        data_pagamento DATE,
+        status VARCHAR(20) NOT NULL DEFAULT 'Pendente',
+        fluxo_caixa_id INTEGER,
+        categoria_id INTEGER REFERENCES categorias_financeiras(id),
+        descricao TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
-    console.log('✅ Categorias financeiras verificadas/atualizadas.');
-} catch (err) {
-    console.error('⚠️  Não foi possível inserir/atualizar categorias:', err.message);
-}
 
-// ===== SISTEMA DE ENTREGAS =====
-    console.log('🚚 Criando tabelas do sistema de entregas...');
-    
+    // Contas a Pagar
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contas_a_pagar (
+        id SERIAL PRIMARY KEY,
+        fornecedor_id INTEGER REFERENCES fornecedores(id),
+        descricao TEXT NOT NULL,
+        valor DECIMAL(10,2) NOT NULL,
+        data_vencimento DATE NOT NULL,
+        data_pagamento DATE,
+        status VARCHAR(20) NOT NULL DEFAULT 'Pendente',
+        fluxo_caixa_id INTEGER REFERENCES fluxo_caixa(id),
+        categoria_id INTEGER REFERENCES categorias_financeiras(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Sistema de Entregas
     await pool.query(`
       CREATE TABLE IF NOT EXISTS entregas (
         id SERIAL PRIMARY KEY,
@@ -478,104 +382,108 @@ try {
       )
     `);
 
-    console.log('✅ Tabelas de entregas criadas!');
-
-console.log('📝 Criando tabela clientes...');
-await pool.query(`
-  CREATE TABLE IF NOT EXISTS clientes (
-    id SERIAL PRIMARY KEY,
-    codigo VARCHAR(50) UNIQUE,
-    nome VARCHAR(200) NOT NULL,
-    contato VARCHAR(150),
-    telefone VARCHAR(20),
-    email VARCHAR(150),
-    endereco TEXT,
-    cep VARCHAR(10),
-    cpf_cnpj VARCHAR(20),
-    rca_id INTEGER REFERENCES rcas(id),
-    observacao TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-  // ADICIONE ESTE BLOCO PARA ATUALIZAR A TABELA 'clientes'
-try {
-  console.log('🔧 Verificando e atualizando tabela clientes...');
-  // Adiciona a coluna rca_id se ela não existir
-  await pool.query('ALTER TABLE clientes ADD COLUMN IF NOT EXISTS rca_id INTEGER REFERENCES rcas(id)');
-  // Adiciona a coluna cep se ela não existir
-  await pool.query('ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cep VARCHAR(10)');
-  console.log('✅ Tabela "clientes" atualizada com sucesso.');
-} catch (err) {
-  console.error('⚠️  Não foi possível atualizar a tabela clientes:', err.message);
-}
-
-    console.log('📝 Criando tabela contas_a_receber...');
+    // Inserir categorias financeiras padrão
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS contas_a_receber (
-        id SERIAL PRIMARY KEY,
-        movimentacao_id INTEGER REFERENCES movimentacoes(id) ON DELETE CASCADE,
-        cliente_nome VARCHAR(200),
-        numero_parcela INTEGER NOT NULL,
-        total_parcelas INTEGER NOT NULL,
-        valor DECIMAL(10,2) NOT NULL,
-        data_vencimento DATE NOT NULL,
-        data_pagamento DATE,
-        status VARCHAR(20) NOT NULL DEFAULT 'Pendente',
-        fluxo_caixa_id INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
+      INSERT INTO categorias_financeiras (id, nome, tipo) VALUES
+        (1, 'Receita de Vendas de Produtos e Serviços', 'RECEITA'),
+        (2, 'Receitas e Rendimentos Financeiros', 'RECEITA'),
+        (3, 'Custo dos Produtos Vendidos', 'DESPESA'),
+        (4, 'Comissões Sobre Vendas', 'DESPESA'),
+        (5, 'Despesas Administrativas', 'DESPESA'),
+        (6, 'Despesas Operacionais', 'DESPESA'),
+        (7, 'Despesas Financeiras', 'DESPESA'),
+        (8, 'Impostos Sobre Vendas', 'DESPESA'),
+        (9, 'Receita de Fretes e Entregas', 'RECEITA'),
+        (10, 'Descontos Incondicionais', 'DESPESA'),
+        (11, 'Devoluções de Vendas', 'DESPESA'),
+        (12, 'Custo das Vendas de Produtos', 'DESPESA'),
+        (13, 'Custo dos Serviços Prestados', 'DESPESA'),
+        (14, 'Despesas Comerciais', 'DESPESA'),
+        (15, 'Outras Receitas Não Operacionais', 'RECEITA'),
+        (16, 'Outras Despesas Não Operacionais', 'DESPESA'),
+        (17, 'Investimentos em Imobilizado', 'DESPESA'),
+        (18, 'Empréstimos e Dívidas', 'DESPESA')
+      ON CONFLICT (id) DO NOTHING
     `);
 
-    // Após criar a tabela contas_a_receber
-try {
-    console.log('🔧 Verificando e atualizando tabela contas_a_receber...');
-    await pool.query('ALTER TABLE contas_a_receber ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorias_financeiras(id)');
-    await pool.query('ALTER TABLE contas_a_receber ADD COLUMN IF NOT EXISTS descricao TEXT');
-    await pool.query('ALTER TABLE contas_a_receber ALTER COLUMN movimentacao_id DROP NOT NULL');
-    console.log('✅ Tabela "contas_a_receber" atualizada com sucesso.');
-} catch (err) {
-    console.error('⚠️  Não foi possível atualizar a tabela contas_a_receber:', err.message);
-}
-
-    // Criar tabela rcas (ATUALIZADA)
-console.log('📝 Criando/Verificando tabela rcas...');
-await pool.query(`
-  CREATE TABLE IF NOT EXISTS rcas (
-    id SERIAL PRIMARY KEY,
-    nome VARCHAR(200) NOT NULL,
-    praca VARCHAR(150),
-    cpf VARCHAR(20),
-    endereco TEXT,
-    cep VARCHAR(10),
-    telefone VARCHAR(20),
-    email VARCHAR(150),
-    observacao TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-
-// ADICIONE ESTE BLOCO PARA ATUALIZAR A TABELA CASO AS COLUNAS NÃO EXISTAM
-try {
-  console.log('🔧 Verificando e atualizando tabela rcas...');
-  await pool.query('ALTER TABLE rcas ADD COLUMN IF NOT EXISTS praca VARCHAR(150)');
-  await pool.query('ALTER TABLE rcas ADD COLUMN IF NOT EXISTS cpf VARCHAR(20)');
-  await pool.query('ALTER TABLE rcas ADD COLUMN IF NOT EXISTS endereco TEXT');
-  await pool.query('ALTER TABLE rcas ADD COLUMN IF NOT EXISTS cep VARCHAR(10)');
-  console.log('✅ Tabela "rcas" atualizada com sucesso.');
-} catch (err) {
-  console.error('⚠️  Não foi possível atualizar a tabela rcas (pode já estar atualizada):', err.message);
-}
-    // ==========================================================
-
     const countProdutos = await pool.query('SELECT COUNT(*) as count FROM produtos');
-    console.log(`✅ Banco PostgreSQL inicializado! Produtos: ${countProdutos.rows[0].count}`);
+    console.log(`✅ Banco inicializado! Produtos: ${countProdutos.rows[0].count}`);
 
   } catch (error) {
-    console.error('❌ Erro ao inicializar banco:', error);
+    console.error('❌ Erro ao inicializar banco:', error.message);
   }
 }
 
-// Criar produto
+// LOGIN ROUTES
+
+app.get('/login', (req, res) => {
+  const redirectUrl = req.query.redirect || '/';
+  const error = req.query.error;
+  const success = req.query.success;
+
+  res.render('login', { error, success, redirectUrl });
+});
+
+app.post('/login', loginLimiter, async (req, res) => {
+  const { username, password, redirect } = req.body;
+  
+  try {
+    const userResult = await pool.query(
+      'SELECT * FROM usuarios WHERE username = $1 AND ativo = true',
+      [username]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.redirect('/login?error=' + encodeURIComponent('Usuário não encontrado'));
+    }
+
+    const user = userResult.rows[0];
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordMatch) {
+      return res.redirect('/login?error=' + encodeURIComponent('Senha incorreta'));
+    }
+
+    await pool.query(
+      'UPDATE usuarios SET ultimo_login = CURRENT_TIMESTAMP WHERE id = $1',
+      [user.id]
+    );
+
+    req.session.userId = user.id;
+    req.session.username = user.username;
+    req.session.nomeCompleto = user.nome_completo;
+
+    req.session.save((err) => {
+      if (err) {
+        return res.redirect('/login?error=' + encodeURIComponent('Erro ao criar sessão'));
+      }
+      
+      const redirectUrl = redirect && redirect !== '/' ? redirect : '/';
+      res.redirect(redirectUrl);
+    });
+
+  } catch (error) {
+    console.error('Erro no login:', error.message);
+    res.redirect('/login?error=' + encodeURIComponent('Erro interno'));
+  }
+});
+
+app.get('/logout', (req, res) => {
+  if (req.session) {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.redirect('/?error=' + encodeURIComponent('Erro ao fazer logout'));
+      }
+      res.clearCookie('sid');
+      res.redirect('/login?success=' + encodeURIComponent('Logout realizado'));
+    });
+  } else {
+    res.redirect('/login');
+  }
+});
+
+// BUSINESS ROUTES
+
 app.post('/produtos', (req, res) => {
   const { codigo, descricao, unidade, categoria, estoque_minimo, preco_custo } = req.body;
   
@@ -585,14 +493,15 @@ app.post('/produtos', (req, res) => {
   `, [codigo, descricao, unidade, categoria, estoque_minimo || 0, preco_custo], 
   function(err) {
     if (err) {
-      console.error('Erro criar produto:', err);
+      console.error('Erro criar produto:', err.message);
       return res.status(500).send('Erro: ' + err.message);
     }
     return res.redirect('/');
   });
 });
 
-// ... outras importações de rotas
+// IMPORT ROUTES
+
 const movimentacoesRoutes = require('./routes/movimentacoes');
 const fornecedoresRoutes = require('./routes/fornecedores');
 const usuariosRoutes = require('./routes/usuarios'); 
@@ -608,7 +517,6 @@ const contasAPagarRoutes = require('./routes/contas-a-pagar');
 const inadimplenciaRoutes = require('./routes/inadimplencia');
 const entregasRoutes = require('./routes/entregas');
 
-// ...
 app.use('/movimentacoes', movimentacoesRoutes);
 app.use('/fornecedores', fornecedoresRoutes);
 app.use('/backup', backupRoutes); 
@@ -624,123 +532,18 @@ app.use('/contas-a-pagar', contasAPagarRoutes);
 app.use('/inadimplencia', inadimplenciaRoutes);
 app.use('/entregas', entregasRoutes);
 
-// ========================================
-// ENDPOINTS DE DEBUG (TEMPORÁRIOS)
-// ========================================
-
-// Debug - verificar usuários
-app.get('/debug/usuarios', async (req, res) => {
-  try {
-    console.log('🔍 Verificando tabela usuarios...');
-    
-    // Verificar se a tabela existe
-    const tableCheck = await pool.query(`
-      SELECT table_name FROM information_schema.tables 
-      WHERE table_schema = 'public' AND table_name = 'usuarios'
-    `);
-    
-    console.log('📋 Tabela usuarios existe:', tableCheck.rows.length > 0);
-    
-    if (tableCheck.rows.length === 0) {
-      return res.json({
-        erro: 'Tabela usuarios não existe',
-        solucao: 'Reiniciar servidor para criar tabela'
-      });
-    }
-    
-    // Buscar usuários
-    const usuarios = await pool.query('SELECT id, username, email, ativo, created_at FROM usuarios');
-    console.log('👥 Usuários encontrados:', usuarios.rows.length);
-    
-    // Verificar usuário admin especificamente
-    const adminUser = await pool.query('SELECT * FROM usuarios WHERE username = $1', ['admin']);
-    console.log('👑 Admin existe:', adminUser.rows.length > 0);
-    
-    if (adminUser.rows.length > 0) {
-      console.log('👑 Admin detalhes:', {
-        id: adminUser.rows[0].id,
-        username: adminUser.rows[0].username,
-        email: adminUser.rows[0].email,
-        ativo: adminUser.rows[0].ativo,
-        tem_senha: adminUser.rows[0].password_hash ? 'SIM' : 'NÃO'
-      });
-    }
-    
-    return res.json({
-      tabelaExiste: tableCheck.rows.length > 0,
-      totalUsuarios: usuarios.rows.length,
-      adminExiste: adminUser.rows.length > 0,
-      usuarios: usuarios.rows,
-      adminDetalhes: adminUser.rows[0] || null
-    });
-    
-  } catch (error) {
-    console.error('❌ Erro no debug:', error);
-    return res.status(500).json({ 
-      erro: error.message,
-      stack: error.stack 
-    });
-  }
-});
-
-app.get('/debug/estrutura-produtos', async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT column_name, data_type 
-            FROM information_schema.columns 
-            WHERE table_name = 'produtos'
-            ORDER BY ordinal_position;
-        `);
-        
-        res.json({
-            message: 'Estrutura da tabela produtos',
-            colunas: result.rows
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Debug - testar login direto
-app.get('/debug/test-login', async (req, res) => {
-  try {
-    // Buscar admin
-    const adminUser = await pool.query('SELECT * FROM usuarios WHERE username = $1', ['admin']);
-    
-    if (adminUser.rows.length === 0) {
-      return res.json({ erro: 'Usuário admin não encontrado' });
-    }
-    
-    const user = adminUser.rows[0];
-    
-    // Testar senha
-    const senhaCorreta = await bcrypt.compare('admin123', user.password_hash);
-    
-    return res.json({
-      usuarioEncontrado: true,
-      senhaCorreta: senhaCorreta,
-      hashSenha: user.password_hash.substring(0, 20) + '...',
-      ativo: user.ativo,
-      userId: user.id,
-      username: user.username
-    });
-    
-  } catch (error) {
-    return res.json({ erro: error.message });
-  }
-});
+// SERVER START
 
 async function startServer() {
   await initializeDatabase();
-   // ADICIONE ESTAS 3 LINHAS PARA DEPURAR AS ROTAS
-  console.log('--- ROTAS REGISTRADAS ---');
-  app._router.stack.forEach(r => { if (r.route && r.route.path) console.log(r.route.path, r.route.methods) });
-  console.log('-------------------------');
+  
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Sistema rodando na porta ${PORT}`);
-    console.log(`🔐 Login: http://localhost:${PORT}/login`);
-    console.log(`👤 Admin padrão: admin / admin123`);
-    console.log(`🌍 Acesso: https://seu-dominio.railway.app`);
+    if (!IS_PRODUCTION) {
+      console.log(`🚀 Sistema rodando: http://localhost:${PORT}`);
+      console.log(`🔐 Login: admin / admin123`);
+    } else {
+      console.log(`🚀 Sistema em produção na porta ${PORT}`);
+    }
   });
 }
 
