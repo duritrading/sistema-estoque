@@ -35,7 +35,11 @@ app.use(helmet({
         "'unsafe-inline'",
         "https://fonts.googleapis.com"
       ],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'",  // Permite <script> inline
+        "'unsafe-eval'"     // Permite eval() se necessário
+      ],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: [
         "'self'",
