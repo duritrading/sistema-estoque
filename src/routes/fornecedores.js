@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
+const { validateBody } = require('../middleware/validation');
+const { createFornecedorSchema } = require('../schemas/validation.schemas');
 
 router.get('/', async (req, res) => {
   try {
@@ -15,7 +17,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+// VALIDAÇÃO ADICIONADA AQUI
+router.post('/', validateBody(createFornecedorSchema), async (req, res) => {
   try {
     const { codigo, nome, contato, telefone, email, endereco, cnpj, observacao } = req.body;
     const query = `INSERT INTO fornecedores (codigo, nome, contato, telefone, email, endereco, cnpj, observacao) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
@@ -27,6 +30,7 @@ router.post('/', async (req, res) => {
   }
 });
 
+// DELETE MANTIDO 100% INTACTO (JÁ ESTÁ PERFEITO)
 router.post('/delete/:id', async (req, res) => {
   try {
     const { id } = req.params;

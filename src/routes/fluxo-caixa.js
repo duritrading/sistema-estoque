@@ -1,67 +1,81 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
+const { validateBody, validateParams } = require('../middleware/validation');
+const { createLancamentoFluxoSchema } = require('../schemas/validation.schemas');
+const Joi = require('joi');
 
-// Rota GET /fluxo-caixa - Lista lançamentos
+// ========================================
+// SCHEMAS DE VALIDAÇÃO
+// ========================================
+
+const idParamSchema = Joi.object({
+  id: Joi.number().integer().positive().required()
+});
+
+const bulkDeleteSchema = Joi.object({
+  ids: Joi.array()
+    .items(Joi.number().integer().positive())
+    .min(1)
+    .max(100)
+    .required()
+});
+
+// ========================================
+// HELPER: Preservar query params no redirect
+// ========================================
+
+function buildRedirectUrl(baseUrl, referer) {
+  try {
+    if (referer) {
+      const url = new URL(referer);
+      const queryString = url.search; // Pega ?param1=value1&param2=value2
+      return baseUrl + queryString;
+    }
+  } catch (e) {
+    // Se falhar parsing, retorna URL base
+  }
+  return baseUrl;
+}
+
+// ========================================
+// GET / - Lista lançamentos com filtros
+// ========================================
+
 router.get('/', async (req, res) => {
   if (!pool) return res.status(500).send('Erro de configuração.');
   
   try {
-    const { periodo, pesquisar, tipo } = req.query;
+    const { periodo, pesquisar, tipo, data_inicio, data_fim } = req.query;
     const hoje = new Date().toISOString().split('T')[0];
-    
     let dataInicio, dataFim;
-    
-    // IMPLEMENTAÇÃO CORRIGIDA DE TODOS OS PERÍODOS
-    if (periodo === 'hoje') {
-      dataInicio = dataFim = hoje;
-      
+
+    // Lógica de filtros por período (mantida 100%)
+    if (periodo === 'custom' && data_inicio && data_fim) {
+      dataInicio = data_inicio;
+      dataFim = data_fim;
+    } else if (periodo === 'hoje') {
+      dataInicio = hoje;
+      dataFim = hoje;
+    } else if (periodo === 'ontem') {
+      const ontem = new Date();
+      ontem.setDate(ontem.getDate() - 1);
+      dataInicio = ontem.toISOString().split('T')[0];
+      dataFim = dataInicio;
     } else if (periodo === 'semana-atual') {
-      const inicioSemana = new Date();
-      inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
-      dataInicio = inicioSemana.toISOString().split('T')[0];
+      const primeiroDia = new Date();
+      primeiroDia.setDate(primeiroDia.getDate() - primeiroDia.getDay());
+      dataInicio = primeiroDia.toISOString().split('T')[0];
       dataFim = hoje;
-      
-    } else if (periodo === 'mes-atual') {
-      const inicioMes = new Date();
-      inicioMes.setDate(1);
-      dataInicio = inicioMes.toISOString().split('T')[0];
-      dataFim = hoje;
-      
     } else if (periodo === 'mes-passado') {
-      // NOVO: Implementação mês passado
-      const hoje_date = new Date();
-      const primeiroDiaMesPassado = new Date(hoje_date.getFullYear(), hoje_date.getMonth() - 1, 1);
-      const ultimoDiaMesPassado = new Date(hoje_date.getFullYear(), hoje_date.getMonth(), 0);
-      dataInicio = primeiroDiaMesPassado.toISOString().split('T')[0];
-      dataFim = ultimoDiaMesPassado.toISOString().split('T')[0];
+      const inicioMesPassado = new Date();
+      inicioMesPassado.setMonth(inicioMesPassado.getMonth() - 1);
+      inicioMesPassado.setDate(1);
+      dataInicio = inicioMesPassado.toISOString().split('T')[0];
       
-    } else if (periodo === 'ultimos-30') {
-      // NOVO: Implementação últimos 30 dias
-      const data30DiasAtras = new Date();
-      data30DiasAtras.setDate(data30DiasAtras.getDate() - 30);
-      dataInicio = data30DiasAtras.toISOString().split('T')[0];
-      dataFim = hoje;
-      
-    } else if (periodo === 'ano-atual') {
-      dataInicio = `${new Date().getFullYear()}-01-01`;
-      dataFim = hoje;
-      
-    } else if (periodo === 'custom' && req.query.data_inicio && req.query.data_fim) {
-      // FIX CRÍTICO: Mudou de 'personalizado' para 'custom'
-      dataInicio = req.query.data_inicio;
-      dataFim = req.query.data_fim;
-      
-      // VALIDAÇÃO: Garantir que data_inicio <= data_fim
-      if (new Date(dataInicio) > new Date(dataFim)) {
-        return res.render('error', {
-          user: res.locals.user,
-          titulo: 'Filtro Inválido',
-          mensagem: 'A data inicial não pode ser maior que a data final.',
-          voltar_url: '/fluxo-caixa'
-        });
-      }
-      
+      const fimMesPassado = new Date();
+      fimMesPassado.setDate(0);
+      dataFim = fimMesPassado.toISOString().split('T')[0];
     } else {
       // DEFAULT: Mês atual
       const inicioMes = new Date();
@@ -174,48 +188,161 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Rota POST /fluxo-caixa/lancamento - Cria um novo lançamento
-router.post('/lancamento', async (req, res) => {
+// ========================================
+// POST /lancamento - Criar novo lançamento
+// ========================================
+
+router.post('/lancamento', validateBody(createLancamentoFluxoSchema), async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
+    
     try {
+        // Dados já validados e sanitizados pelo Joi
         const { data_operacao, tipo, valor, descricao, categoria_id } = req.body;
-        
-        if (!data_operacao || !tipo || !valor || !descricao || !categoria_id) {
-            return res.status(400).send('Todos os campos obrigatórios devem ser preenchidos.');
-        }
 
         await pool.query(`
             INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id, status) 
             VALUES ($1, $2, $3, $4, $5, 'PAGO')
-        `, [data_operacao, tipo, parseFloat(valor), descricao, categoria_id]);
+        `, [data_operacao, tipo, valor, descricao, categoria_id]);
         
-        res.redirect('/fluxo-caixa');
+        // Preserva filtros no redirect
+        const redirectUrl = buildRedirectUrl('/fluxo-caixa', req.get('Referer'));
+        res.redirect(redirectUrl);
     } catch(err) {
         console.error("Erro ao criar lançamento:", err);
+        
+        if (err.code === '23503') {
+            return res.render('error', {
+                user: res.locals.user,
+                titulo: 'Erro de Validação',
+                mensagem: 'Categoria financeira não encontrada.',
+                voltar_url: '/fluxo-caixa'
+            });
+        }
+        
         res.status(500).send('Erro ao criar lançamento: ' + err.message);
     }
 });
 
-// NOVA ROTA: Exclusão em massa
-router.post('/bulk-delete', async (req, res) => {
+// ========================================
+// POST /estornar/:id - Estornar lançamento
+// ========================================
+
+router.post('/estornar/:id', validateParams(idParamSchema), async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     
     try {
-        const { ids } = req.body;
+        const { id } = req.params; // Já validado
         
-        if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Nenhum lançamento selecionado.'
+        const lancamento = await pool.query('SELECT * FROM fluxo_caixa WHERE id = $1', [id]);
+        
+        if (!lancamento.rows[0]) {
+            return res.render('error', { 
+                user: res.locals.user, 
+                titulo: 'Erro', 
+                mensagem: 'Lançamento não encontrado.',
+                voltar_url: '/fluxo-caixa'
             });
         }
+        
+        const contaReceber = await pool.query(`
+            SELECT * FROM contas_a_receber WHERE fluxo_caixa_id = $1
+        `, [id]);
+        
+        const contaPagar = await pool.query(`
+            SELECT * FROM contas_a_pagar WHERE fluxo_caixa_id = $1
+        `, [id]);
+        
+        if (contaReceber.rows.length > 0) {
+            const conta = contaReceber.rows[0];
+            await pool.query(`
+                UPDATE contas_a_receber 
+                SET status = 'Pendente', data_pagamento = NULL, fluxo_caixa_id = NULL 
+                WHERE id = $1
+            `, [conta.id]);
+        }
+        
+        if (contaPagar.rows.length > 0) {
+            const conta = contaPagar.rows[0];
+            await pool.query(`
+                UPDATE contas_a_pagar 
+                SET status = 'Pendente', data_pagamento = NULL, fluxo_caixa_id = NULL 
+                WHERE id = $1
+            `, [conta.id]);
+        }
+        
+        await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [id]);
+        
+        // Preserva filtros no redirect
+        const redirectUrl = buildRedirectUrl('/fluxo-caixa?success=estorno', req.get('Referer'));
+        res.redirect(redirectUrl);
+        
+    } catch (err) {
+        console.error("Erro ao estornar lançamento:", err);
+        res.render('error', { 
+            user: res.locals.user, 
+            titulo: 'Erro', 
+            mensagem: 'Erro ao estornar lançamento: ' + err.message,
+            voltar_url: '/fluxo-caixa'
+        });
+    }
+});
 
-        if (ids.length > 100) {
-            return res.status(400).json({
-                success: false,
-                message: 'Máximo de 100 lançamentos por operação.'
+// ========================================
+// POST /delete/:id - Excluir lançamento
+// ========================================
+
+router.post('/delete/:id', validateParams(idParamSchema), async (req, res) => {
+    if (!pool) return res.status(500).send('Erro de configuração.');
+    
+    try {
+        const { id } = req.params; // Já validado
+        
+        const checkContas = await pool.query(`
+            SELECT COUNT(*) as count 
+            FROM contas_a_receber 
+            WHERE fluxo_caixa_id = $1
+            UNION ALL
+            SELECT COUNT(*) as count 
+            FROM contas_a_pagar 
+            WHERE fluxo_caixa_id = $1
+        `, [id]);
+        
+        const totalVinculado = checkContas.rows.reduce((total, row) => 
+            total + parseInt(row.count), 0
+        );
+        
+        if (totalVinculado > 0) {
+            return res.render('error', { 
+                user: res.locals.user, 
+                titulo: 'Ação Bloqueada', 
+                mensagem: `Este lançamento está vinculado a contas a receber/pagar.<br><br>
+                          <strong>Use o botão "Estornar"</strong> ao lado do lançamento para reverter o pagamento e excluir o registro.`,
+                voltar_url: '/fluxo-caixa'
             });
         }
+        
+        await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [id]);
+        
+        // Preserva filtros no redirect
+        const redirectUrl = buildRedirectUrl('/fluxo-caixa', req.get('Referer'));
+        res.redirect(redirectUrl);
+        
+    } catch (err) {
+        console.error("Erro ao excluir lançamento:", err);
+        res.status(500).send('Erro ao excluir lançamento: ' + err.message);
+    }
+});
+
+// ========================================
+// POST /bulk-delete - Exclusão em massa
+// ========================================
+
+router.post('/bulk-delete', validateBody(bulkDeleteSchema), async (req, res) => {
+    if (!pool) return res.status(500).send('Erro de configuração.');
+    
+    try {
+        // Dados já validados pelo Joi
+        const { ids } = req.body;
 
         const resultados = {
             total: ids.length,
@@ -278,104 +405,6 @@ router.post('/bulk-delete', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Erro ao processar exclusão em massa: ' + err.message
-        });
-    }
-});
-
-// Rota DELETE individual (mantida para compatibilidade)
-router.post('/delete/:id', async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração.');
-    try {
-        const { id } = req.params;
-        
-        const checkContas = await pool.query(`
-            SELECT COUNT(*) as count 
-            FROM contas_a_receber 
-            WHERE fluxo_caixa_id = $1
-            UNION ALL
-            SELECT COUNT(*) as count 
-            FROM contas_a_pagar 
-            WHERE fluxo_caixa_id = $1
-        `, [id]);
-        
-        const totalVinculado = checkContas.rows.reduce((total, row) => 
-            total + parseInt(row.count), 0
-        );
-        
-        if (totalVinculado > 0) {
-            return res.render('error', { 
-                user: res.locals.user, 
-                titulo: 'Ação Bloqueada', 
-                mensagem: `Este lançamento está vinculado a contas a receber/pagar.<br><br>
-                          <strong>Use o botão "Estornar"</strong> ao lado do lançamento para reverter o pagamento e excluir o registro.`,
-                voltar_url: '/fluxo-caixa'
-            });
-        }
-        
-        await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [id]);
-        res.redirect('/fluxo-caixa');
-        
-    } catch (err) {
-        console.error("Erro ao excluir lançamento:", err);
-        res.status(500).send('Erro ao excluir lançamento: ' + err.message);
-    }
-});
-
-// Rota ESTORNAR (mantida)
-router.post('/estornar/:id', async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração.');
-    
-    try {
-        const { id } = req.params;
-        
-        const lancamento = await pool.query('SELECT * FROM fluxo_caixa WHERE id = $1', [id]);
-        
-        if (!lancamento.rows[0]) {
-            return res.render('error', { 
-                user: res.locals.user, 
-                titulo: 'Erro', 
-                mensagem: 'Lançamento não encontrado.',
-                voltar_url: '/fluxo-caixa'
-            });
-        }
-        
-        const contaReceber = await pool.query(`
-            SELECT * FROM contas_a_receber WHERE fluxo_caixa_id = $1
-        `, [id]);
-        
-        const contaPagar = await pool.query(`
-            SELECT * FROM contas_a_pagar WHERE fluxo_caixa_id = $1
-        `, [id]);
-        
-        if (contaReceber.rows.length > 0) {
-            const conta = contaReceber.rows[0];
-            await pool.query(`
-                UPDATE contas_a_receber 
-                SET status = 'Pendente', data_pagamento = NULL, fluxo_caixa_id = NULL 
-                WHERE id = $1
-            `, [conta.id]);
-        }
-        
-        if (contaPagar.rows.length > 0) {
-            const conta = contaPagar.rows[0];
-            await pool.query(`
-                UPDATE contas_a_pagar 
-                SET status = 'Pendente', data_pagamento = NULL, fluxo_caixa_id = NULL 
-                WHERE id = $1
-            `, [conta.id]);
-        }
-        
-        await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [id]);
-        
-        res.redirect('/fluxo-caixa?success=estorno');
-        
-    } catch (err) {
-        console.error("Erro ao estornar lançamento:", err);
-        res.render('error', { 
-            user: res.locals.user, 
-            titulo: 'Erro', 
-            mensagem: 'Erro ao estornar lançamento: ' + err.message,
-            voltar_url: '/fluxo-caixa'
         });
     }
 });

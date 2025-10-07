@@ -1,8 +1,39 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
+const { validateBody, validateParams } = require('../middleware/validation');
+const { createContaReceberManualSchema, marcarPagaSchema } = require('../schemas/validation.schemas');
+const Joi = require('joi');
 
-// Rota GET - Mostra a página
+// ========================================
+// SCHEMAS DE VALIDAÇÃO
+// ========================================
+
+const idParamSchema = Joi.object({
+  id: Joi.number().integer().positive().required()
+});
+
+// ========================================
+// HELPER: Preservar query params no redirect
+// ========================================
+
+function buildRedirectUrl(baseUrl, referer) {
+  try {
+    if (referer) {
+      const url = new URL(referer);
+      const queryString = url.search; // Pega ?param1=value1&param2=value2
+      return baseUrl + queryString;
+    }
+  } catch (e) {
+    // Se falhar parsing, retorna URL base
+  }
+  return baseUrl;
+}
+
+// ========================================
+// GET / - Lista contas a receber
+// ========================================
+
 router.get('/', async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     try {
@@ -19,7 +50,7 @@ router.get('/', async (req, res) => {
             data_fim = new Date(hojeDate.getFullYear(), hojeDate.getMonth() + 1, 0).toISOString().split('T')[0];
         }
         
-        // QUERY CORRIGIDA - Mostra apenas contas NÃO vencidas e NÃO pagas
+        // Query - Mostra apenas contas NÃO vencidas e NÃO pagas
         const queryContas = `
             SELECT cr.*, p.descricao as produto_descricao
             FROM contas_a_receber cr
@@ -31,9 +62,9 @@ router.get('/', async (req, res) => {
         `;
         
         const [contasResult, categoriasResult, clientesResult] = await Promise.all([
-            pool.query(queryContas, [hoje]), // Agora só passa a data de hoje
+            pool.query(queryContas, [hoje]),
             pool.query(`SELECT * FROM categorias_financeiras WHERE tipo = 'RECEITA' ORDER BY nome`),
-            pool.query('SELECT DISTINCT nome FROM clientes ORDER BY nome') // NOVA QUERY
+            pool.query('SELECT DISTINCT nome FROM clientes ORDER BY nome')
         ]);
 
         const contas = contasResult.rows || [];
@@ -44,7 +75,7 @@ router.get('/', async (req, res) => {
             user: res.locals.user,
             contas: contas,
             categorias: categoriasResult.rows || [],
-            clientes: clientesResult.rows || [], // NOVA LINHA
+            clientes: clientesResult.rows || [],
             filtros: { data_inicio, data_fim },
             totalValor,
             totalPendente
@@ -55,11 +86,14 @@ router.get('/', async (req, res) => {
     }
 });
 
-// ROTA POST /contas-a-receber/registrar-pagamento/:id - Processa o pagamento
-router.post('/registrar-pagamento/:id', async (req, res) => {
+// ========================================
+// POST /registrar-pagamento/:id - Registrar pagamento
+// ========================================
+
+router.post('/registrar-pagamento/:id', validateParams(idParamSchema), async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
 
-    const contaId = req.params.id;
+    const contaId = req.params.id; // Já validado pelo middleware
     const dataPagamento = new Date().toISOString().split('T')[0];
     
     try {
@@ -72,10 +106,20 @@ router.post('/registrar-pagamento/:id', async (req, res) => {
         `, [contaId]);
 
         const conta = contaResult.rows[0];
-        if (!conta) return res.render('error', { user: res.locals.user, titulo: 'Erro', mensagem: 'Conta a receber não encontrada.' });
-        if (conta.status === 'Pago') return res.redirect('/contas-a-receber');
+        if (!conta) {
+            return res.render('error', { 
+                user: res.locals.user, 
+                titulo: 'Erro', 
+                mensagem: 'Conta a receber não encontrada.' 
+            });
+        }
+        
+        if (conta.status === 'Pago') {
+            return res.redirect('/contas-a-receber');
+        }
 
         const descricaoFluxo = `Recebimento Parcela ${conta.numero_parcela}/${conta.total_parcelas} - ${conta.produto_descricao || conta.cliente_nome}`;
+        
         const insertResult = await pool.query(`
             INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id, status)
             VALUES ($1, 'CREDITO', $2, $3, $4, 'PAGO')
@@ -89,65 +133,79 @@ router.post('/registrar-pagamento/:id', async (req, res) => {
             [dataPagamento, fluxoCaixaId, contaId]
         );
         
-        res.redirect('/contas-a-receber');
+        // Preserva filtros no redirect
+        const redirectUrl = buildRedirectUrl('/contas-a-receber', req.get('Referer'));
+        res.redirect(redirectUrl);
     } catch (err) {
         console.error("Erro ao registrar pagamento:", err);
-        return res.render('error', { user: res.locals.user, titulo: 'Erro', mensagem: 'Não foi possível registrar o pagamento: ' + err.message });
+        return res.render('error', { 
+            user: res.locals.user, 
+            titulo: 'Erro', 
+            mensagem: 'Não foi possível registrar o pagamento: ' + err.message 
+        });
     }
 });
 
-// ROTA POST para criar conta manual
-router.post('/', async (req, res) => {
+// ========================================
+// POST / - Criar conta manual
+// ========================================
+
+router.post('/', validateBody(createContaReceberManualSchema), async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
+    
     try {
+        // Dados já validados e sanitizados pelo Joi
         const { cliente_nome, valor, data_vencimento, categoria_id, descricao } = req.body;
-        
-        // Validações
-        if (!cliente_nome || !valor || !data_vencimento || !categoria_id) {
-            return res.status(400).send('Dados obrigatórios faltando.');
-        }
-        
-        // Converte valor para número
-        const valorNumerico = parseFloat(valor);
-        
-        if (isNaN(valorNumerico) || valorNumerico <= 0) {
-            return res.status(400).send('Valor inválido.');
-        }
-        
-        if (valorNumerico > 99999999.99) {
-            return res.render('error', {
-                user: res.locals.user,
-                titulo: 'Erro de Validação',
-                mensagem: 'Valor muito grande. Máximo permitido: R$ 99.999.999,99',
-                voltar_url: '/contas-a-receber'
-            });
-        }
         
         await pool.query(`
             INSERT INTO contas_a_receber (
                 cliente_nome, numero_parcela, total_parcelas, 
                 valor, data_vencimento, status, categoria_id, descricao
             ) VALUES ($1, 1, 1, $2, $3, 'Pendente', $4, $5)
-        `, [cliente_nome, valorNumerico, data_vencimento, parseInt(categoria_id), descricao || null]);
+        `, [cliente_nome, valor, data_vencimento, categoria_id, descricao || null]);
         
-        res.redirect('/contas-a-receber');
+        // Preserva filtros no redirect
+        const redirectUrl = buildRedirectUrl('/contas-a-receber', req.get('Referer'));
+        res.redirect(redirectUrl);
     } catch (err) {
         console.error("Erro ao criar conta a receber:", err);
+        
+        // Tratamento de erro específico para constraint violations
+        if (err.code === '23503') {
+            return res.render('error', {
+                user: res.locals.user,
+                titulo: 'Erro de Validação',
+                mensagem: 'Categoria financeira não encontrada.',
+                voltar_url: '/contas-a-receber'
+            });
+        }
+        
         res.status(500).send('Erro ao criar conta a receber: ' + err.message);
     }
 });
 
-// NOVA ROTA PARA EXCLUIR
-router.post('/delete/:id', async (req, res) => {
+// ========================================
+// POST /delete/:id - Excluir conta
+// ========================================
+
+router.post('/delete/:id', validateParams(idParamSchema), async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
+    
     try {
-        const { id } = req.params;
+        const { id } = req.params; // Já validado pelo middleware
         
         // Verifica se é um lançamento manual (sem movimentacao_id)
-        const conta = await pool.query('SELECT movimentacao_id, status FROM contas_a_receber WHERE id = $1', [id]);
+        const conta = await pool.query(
+            'SELECT movimentacao_id, status FROM contas_a_receber WHERE id = $1', 
+            [id]
+        );
         
         if (conta.rows.length === 0) {
-            return res.render('error', { user: res.locals.user, titulo: 'Erro', mensagem: 'Conta não encontrada.' });
+            return res.render('error', { 
+                user: res.locals.user, 
+                titulo: 'Erro', 
+                mensagem: 'Conta não encontrada.' 
+            });
         }
         
         if (conta.rows[0].movimentacao_id) {
@@ -167,10 +225,13 @@ router.post('/delete/:id', async (req, res) => {
         }
         
         await pool.query('DELETE FROM contas_a_receber WHERE id = $1', [id]);
-        res.redirect('/contas-a-receber');
+        
+        // Preserva filtros no redirect
+        const redirectUrl = buildRedirectUrl('/contas-a-receber', req.get('Referer'));
+        res.redirect(redirectUrl);
     } catch (err) {
         console.error("Erro ao excluir conta a receber:", err);
-        res.status(500).send('Erro ao excluir conta a receber.');
+        res.status(500).send('Erro ao excluir conta a receber: ' + err.message);
     }
 });
 

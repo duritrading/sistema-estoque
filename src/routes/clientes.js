@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
+const { validateBody } = require('../middleware/validation');
+const { createClienteSchema } = require('../schemas/validation.schemas');
 
 // Rota GET /clientes - Busca clientes e RCAs
 router.get('/', async (req, res) => {
@@ -31,8 +33,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Rota POST /clientes - Corrigida
-router.post('/', async (req, res) => {
+// VALIDAÇÃO ADICIONADA AQUI
+router.post('/', validateBody(createClienteSchema), async (req, res) => {
   try {
     const { nome, cpf_cnpj, endereco, cep, telefone, email, observacao, rca_id } = req.body;
     
@@ -67,7 +69,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Rota para EXCLUIR um cliente
+// Rota para EXCLUIR um cliente - MANTIDA 100% INTACTA
 router.post('/delete/:id', async (req, res) => {
   try {
     const { id } = req.params;
