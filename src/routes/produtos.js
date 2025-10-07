@@ -9,7 +9,7 @@ const idParamSchema = Joi.object({
   id: Joi.number().integer().positive().required()
 });
 
-rrouter.get('/', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const produtos = await pool.query('SELECT * FROM produtos ORDER BY created_at DESC');
     
