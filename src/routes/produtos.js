@@ -9,12 +9,22 @@ const idParamSchema = Joi.object({
   id: Joi.number().integer().positive().required()
 });
 
-router.get('/', async (req, res) => {
+rrouter.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM produtos ORDER BY created_at DESC');
+    const produtos = await pool.query('SELECT * FROM produtos ORDER BY created_at DESC');
+    
+    // Buscar categorias únicas dos produtos
+    const categorias = await pool.query(`
+      SELECT DISTINCT categoria 
+      FROM produtos 
+      WHERE categoria IS NOT NULL AND categoria != ''
+      ORDER BY categoria
+    `);
+    
     res.render('produtos', {
       user: res.locals.user,
-      produtos: result.rows || []
+      produtos: produtos.rows || [],
+      categorias: categorias.rows || []
     });
   } catch (err) {
     console.error('Erro ao buscar produtos:', err.message);
