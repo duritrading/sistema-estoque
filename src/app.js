@@ -6,6 +6,7 @@ const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session); // ✅ Session store PostgreSQL
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
@@ -46,8 +47,8 @@ app.use(helmet({
 }));
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 500, // ✅ Aumentado de 100 para 500 (mais permissivo)
   message: 'Muitas requisições. Tente novamente em 15 minutos.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -72,6 +73,13 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ========================================
+// HEALTH CHECK (ANTES de rate limiting e auth)
+// ========================================
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// ========================================
 // SESSION CONFIGURATION
 // ========================================
 if (!process.env.SESSION_SECRET && IS_PRODUCTION) {
@@ -80,24 +88,22 @@ if (!process.env.SESSION_SECRET && IS_PRODUCTION) {
 }
 
 app.use(session({
+  store: new pgSession({
+    pool: pool, // ✅ Usar pool do PostgreSQL existente
+    tableName: 'session', // Nome da tabela de sessões
+    createTableIfMissing: true // Criar tabela automaticamente
+  }),
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
   cookie: { 
     secure: IS_PRODUCTION,
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000,
+    maxAge: 24 * 60 * 60 * 1000, // 24 horas
     sameSite: 'strict'
   },
   name: 'sid'
 }));
-
-// ========================================
-// HEALTH CHECK
-// ========================================
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
 
 // ========================================
 // AUTHENTICATION MIDDLEWARE
