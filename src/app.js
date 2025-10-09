@@ -1,5 +1,5 @@
 // ========================================
-// SISTEMA DE ESTOQUE - COM INPUT VALIDATION
+// SISTEMA DE ESTOQUE - FIX CRÍTICO
 // ========================================
 
 const express = require('express');
@@ -10,15 +10,15 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const pool = require('./config/database');
-const { validateBody } = require('./middleware/validation'); // ← NOVO
-const { loginSchema, createProdutoSchema } = require('./schemas/validation.schemas'); // ← NOVO
+const { validateBody } = require('./middleware/validation');
+const { loginSchema } = require('./schemas/validation.schemas');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // ========================================
-// TRUST PROXY - CRÍTICO PARA RENDER/RAILWAY  
+// TRUST PROXY
 // ========================================
 app.set('trust proxy', 1);
 
@@ -30,22 +30,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: [
-        "'self'", 
-        "'unsafe-inline'",
-        "https://fonts.googleapis.com"
-      ],
-      scriptSrc: [
-        "'self'", 
-        "'unsafe-inline'",
-        "'unsafe-eval'"
-      ],
-      scriptSrcAttr: ["'unsafe-inline'"],  // ← LINHA CRÍTICA (permite onclick, onchange, etc)
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      fontSrc: [
-        "'self'",
-        "https://fonts.gstatic.com"
-      ],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: ["'self'"]
     },
   },
@@ -104,49 +93,6 @@ app.use(session({
 }));
 
 // ========================================
-// DATABASE HELPERS
-// ========================================
-const db = {
-  all: (query, params, callback) => {
-    pool.query(query, params, (err, result) => {
-      if (callback) callback(err, result ? result.rows : null);
-    });
-  },
-  get: (query, params, callback) => {
-    pool.query(query, params, (err, result) => {
-      if (callback) callback(err, result && result.rows.length > 0 ? result.rows[0] : null);
-    });
-  },
-  run: function(query, params, callback) {
-    pool.query(query, params, (err, result) => {
-      if (callback) {
-        const ctx = { lastID: result && result.rows.length > 0 ? result.rows[0].id : null };
-        callback.call(ctx, err);
-      }
-    });
-  }
-};
-
-function getSaldoProduto(produtoId) {
-  return new Promise((resolve, reject) => {
-    db.get(
-      `SELECT COALESCE(SUM(
-        CASE WHEN tipo = 'ENTRADA' THEN quantidade 
-             WHEN tipo = 'SAIDA' THEN -quantidade 
-             ELSE 0 END
-      ), 0) as saldo 
-      FROM movimentacoes 
-      WHERE produto_id = $1`,
-      [produtoId],
-      (err, row) => {
-        if (err) reject(err);
-        else resolve(row ? row.saldo : 0);
-      }
-    );
-  });
-}
-
-// ========================================
 // HEALTH CHECK
 // ========================================
 app.get('/health', (req, res) => {
@@ -182,59 +128,7 @@ app.use((req, res, next) => {
 });
 
 // ========================================
-// DATABASE INITIALIZATION
-// ========================================
-async function createUsersTable() {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS usuarios (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        email VARCHAR(150) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        nome_completo VARCHAR(200),
-        ativo BOOLEAN DEFAULT true,
-        ultimo_login TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    const adminCheck = await pool.query('SELECT * FROM usuarios WHERE username = $1', ['admin']);
-    
-    if (adminCheck.rows.length === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      await pool.query(`
-        INSERT INTO usuarios (username, email, password_hash, nome_completo)
-        VALUES ($1, $2, $3, $4)
-      `, ['admin', 'admin@sistema.com', hashedPassword, 'Administrador do Sistema']);
-      
-      if (!IS_PRODUCTION) {
-        console.log('✅ Usuário admin criado: admin / admin123');
-      }
-    }
-  } catch (error) {
-    console.error('Erro criar tabela usuários:', error.message);
-  }
-}
-
-async function initializeDatabase() {
-  try {
-    console.log('🔧 Inicializando banco PostgreSQL...');
-    await createUsersTable();
-
-    // ... resto da inicialização do banco (mantém como está)
-    // Código omitido por brevidade, mas mantenha todo o código de CREATE TABLE
-
-    const countProdutos = await pool.query('SELECT COUNT(*) as count FROM produtos');
-    console.log(`✅ Banco inicializado! Produtos: ${countProdutos.rows[0].count}`);
-
-  } catch (error) {
-    console.error('❌ Erro ao inicializar banco:', error.message);
-  }
-}
-
-// ========================================
-// LOGIN ROUTES (COM VALIDAÇÃO)
+// LOGIN ROUTES
 // ========================================
 app.get('/login', (req, res) => {
   const redirectUrl = req.query.redirect || '/';
@@ -244,9 +138,8 @@ app.get('/login', (req, res) => {
   res.render('login', { error, success, redirectUrl });
 });
 
-// ← VALIDAÇÃO APLICADA AQUI
 app.post('/login', loginLimiter, validateBody(loginSchema), async (req, res) => {
-  const { username, password, redirect } = req.body; // Já validado e sanitizado!
+  const { username, password, redirect } = req.body;
   
   try {
     const userResult = await pool.query(
@@ -304,28 +197,7 @@ app.get('/logout', (req, res) => {
 });
 
 // ========================================
-// BUSINESS ROUTES (COM VALIDAÇÃO)
-// ========================================
-
-// ← VALIDAÇÃO APLICADA AQUI
-app.post('/produtos', validateBody(createProdutoSchema), (req, res) => {
-  const { codigo, descricao, unidade, categoria, estoque_minimo, preco_custo } = req.body; // Já validado!
-  
-  db.run(`
-    INSERT INTO produtos (codigo, descricao, unidade, categoria, estoque_minimo, preco_custo)
-    VALUES ($1, $2, $3, $4, $5, $6)
-  `, [codigo, descricao, unidade, categoria, estoque_minimo, preco_custo], 
-  function(err) {
-    if (err) {
-      console.error('Erro criar produto:', error.message);
-      return res.status(500).send('Erro: ' + err.message);
-    }
-    return res.redirect('/');
-  });
-});
-
-// ========================================
-// IMPORT ROUTES (aplicar validação em cada)
+// IMPORT ROUTES
 // ========================================
 const movimentacoesRoutes = require('./routes/movimentacoes');
 const fornecedoresRoutes = require('./routes/fornecedores');
@@ -342,13 +214,15 @@ const contasAPagarRoutes = require('./routes/contas-a-pagar');
 const inadimplenciaRoutes = require('./routes/inadimplencia');
 const entregasRoutes = require('./routes/entregas');
 
+// ========================================
+// MOUNT ROUTES (ordem importa!)
+// ========================================
 app.use('/movimentacoes', movimentacoesRoutes);
 app.use('/fornecedores', fornecedoresRoutes);
 app.use('/backup', backupRoutes); 
 app.use('/clientes', clientesRoutes);
 app.use('/rcas', rcaRoutes);
-app.use('/', dashboardRoutes); 
-app.use('/produtos', produtosRoutes);
+app.use('/produtos', produtosRoutes); // ✅ ROUTER LIMPO - SEM ROTAS DUPLICADAS
 app.use('/fluxo-caixa', fluxoCaixaRoutes);
 app.use('/dre', dreRoutes);
 app.use('/contas-a-receber', contasAReceberRoutes);
@@ -356,6 +230,68 @@ app.use('/usuarios', usuariosRoutes);
 app.use('/contas-a-pagar', contasAPagarRoutes);
 app.use('/inadimplencia', inadimplenciaRoutes);
 app.use('/entregas', entregasRoutes);
+app.use('/', dashboardRoutes); // Dashboard por último (catch-all)
+
+// ========================================
+// ERROR HANDLER (404)
+// ========================================
+app.use((req, res) => {
+  res.status(404).render('error', {
+    user: res.locals.user || null,
+    titulo: 'Página Não Encontrada',
+    mensagem: 'A página que você procura não existe.',
+    voltar_url: '/'
+  });
+});
+
+// ========================================
+// DATABASE INITIALIZATION
+// ========================================
+async function createUsersTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(150) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        nome_completo VARCHAR(200),
+        ativo BOOLEAN DEFAULT true,
+        ultimo_login TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    const adminCheck = await pool.query('SELECT * FROM usuarios WHERE username = $1', ['admin']);
+    
+    if (adminCheck.rows.length === 0) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await pool.query(`
+        INSERT INTO usuarios (username, email, password_hash, nome_completo)
+        VALUES ($1, $2, $3, $4)
+      `, ['admin', 'admin@sistema.com', hashedPassword, 'Administrador do Sistema']);
+      
+      if (!IS_PRODUCTION) {
+        console.log('✅ Usuário admin criado: admin / admin123');
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro criar tabela usuários:', error.message);
+  }
+}
+
+async function initializeDatabase() {
+  try {
+    console.log('🔧 Inicializando banco PostgreSQL...');
+    await createUsersTable();
+
+    const countProdutos = await pool.query('SELECT COUNT(*) as count FROM produtos');
+    console.log(`✅ Banco inicializado! Produtos: ${countProdutos.rows[0].count}`);
+
+  } catch (error) {
+    console.error('❌ Erro ao inicializar banco:', error.message);
+  }
+}
 
 // ========================================
 // SERVER START
