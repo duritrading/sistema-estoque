@@ -22,11 +22,15 @@ router.get('/', async (req, res) => {
     const produtos = await pool.query('SELECT * FROM produtos ORDER BY descricao');
     const fornecedores = await pool.query('SELECT * FROM fornecedores ORDER BY nome');
     
+    // ✅ ADICIONE ESTA LINHA - Busca os RCAs
+    const rcas = await pool.query('SELECT * FROM rcas ORDER BY nome');
+    
     res.render('movimentacoes', {
       user: res.locals.user,
       movimentacoes: result.rows || [],
       produtos: produtos.rows || [],
-      fornecedores: fornecedores.rows || []
+      fornecedores: fornecedores.rows || [],
+      rcas: rcas.rows || []  // ✅ ADICIONE ESTA LINHA
     });
   } catch (err) {
     console.error('Erro ao buscar movimentações:', err.message);
