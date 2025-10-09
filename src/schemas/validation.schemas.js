@@ -1,3 +1,4 @@
+// src/schemas/validation.schemas.js - CORRIGIDO
 const Joi = require('joi');
 
 // ========================================
@@ -75,7 +76,7 @@ const createProdutoSchema = Joi.object({
       'string.max': 'Descrição muito longa (máximo 1000 caracteres)'
     }),
   unidade: Joi.string()
-    .valid('UN', 'KG', 'LT', 'MT', 'CX', 'PC', 'DZ')
+    .valid('UN', 'KG', 'LT', 'MT', 'CX', 'CT', 'PC', 'DZ') // ✅ ADICIONADO 'CT'
     .default('UN')
     .optional(),
   categoria: Joi.string()
@@ -107,7 +108,7 @@ const updateProdutoSchema = Joi.object({
     .optional()
     .trim(),
   unidade: Joi.string()
-    .valid('UN', 'KG', 'LT', 'MT', 'CX', 'PC', 'DZ')
+    .valid('UN', 'KG', 'LT', 'MT', 'CX', 'CT', 'PC', 'DZ') // ✅ ADICIONADO 'CT'
     .optional(),
   categoria: Joi.string()
     .max(100)
@@ -253,8 +254,7 @@ const createContaReceberSchema = Joi.object({
   movimentacao_id: Joi.number()
     .integer()
     .positive()
-    .optional()
-    .allow(null, ''),
+    .required(),
   cliente_nome: Joi.string()
     .max(200)
     .required()
@@ -263,12 +263,12 @@ const createContaReceberSchema = Joi.object({
     .integer()
     .min(1)
     .max(999)
-    .required(),
+    .default(1),
   total_parcelas: Joi.number()
     .integer()
     .min(1)
     .max(999)
-    .required(),
+    .default(1),
   valor: Joi.number()
     .positive()
     .precision(2)
@@ -276,32 +276,20 @@ const createContaReceberSchema = Joi.object({
     .required(),
   data_vencimento: Joi.date()
     .iso()
-    .required()
-    .messages({
-      'any.required': 'Data de vencimento é obrigatória',
-      'date.format': 'Data de vencimento inválida'
-    }),
+    .required(),
   categoria_id: Joi.number()
     .integer()
     .positive()
-    .optional()
-    .allow(null, ''),
-  descricao: Joi.string()
-    .max(500)
-    .optional()
-    .allow('')
-    .trim()
+    .required()
 });
 
-// Schema para cadastro manual simplificado de contas a receber
 const createContaReceberManualSchema = Joi.object({
   cliente_nome: Joi.string()
     .max(200)
     .required()
     .trim()
     .messages({
-      'any.required': 'Nome do cliente é obrigatório',
-      'string.max': 'Nome do cliente muito longo (máximo 200 caracteres)'
+      'any.required': 'Nome do cliente é obrigatório'
     }),
   valor: Joi.alternatives()
     .try(
@@ -322,49 +310,33 @@ const createContaReceberManualSchema = Joi.object({
     )
     .messages({
       'any.required': 'Valor é obrigatório',
-      'number.positive': 'Valor deve ser maior que zero',
-      'number.max': 'Valor máximo permitido: R$ 99.999.999,99',
-      'string.pattern.base': 'Valor inválido. Use formato: 0.00'
+      'number.positive': 'Valor deve ser maior que zero'
     }),
   data_vencimento: Joi.date()
     .iso()
     .required()
     .messages({
-      'any.required': 'Data de vencimento é obrigatória',
-      'date.base': 'Data de vencimento inválida',
-      'date.format': 'Formato de data inválido. Use YYYY-MM-DD'
+      'any.required': 'Data de vencimento é obrigatória'
     }),
   categoria_id: Joi.alternatives()
     .try(
-      Joi.number()
-        .integer()
-        .positive()
-        .required(),
-      Joi.string()
-        .pattern(/^\d+$/)
-        .custom((value, helpers) => {
-          const num = parseInt(value, 10);
-          if (num <= 0) {
-            return helpers.error('any.invalid');
-          }
-          return num;
-        })
+      Joi.number().integer().positive().required(),
+      Joi.string().pattern(/^\d+$/).custom((value, helpers) => {
+        const num = parseInt(value, 10);
+        if (num <= 0) return helpers.error('any.invalid');
+        return num;
+      })
     )
     .messages({
-      'any.required': 'Categoria é obrigatória',
-      'number.positive': 'ID da categoria inválido'
+      'any.required': 'Categoria é obrigatória'
     }),
   descricao: Joi.string()
     .max(500)
     .optional()
-    .allow('', null)
+    .allow('')
     .trim()
-    .messages({
-      'string.max': 'Descrição muito longa (máximo 500 caracteres)'
-    })
 });
 
-// Schema para marcar conta como paga com data customizada
 const marcarPagaSchema = Joi.object({
   data_pagamento: Joi.date()
     .iso()
@@ -372,8 +344,7 @@ const marcarPagaSchema = Joi.object({
     .required()
     .messages({
       'any.required': 'Data de pagamento é obrigatória',
-      'date.base': 'Data de pagamento inválida',
-      'date.max': 'Data de pagamento não pode ser futura'
+      'date.max': 'Data não pode ser futura'
     })
 });
 
@@ -387,27 +358,13 @@ const createContaPagarSchema = Joi.object({
     .required()
     .trim()
     .messages({
-      'any.required': 'Descrição é obrigatória',
-      'string.max': 'Descrição muito longa (máximo 500 caracteres)'
+      'any.required': 'Descrição é obrigatória'
     }),
-  fornecedor_id: Joi.alternatives()
-    .try(
-      Joi.number()
-        .integer()
-        .positive()
-        .optional()
-        .allow(null, ''),
-      Joi.string()
-        .pattern(/^\d+$/)
-        .optional()
-        .allow('', null)
-        .custom((value, helpers) => {
-          if (value === '' || value === null) return null;
-          const num = parseInt(value, 10);
-          if (num <= 0) return helpers.error('any.invalid');
-          return num;
-        })
-    ),
+  fornecedor_id: Joi.number()
+    .integer()
+    .positive()
+    .optional()
+    .allow(null, ''),
   valor: Joi.alternatives()
     .try(
       Joi.number()
@@ -427,33 +384,25 @@ const createContaPagarSchema = Joi.object({
     )
     .messages({
       'any.required': 'Valor é obrigatório',
-      'number.positive': 'Valor deve ser maior que zero',
-      'number.max': 'Valor máximo: R$ 99.999.999,99'
+      'number.positive': 'Valor deve ser maior que zero'
     }),
   data_vencimento: Joi.date()
     .iso()
     .required()
     .messages({
-      'any.required': 'Data de vencimento é obrigatória',
-      'date.base': 'Data de vencimento inválida'
+      'any.required': 'Data de vencimento é obrigatória'
     }),
   categoria_id: Joi.alternatives()
     .try(
-      Joi.number()
-        .integer()
-        .positive()
-        .required(),
-      Joi.string()
-        .pattern(/^\d+$/)
-        .custom((value, helpers) => {
-          const num = parseInt(value, 10);
-          if (num <= 0) return helpers.error('any.invalid');
-          return num;
-        })
+      Joi.number().integer().positive().required(),
+      Joi.string().pattern(/^\d+$/).custom((value, helpers) => {
+        const num = parseInt(value, 10);
+        if (num <= 0) return helpers.error('any.invalid');
+        return num;
+      })
     )
     .messages({
-      'any.required': 'Categoria é obrigatória',
-      'number.positive': 'ID da categoria inválido'
+      'any.required': 'Categoria é obrigatória'
     })
 });
 
@@ -468,7 +417,6 @@ const createLancamentoFluxoSchema = Joi.object({
     .required()
     .messages({
       'any.required': 'Data da operação é obrigatória',
-      'date.base': 'Data inválida',
       'date.max': 'Data não pode ser futura'
     }),
   tipo: Joi.string()
@@ -497,34 +445,26 @@ const createLancamentoFluxoSchema = Joi.object({
     )
     .messages({
       'any.required': 'Valor é obrigatório',
-      'number.positive': 'Valor deve ser maior que zero',
-      'number.max': 'Valor máximo: R$ 99.999.999,99'
+      'number.positive': 'Valor deve ser maior que zero'
     }),
   descricao: Joi.string()
     .max(500)
     .required()
     .trim()
     .messages({
-      'any.required': 'Descrição é obrigatória',
-      'string.max': 'Descrição muito longa (máximo 500 caracteres)'
+      'any.required': 'Descrição é obrigatória'
     }),
   categoria_id: Joi.alternatives()
     .try(
-      Joi.number()
-        .integer()
-        .positive()
-        .required(),
-      Joi.string()
-        .pattern(/^\d+$/)
-        .custom((value, helpers) => {
-          const num = parseInt(value, 10);
-          if (num <= 0) return helpers.error('any.invalid');
-          return num;
-        })
+      Joi.number().integer().positive().required(),
+      Joi.string().pattern(/^\d+$/).custom((value, helpers) => {
+        const num = parseInt(value, 10);
+        if (num <= 0) return helpers.error('any.invalid');
+        return num;
+      })
     )
     .messages({
-      'any.required': 'Categoria é obrigatória',
-      'number.positive': 'ID da categoria inválido'
+      'any.required': 'Categoria é obrigatória'
     })
 });
 
@@ -533,28 +473,12 @@ const createLancamentoFluxoSchema = Joi.object({
 // ========================================
 
 const createClienteSchema = Joi.object({
-  codigo: Joi.string()
-    .max(50)
-    .optional()
-    .allow('')
-    .trim(),
   nome: Joi.string()
     .max(200)
     .required()
     .trim(),
-  contato: Joi.string()
-    .max(150)
-    .optional()
-    .allow('')
-    .trim(),
-  telefone: Joi.string()
+  cpf_cnpj: Joi.string()
     .max(20)
-    .optional()
-    .allow('')
-    .trim(),
-  email: Joi.string()
-    .email()
-    .max(150)
     .optional()
     .allow('')
     .trim(),
@@ -568,8 +492,14 @@ const createClienteSchema = Joi.object({
     .optional()
     .allow('')
     .trim(),
-  cpf_cnpj: Joi.string()
+  telefone: Joi.string()
     .max(20)
+    .optional()
+    .allow('')
+    .trim(),
+  email: Joi.string()
+    .email()
+    .max(150)
     .optional()
     .allow('')
     .trim(),
