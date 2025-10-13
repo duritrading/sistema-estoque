@@ -29,7 +29,11 @@ router.get('/', async (req, res) => {
         COUNT(CASE WHEN tipo = 'ENTRADA' THEN 1 END) as entradas_mes,
         COUNT(CASE WHEN tipo = 'SAIDA' THEN 1 END) as saidas_mes,
         COUNT(*) as total_movimentacoes,
-        COALESCE(SUM(CASE WHEN tipo = 'SAIDA' THEN valor_total ELSE 0 END), 0) as valor_total
+        COALESCE(SUM(
+          CASE WHEN tipo = 'SAIDA' THEN 
+            COALESCE(valor_total, quantidade * COALESCE(preco_unitario, 0))
+          ELSE 0 END
+        ), 0) as valor_total
       FROM movimentacoes
       WHERE created_at >= $1 AND created_at <= $2
     `, [inicioMes, fimMes]);
@@ -37,8 +41,11 @@ router.get('/', async (req, res) => {
     const metrics = metricsResult.rows[0];
     
     let query = `
-      SELECT m.*, p.descricao as produto_descricao, p.codigo as produto_codigo,
-             f.nome as fornecedor_nome
+      SELECT m.*, 
+             p.descricao as produto_descricao, 
+             p.codigo as produto_codigo,
+             f.nome as fornecedor_nome,
+             COALESCE(m.valor_total, m.quantidade * COALESCE(m.preco_unitario, 0)) as valor_total_calc
       FROM movimentacoes m
       LEFT JOIN produtos p ON m.produto_id = p.id
       LEFT JOIN fornecedores f ON m.fornecedor_id = f.id
@@ -104,8 +111,11 @@ router.get('/:id', validateParams(idParamSchema), async (req, res) => {
     const { id } = req.params;
     
     const result = await pool.query(`
-      SELECT m.*, p.descricao as produto_descricao, p.codigo as produto_codigo,
-             f.nome as fornecedor_nome
+      SELECT m.*, 
+             p.descricao as produto_descricao, 
+             p.codigo as produto_codigo,
+             f.nome as fornecedor_nome,
+             COALESCE(m.valor_total, m.quantidade * COALESCE(m.preco_unitario, 0)) as valor_total_calc
       FROM movimentacoes m
       LEFT JOIN produtos p ON m.produto_id = p.id
       LEFT JOIN fornecedores f ON m.fornecedor_id = f.id

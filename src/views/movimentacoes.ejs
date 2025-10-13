@@ -156,7 +156,9 @@
               </td>
               <td><%= parseFloat(mov.quantidade).toFixed(3) %></td>
               <td>R$ <%= mov.preco_unitario ? parseFloat(mov.preco_unitario).toFixed(2) : '-' %></td>
-              <td>R$ <%= mov.valor_total ? parseFloat(mov.valor_total).toFixed(2) : '-' %></td>
+              <td>
+                <strong>R$ <%= parseFloat(mov.valor_total_calc || 0).toFixed(2) %></strong>
+              </td>
               <td>
                 <% if (mov.tipo === 'ENTRADA' && mov.fornecedor_nome) { %>
                   <%= mov.fornecedor_nome %>
@@ -243,12 +245,18 @@
 
         <div class="form-group">
           <label for="quantidade">Quantidade *</label>
-          <input type="number" id="quantidade" name="quantidade" step="0.001" required>
+          <input type="number" id="quantidade" name="quantidade" step="0.001" required oninput="calcularValorTotal()">
         </div>
 
         <div class="form-group">
           <label for="preco_unitario">Preço Unitário</label>
-          <input type="number" id="preco_unitario" name="preco_unitario" step="0.01">
+          <input type="number" id="preco_unitario" name="preco_unitario" step="0.01" oninput="calcularValorTotal()">
+        </div>
+
+        <div class="form-group">
+          <label for="valor_total_display">Valor Total (calculado)</label>
+          <input type="text" id="valor_total_display" disabled style="background: #f8fafc; font-weight: 600; color: #1e3a5f;">
+          <input type="hidden" id="valor_total" name="valor_total">
         </div>
 
         <div class="form-group" id="fornecedor_group" style="display: none;">
@@ -565,6 +573,11 @@
   background: #f8fafc;
 }
 
+.movimentacoes-table td strong {
+  color: #059669;
+  font-size: 15px;
+}
+
 .badge {
   display: inline-block;
   padding: 4px 12px;
@@ -755,6 +768,14 @@
   outline: none;
   border-color: #1e3a5f;
   box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+}
+
+.form-group input:disabled {
+  background: #f8fafc;
+  color: #1e3a5f;
+  font-weight: 600;
+  cursor: not-allowed;
+  border-color: #e5e7eb;
 }
 
 .modal-actions {
@@ -949,6 +970,16 @@ function updateFormFields() {
   }
 }
 
+// Calcular valor total automaticamente
+function calcularValorTotal() {
+  const quantidade = parseFloat(document.getElementById('quantidade').value) || 0;
+  const precoUnitario = parseFloat(document.getElementById('preco_unitario').value) || 0;
+  const valorTotal = quantidade * precoUnitario;
+  
+  document.getElementById('valor_total_display').value = 'R$ ' + valorTotal.toFixed(2);
+  document.getElementById('valor_total').value = valorTotal.toFixed(2);
+}
+
 // View movimentação
 async function viewMovimentacao(id) {
   try {
@@ -979,7 +1010,7 @@ async function viewMovimentacao(id) {
         </div>
         <div class="view-field">
           <span class="view-label">Valor Total</span>
-          <span class="view-value">R$ ${data.valor_total ? parseFloat(data.valor_total).toFixed(2) : '-'}</span>
+          <span class="view-value">R$ ${parseFloat(data.valor_total_calc || 0).toFixed(2)}</span>
         </div>
         <div class="view-field">
           <span class="view-label">${data.tipo === 'ENTRADA' ? 'Fornecedor' : 'Cliente'}</span>
@@ -1029,6 +1060,7 @@ async function editMovimentacao(id) {
     document.getElementById('observacao').value = data.observacao || '';
     
     updateFormFields();
+    calcularValorTotal(); // Calcular valor total com dados carregados
     
     document.getElementById('modalForm').classList.add('active');
     document.body.style.overflow = 'hidden';
