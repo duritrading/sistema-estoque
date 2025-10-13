@@ -42,13 +42,34 @@ function buildRedirectUrl(baseUrl, referer) {
 }
 
 // ========================================
+// HELPER: Parse seguro de valores numéricos
+// ========================================
+
+function safeParseFloat(value, defaultValue = 0) {
+  const parsed = parseFloat(value);
+  return isNaN(parsed) || !isFinite(parsed) ? defaultValue : parsed;
+}
+
+// ========================================
 // GET / - Lista contas a pagar
 // ========================================
 
 router.get('/', async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração do banco de dados.');
+    // ✅ FIX 1: Verificação robusta do pool
+    if (!pool) {
+        console.error('❌ Pool de conexão PostgreSQL não inicializado!');
+        return res.status(500).render('error', {
+            user: res.locals.user,
+            titulo: 'Erro de Configuração',
+            mensagem: 'Banco de dados não conectado. Contate o administrador.',
+            voltar_url: '/'
+        });
+    }
+    
     try {
+        // ✅ FIX 2: Definir filtros de data com validação
         let { data_inicio, data_fim } = req.query;
+        
         if (!data_inicio) {
             const hoje = new Date();
             data_inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
@@ -58,8 +79,36 @@ router.get('/', async (req, res) => {
             data_fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
         }
 
+        // ✅ FIX 3: Verificar existência das tabelas antes de consultar
+        const checkTablesQuery = `
+            SELECT 
+                COUNT(DISTINCT table_name) as total
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name IN ('contas_a_pagar', 'fornecedores', 'categorias_financeiras')
+        `;
+        
+        const tableCheck = await pool.query(checkTablesQuery);
+        const tableCount = parseInt(tableCheck.rows[0]?.total || 0);
+        
+        if (tableCount < 3) {
+            console.error('❌ Tabelas necessárias não encontradas no banco!');
+            console.error(`   Tabelas encontradas: ${tableCount}/3`);
+            
+            return res.status(500).render('error', {
+                user: res.locals.user,
+                titulo: 'Erro de Banco de Dados',
+                mensagem: 'Tabelas do sistema não encontradas. Execute: node scripts/init-database.js',
+                voltar_url: '/'
+            });
+        }
+
+        // ✅ FIX 4: Query principal com tratamento de dados
         const queryContas = `
-            SELECT cp.*, f.nome as fornecedor_nome, cf.nome as categoria_nome 
+            SELECT 
+                cp.*, 
+                COALESCE(f.nome, 'Sem fornecedor') as fornecedor_nome, 
+                COALESCE(cf.nome, 'Sem categoria') as categoria_nome 
             FROM contas_a_pagar cp
             LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
             LEFT JOIN categorias_financeiras cf ON cp.categoria_id = cf.id
@@ -67,6 +116,9 @@ router.get('/', async (req, res) => {
             ORDER BY cp.data_vencimento ASC
         `;
         
+        console.log(`🔍 Buscando contas de ${data_inicio} até ${data_fim}`);
+        
+        // ✅ FIX 5: Executar queries em paralelo com Promise.all
         const [contasResult, fornecedoresResult, categoriasResult] = await Promise.all([
             pool.query(queryContas, [data_inicio, data_fim]),
             pool.query('SELECT * FROM fornecedores ORDER BY nome'),
@@ -74,21 +126,65 @@ router.get('/', async (req, res) => {
         ]);
 
         const contas = contasResult.rows || [];
-        const totalValor = contas.reduce((sum, conta) => sum + parseFloat(conta.valor), 0);
-        const totalPendente = contas.filter(c => c.status !== 'Pago').reduce((sum, c) => sum + parseFloat(c.valor), 0);
+        const fornecedores = fornecedoresResult.rows || [];
+        const categorias = categoriasResult.rows || [];
 
+        console.log(`✅ Encontradas ${contas.length} contas a pagar`);
+        console.log(`✅ Encontrados ${fornecedores.length} fornecedores`);
+        console.log(`✅ Encontradas ${categorias.length} categorias de despesa`);
+
+        // ✅ FIX 6: Cálculo seguro de totais com proteção contra NaN
+        const totalValor = contas.reduce((sum, conta) => {
+            return sum + safeParseFloat(conta.valor, 0);
+        }, 0);
+        
+        const totalPendente = contas
+            .filter(c => c.status !== 'Pago')
+            .reduce((sum, c) => {
+                return sum + safeParseFloat(c.valor, 0);
+            }, 0);
+
+        console.log(`💰 Total geral: R$ ${totalValor.toFixed(2)}`);
+        console.log(`⏳ Total pendente: R$ ${totalPendente.toFixed(2)}`);
+
+        // ✅ FIX 7: Renderizar view com dados garantidos
         res.render('contas-a-pagar', {
             user: res.locals.user,
-            contas,
-            fornecedores: fornecedoresResult.rows || [],
-            categorias: categoriasResult.rows || [],
+            contas: contas,
+            fornecedores: fornecedores,
+            categorias: categorias,
             filtros: { data_inicio, data_fim },
-            totalValor,
-            totalPendente
+            totalValor: totalValor,
+            totalPendente: totalPendente
         });
+
     } catch (error) {
-        console.error('Erro ao carregar contas a pagar:', error);
-        res.status(500).send('Erro ao carregar a página.');
+        // ✅ FIX 8: Log detalhado para debugging
+        console.error('❌ ERRO CRÍTICO em GET /contas-a-pagar:');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('📝 Mensagem:', error.message);
+        console.error('🔢 Código:', error.code);
+        console.error('📍 Detalhe:', error.detail);
+        console.error('📚 Stack:', error.stack);
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // ✅ FIX 9: Mensagem de erro específica baseada no código
+        let mensagemErro = 'Erro ao carregar contas a pagar.';
+        
+        if (error.code === '42P01') {
+            mensagemErro = 'Tabela não encontrada no banco. Execute: node scripts/init-database.js';
+        } else if (error.code === '3D000') {
+            mensagemErro = 'Banco de dados não encontrado. Verifique a configuração.';
+        } else if (error.code === 'ECONNREFUSED') {
+            mensagemErro = 'PostgreSQL não está rodando. Inicie o banco de dados.';
+        }
+
+        return res.status(500).render('error', {
+            user: res.locals.user,
+            titulo: 'Erro ao Carregar Contas a Pagar',
+            mensagem: `${mensagemErro}\n\nDetalhes técnicos: ${error.message}`,
+            voltar_url: '/'
+        });
     }
 });
 
@@ -97,20 +193,39 @@ router.get('/', async (req, res) => {
 // ========================================
 
 router.post('/', validateBody(createContaPagarSchema), async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração.');
+    if (!pool) {
+        return res.status(500).render('error', {
+            user: res.locals.user,
+            titulo: 'Erro de Configuração',
+            mensagem: 'Banco de dados não conectado.',
+            voltar_url: '/contas-a-pagar'
+        });
+    }
     
     try {
         const { descricao, fornecedor_id, valor, data_vencimento, categoria_id } = req.body;
+        
+        // ✅ Validação adicional de valor
+        if (isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
+            return res.render('error', {
+                user: res.locals.user,
+                titulo: 'Erro de Validação',
+                mensagem: 'Valor deve ser um número positivo válido.',
+                voltar_url: '/contas-a-pagar'
+            });
+        }
         
         await pool.query(
             'INSERT INTO contas_a_pagar (descricao, fornecedor_id, valor, data_vencimento, categoria_id) VALUES ($1, $2, $3, $4, $5)',
             [descricao, fornecedor_id || null, valor, data_vencimento, categoria_id]
         );
         
+        console.log(`✅ Conta a pagar criada: ${descricao} - R$ ${valor}`);
+        
         const redirectUrl = buildRedirectUrl('/contas-a-pagar', req.get('Referer'));
         res.redirect(redirectUrl);
     } catch(err) {
-        console.error('Erro ao criar conta a pagar:', err);
+        console.error('❌ Erro ao criar conta a pagar:', err);
         
         if (err.code === '23503') {
             return res.render('error', {
@@ -121,7 +236,12 @@ router.post('/', validateBody(createContaPagarSchema), async (req, res) => {
             });
         }
         
-        res.status(500).send('Erro ao criar conta: ' + err.message);
+        return res.status(500).render('error', {
+            user: res.locals.user,
+            titulo: 'Erro ao Criar Conta',
+            mensagem: `Não foi possível criar a conta. ${err.message}`,
+            voltar_url: '/contas-a-pagar'
+        });
     }
 });
 
@@ -130,7 +250,9 @@ router.post('/', validateBody(createContaPagarSchema), async (req, res) => {
 // ========================================
 
 router.post('/pagar/:id', validateParams(idParamSchema), validateBody(pagarContaSchema), async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração.');
+    if (!pool) {
+        return res.status(500).send('Erro de configuração.');
+    }
     
     const contaId = req.params.id;
     const { data_pagamento } = req.body;
@@ -149,6 +271,7 @@ router.post('/pagar/:id', validateParams(idParamSchema), validateBody(pagarConta
         }
         
         if (conta.status === 'Pago') {
+            console.log(`⚠️ Tentativa de pagar conta já paga: ID ${contaId}`);
             return res.redirect('/contas-a-pagar');
         }
 
@@ -169,13 +292,19 @@ router.post('/pagar/:id', validateParams(idParamSchema), validateBody(pagarConta
             [data_pagamento, fluxoCaixaId, contaId]
         );
 
-        console.log(`✅ Conta ID ${contaId} paga em ${data_pagamento}`);
+        console.log(`✅ Conta ID ${contaId} paga em ${data_pagamento} - R$ ${conta.valor}`);
 
         const redirectUrl = buildRedirectUrl('/contas-a-pagar', req.get('Referer'));
         res.redirect(redirectUrl);
     } catch (err) {
-        console.error('Erro ao registrar pagamento:', err);
-        res.status(500).send('Erro ao registrar pagamento: ' + err.message);
+        console.error('❌ Erro ao registrar pagamento:', err);
+        
+        return res.status(500).render('error', {
+            user: res.locals.user,
+            titulo: 'Erro ao Registrar Pagamento',
+            mensagem: `Não foi possível registrar o pagamento. ${err.message}`,
+            voltar_url: '/contas-a-pagar'
+        });
     }
 });
 
@@ -184,7 +313,9 @@ router.post('/pagar/:id', validateParams(idParamSchema), validateBody(pagarConta
 // ========================================
 
 router.post('/estornar/:id', validateParams(idParamSchema), async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração.');
+    if (!pool) {
+        return res.status(500).send('Erro de configuração.');
+    }
     
     const contaId = req.params.id;
     
@@ -202,6 +333,7 @@ router.post('/estornar/:id', validateParams(idParamSchema), async (req, res) => 
         }
         
         if (conta.status !== 'Pago') {
+            console.log(`⚠️ Tentativa de estornar conta não paga: ID ${contaId}`);
             return res.redirect('/contas-a-pagar');
         }
 
@@ -214,13 +346,20 @@ router.post('/estornar/:id', validateParams(idParamSchema), async (req, res) => 
         // PASSO 2: Deleta lançamento do fluxo de caixa DEPOIS
         if (conta.fluxo_caixa_id) {
             await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [conta.fluxo_caixa_id]);
+            console.log(`✅ Pagamento estornado: Conta ID ${contaId} - R$ ${conta.valor}`);
         }
 
         const redirectUrl = buildRedirectUrl('/contas-a-pagar', req.get('Referer'));
         res.redirect(redirectUrl);
     } catch (err) {
-        console.error('Erro ao estornar pagamento:', err);
-        res.status(500).send('Erro ao estornar pagamento: ' + err.message);
+        console.error('❌ Erro ao estornar pagamento:', err);
+        
+        return res.status(500).render('error', {
+            user: res.locals.user,
+            titulo: 'Erro ao Estornar Pagamento',
+            mensagem: `Não foi possível estornar o pagamento. ${err.message}`,
+            voltar_url: '/contas-a-pagar'
+        });
     }
 });
 
@@ -229,12 +368,14 @@ router.post('/estornar/:id', validateParams(idParamSchema), async (req, res) => 
 // ========================================
 
 router.post('/delete/:id', validateParams(idParamSchema), async (req, res) => {
-    if (!pool) return res.status(500).send('Erro de configuração.');
+    if (!pool) {
+        return res.status(500).send('Erro de configuração.');
+    }
     
     try {
         const { id } = req.params;
 
-        const contaResult = await pool.query('SELECT status FROM contas_a_pagar WHERE id = $1', [id]);
+        const contaResult = await pool.query('SELECT status, descricao, valor FROM contas_a_pagar WHERE id = $1', [id]);
         const conta = contaResult.rows[0];
         
         if (!conta) {
@@ -257,11 +398,19 @@ router.post('/delete/:id', validateParams(idParamSchema), async (req, res) => {
 
         await pool.query('DELETE FROM contas_a_pagar WHERE id = $1', [id]);
         
+        console.log(`🗑️ Conta excluída: ${conta.descricao} - R$ ${conta.valor}`);
+        
         const redirectUrl = buildRedirectUrl('/contas-a-pagar', req.get('Referer'));
         res.redirect(redirectUrl);
     } catch (err) {
-        console.error("Erro ao excluir conta a pagar:", err);
-        res.status(500).send('Erro ao excluir conta a pagar: ' + err.message);
+        console.error("❌ Erro ao excluir conta a pagar:", err);
+        
+        return res.status(500).render('error', {
+            user: res.locals.user,
+            titulo: 'Erro ao Excluir Conta',
+            mensagem: `Não foi possível excluir a conta. ${err.message}`,
+            voltar_url: '/contas-a-pagar'
+        });
     }
 });
 
