@@ -14,6 +14,28 @@ router.get('/', async (req, res) => {
   try {
     const { tipo, produto_id, data_inicial, data_fim } = req.query;
     
+    // Calcular métricas do mês atual
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    inicioMes.setHours(0, 0, 0, 0);
+    
+    const fimMes = new Date();
+    fimMes.setMonth(fimMes.getMonth() + 1);
+    fimMes.setDate(0);
+    fimMes.setHours(23, 59, 59, 999);
+    
+    const metricsResult = await pool.query(`
+      SELECT 
+        COUNT(CASE WHEN tipo = 'ENTRADA' THEN 1 END) as entradas_mes,
+        COUNT(CASE WHEN tipo = 'SAIDA' THEN 1 END) as saidas_mes,
+        COUNT(*) as total_movimentacoes,
+        COALESCE(SUM(CASE WHEN tipo = 'SAIDA' THEN valor_total ELSE 0 END), 0) as valor_total
+      FROM movimentacoes
+      WHERE created_at >= $1 AND created_at <= $2
+    `, [inicioMes, fimMes]);
+    
+    const metrics = metricsResult.rows[0];
+    
     let query = `
       SELECT m.*, p.descricao as produto_descricao, p.codigo as produto_codigo,
              f.nome as fornecedor_nome
@@ -62,7 +84,13 @@ router.get('/', async (req, res) => {
       produtos: produtos.rows || [],
       fornecedores: fornecedores.rows || [],
       rcas: rcas.rows || [],
-      filtros: { tipo, produto_id, data_inicial, data_fim }
+      filtros: { tipo, produto_id, data_inicial, data_fim },
+      metrics: {
+        entradas_mes: parseInt(metrics.entradas_mes) || 0,
+        saidas_mes: parseInt(metrics.saidas_mes) || 0,
+        total_movimentacoes: parseInt(metrics.total_movimentacoes) || 0,
+        valor_total: parseFloat(metrics.valor_total) || 0
+      }
     });
   } catch (err) {
     console.error('Erro ao buscar movimentações:', err.message);
