@@ -172,13 +172,82 @@
                   </span>
                 </td>
                 <td class="td-status">
-                  <% if (conta.status === 'Pago') { %>
-                    <span class="status-badge status-paid">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="20,6 9,17 4,12"></polyline>
-                      </svg>
-                      Pago
-                    </span>
+                <% if (conta.status !== 'Pago') { %>
+  <button 
+    class="btn-action success btn-pagar-conta" 
+    data-conta-id="<%= conta.id %>"
+    data-descricao="<%= conta.descricao %>"
+    data-fornecedor="<%= conta.fornecedor_nome || 'Não informado' %>"
+    data-valor="<%= conta.valor %>"
+    title="Registrar pagamento"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="20,6 9,17 4,12"></polyline>
+    </svg>
+  </button>
+<% } else { %>
+  <!-- Botão de estornar continua igual -->
+<% } %>
+
+<style>
+/* Estilos adicionais para o modal de pagamento */
+.payment-info {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.info-group {
+  margin-bottom: 12px;
+}
+
+.info-group:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.info-value {
+  font-size: 15px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.info-value.highlight {
+  font-size: 18px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.btn-success {
+  background: #059669;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #047857;
+}
+
+.field-hint small {
+  color: #f59e0b;
+  font-size: 12px;
+}
+</style>
                   <% } else { %>
                     <span class="status-badge status-pending">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -383,6 +452,69 @@
       </div>
     </form>
   </div>
+
+  <div id="modalPagamento" class="modal-overlay">
+  <div class="modal-container" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3 class="modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+          <line x1="1" y1="10" x2="23" y2="10"></line>
+        </svg>
+        Registrar Pagamento
+      </h3>
+      <button type="button" class="modal-close" onclick="fecharModalPagamento()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    
+    <form id="formPagamento" method="POST">
+      <div class="modal-body">
+        <div class="payment-info">
+          <div class="info-group">
+            <label class="info-label">Descrição da Conta</label>
+            <div class="info-value" id="pagamentoDescricao">-</div>
+          </div>
+          
+          <div class="info-row">
+            <div class="info-group">
+              <label class="info-label">Fornecedor</label>
+              <div class="info-value" id="pagamentoFornecedor">-</div>
+            </div>
+            
+            <div class="info-group">
+              <label class="info-label">Valor</label>
+              <div class="info-value highlight" id="pagamentoValor">R$ 0,00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-field" style="margin-top: 20px;">
+          <label class="field-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            Data do Pagamento *
+          </label>
+          <input 
+            type="date" 
+            class="field-input" 
+            id="dataPagamento" 
+            name="data_pagamento" 
+            required
+            max="<%= new Date().toISOString().split('T')[0] %>"
+          >
+          <div class="field-hint">
+            <small>⚠️ A data não pode ser futura</small>
+          </div>
+        </div>
+      </div>
 </div>
 
 <style>
@@ -1080,59 +1212,133 @@
 }
 </style>
 
+
 <script>
-// PAYABLES MANAGEMENT FUNCTIONS
-
-function abrirModalConta() {
-  document.getElementById('modalNovaConta').classList.add('active');
-  document.body.style.overflow = 'hidden';
-}
-
-function fecharModalConta() {
-  document.getElementById('modalNovaConta').classList.remove('active');
-  document.body.style.overflow = 'auto';
-}
-
-// Close modal on overlay click
-document.getElementById('modalNovaConta').addEventListener('click', function(e) {
-  if (e.target === this) {
-    fecharModalConta();
-  }
-});
-
-// Form validation
-document.querySelector('#modalNovaConta form').addEventListener('submit', function(e) {
-  const descricao = document.querySelector('input[name="descricao"]').value;
-  const valor = document.querySelector('input[name="valor"]').value;
-  const vencimento = document.querySelector('input[name="data_vencimento"]').value;
-  const categoria = document.querySelector('select[name="categoria_id"]').value;
-  
-  if (!descricao || !valor || !vencimento || !categoria) {
-    e.preventDefault();
-    alert('Por favor, preencha todos os campos obrigatórios.');
-  }
-});
-
-// Auto-focus modal inputs
-function abrirModalConta() {
-  document.getElementById('modalNovaConta').classList.add('active');
-  document.body.style.overflow = 'hidden';
-  setTimeout(() => {
-    document.querySelector('input[name="descricao"]').focus();
-  }, 100);
-}
-
-// Set default due date to 30 days from today
 document.addEventListener('DOMContentLoaded', function() {
-  const hoje = new Date();
-  const vencimento = new Date(hoje.getTime() + (30 * 24 * 60 * 60 * 1000));
-  const vencimentoFormatado = vencimento.toISOString().split('T')[0];
+  console.log('📄 DOM carregado, configurando modal de pagamento...');
   
-  const campoVencimento = document.querySelector('input[name="data_vencimento"]');
-  if (campoVencimento && !campoVencimento.value) {
-    campoVencimento.value = vencimentoFormatado;
+  // Event delegation para botões de pagar conta
+  document.addEventListener('click', function(e) {
+    const btnPagar = e.target.closest('.btn-pagar-conta');
+    if (!btnPagar) return;
+    
+    const contaId = btnPagar.dataset.contaId;
+    const descricao = btnPagar.dataset.descricao;
+    const fornecedor = btnPagar.dataset.fornecedor;
+    const valor = btnPagar.dataset.valor;
+    
+    abrirModalPagamento(contaId, descricao, fornecedor, valor);
+  });
+  
+  const modalEl = document.getElementById('modalPagamento');
+  const formEl = document.getElementById('formPagamento');
+  
+  if (!modalEl || !formEl) {
+    console.error('❌ Modal de pagamento não encontrado!');
+    return;
   }
+
+  // Fechar modal ao clicar fora
+  modalEl.addEventListener('click', function(e) {
+    if (e.target === modalEl) {
+      fecharModalPagamento();
+    }
+  });
+
+  // Fechar modal com ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modalEl.classList.contains('active')) {
+      fecharModalPagamento();
+    }
+  });
+
+  // Validação do formulário
+  formEl.addEventListener('submit', function(e) {
+    const dataPagamento = document.getElementById('dataPagamento').value;
+    
+    if (!dataPagamento) {
+      e.preventDefault();
+      alert('Por favor, selecione a data do pagamento.');
+      return;
+    }
+    
+    // Validar se a data não é futura
+    const hoje = new Date().toISOString().split('T')[0];
+    if (dataPagamento > hoje) {
+      e.preventDefault();
+      alert('A data de pagamento não pode ser no futuro.');
+      return;
+    }
+    
+    const confirmacao = confirm('Confirma o pagamento desta conta na data selecionada?');
+    if (!confirmacao) {
+      e.preventDefault();
+      return;
+    }
+    
+    console.log('✅ Formulário validado e enviado');
+  });
+
+  console.log('✅ Modal de pagamento configurado com sucesso');
 });
+
+// Abrir modal de pagamento com dados da conta
+function abrirModalPagamento(contaId, descricao, fornecedor, valor) {
+  console.log('🔓 Abrindo modal de pagamento', { contaId, descricao, fornecedor, valor });
+  
+  try {
+    const modalEl = document.getElementById('modalPagamento');
+    const formEl = document.getElementById('formPagamento');
+    const descricaoEl = document.getElementById('pagamentoDescricao');
+    const fornecedorEl = document.getElementById('pagamentoFornecedor');
+    const valorEl = document.getElementById('pagamentoValor');
+    const dataEl = document.getElementById('dataPagamento');
+
+    if (!modalEl || !formEl || !descricaoEl || !fornecedorEl || !valorEl || !dataEl) {
+      console.error('❌ Erro: Elementos do modal não encontrados');
+      alert('Erro interno: Elementos do modal não encontrados. Recarregue a página.');
+      return;
+    }
+
+    // Preencher dados da conta
+    descricaoEl.textContent = descricao;
+    fornecedorEl.textContent = fornecedor;
+    valorEl.textContent = 'R$ ' + parseFloat(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    
+    // Configurar action do form
+    formEl.action = '/contas-a-pagar/pagar/' + contaId;
+    
+    // Setar data padrão como hoje
+    const hoje = new Date().toISOString().split('T')[0];
+    dataEl.value = hoje;
+    
+    // Abrir modal
+    modalEl.classList.add('active');
+    modalEl.style.display = 'flex';
+    
+    console.log('✅ Modal aberto com sucesso');
+    
+    // Focus no input de data
+    setTimeout(() => {
+      dataEl.focus();
+    }, 300);
+    
+  } catch (error) {
+    console.error('❌ Erro ao abrir modal:', error);
+    alert('Erro ao abrir modal de pagamento. Recarregue a página e tente novamente.');
+  }
+}
+
+// Fechar modal de pagamento
+function fecharModalPagamento() {
+  console.log('🔒 Fechando modal de pagamento');
+  
+  const modalEl = document.getElementById('modalPagamento');
+  if (modalEl) {
+    modalEl.classList.remove('active');
+    modalEl.style.display = 'none';
+  }
+}
 </script>
 
 <%- include('partials/footer') %>

@@ -13,6 +13,17 @@ const idParamSchema = Joi.object({
   id: Joi.number().integer().positive().required()
 });
 
+const pagarContaSchema = Joi.object({
+  data_pagamento: Joi.date()
+    .iso()
+    .max('now')
+    .required()
+    .messages({
+      'any.required': 'Data de pagamento é obrigatória',
+      'date.max': 'Data não pode ser futura'
+    })
+});
+
 // ========================================
 // HELPER: Preservar query params no redirect
 // ========================================
@@ -21,7 +32,7 @@ function buildRedirectUrl(baseUrl, referer) {
   try {
     if (referer) {
       const url = new URL(referer);
-      const queryString = url.search; // Pega ?param1=value1&param2=value2
+      const queryString = url.search;
       return baseUrl + queryString;
     }
   } catch (e) {
@@ -89,7 +100,6 @@ router.post('/', validateBody(createContaPagarSchema), async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     
     try {
-        // Dados já validados e sanitizados pelo Joi
         const { descricao, fornecedor_id, valor, data_vencimento, categoria_id } = req.body;
         
         await pool.query(
@@ -97,13 +107,11 @@ router.post('/', validateBody(createContaPagarSchema), async (req, res) => {
             [descricao, fornecedor_id || null, valor, data_vencimento, categoria_id]
         );
         
-        // Preserva filtros no redirect
         const redirectUrl = buildRedirectUrl('/contas-a-pagar', req.get('Referer'));
         res.redirect(redirectUrl);
     } catch(err) {
         console.error('Erro ao criar conta a pagar:', err);
         
-        // Tratamento específico de erros
         if (err.code === '23503') {
             return res.render('error', {
                 user: res.locals.user,
@@ -118,13 +126,14 @@ router.post('/', validateBody(createContaPagarSchema), async (req, res) => {
 });
 
 // ========================================
-// POST /pagar/:id - Registrar pagamento
+// POST /pagar/:id - Registrar pagamento com data customizada
 // ========================================
 
-router.post('/pagar/:id', validateParams(idParamSchema), async (req, res) => {
+router.post('/pagar/:id', validateParams(idParamSchema), validateBody(pagarContaSchema), async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     
-    const contaId = req.params.id; // Já validado pelo middleware
+    const contaId = req.params.id;
+    const { data_pagamento } = req.body;
     
     try {
         const contaResult = await pool.query('SELECT * FROM contas_a_pagar WHERE id = $1', [contaId]);
@@ -134,7 +143,8 @@ router.post('/pagar/:id', validateParams(idParamSchema), async (req, res) => {
             return res.render('error', { 
                 user: res.locals.user, 
                 titulo: 'Erro', 
-                mensagem: 'Conta não encontrada.' 
+                mensagem: 'Conta não encontrada.',
+                voltar_url: '/contas-a-pagar'
             });
         }
         
@@ -142,24 +152,25 @@ router.post('/pagar/:id', validateParams(idParamSchema), async (req, res) => {
             return res.redirect('/contas-a-pagar');
         }
 
-        const dataPagamento = new Date().toISOString().split('T')[0];
         const descricaoFluxo = `Pagamento: ${conta.descricao}`;
 
-        // Lança a saída no fluxo de caixa usando a categoria da conta
+        // Lança a saída no fluxo de caixa com a data escolhida
         const fluxoResult = await pool.query(
             `INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id, status) 
              VALUES ($1, 'DEBITO', $2, $3, $4, 'PAGO') 
              RETURNING id`,
-            [dataPagamento, conta.valor, descricaoFluxo, conta.categoria_id]
+            [data_pagamento, conta.valor, descricaoFluxo, conta.categoria_id]
         );
         const fluxoCaixaId = fluxoResult.rows[0].id;
 
+        // Atualiza a conta com a data escolhida
         await pool.query(
             `UPDATE contas_a_pagar SET status = 'Pago', data_pagamento = $1, fluxo_caixa_id = $2 WHERE id = $3`,
-            [dataPagamento, fluxoCaixaId, contaId]
+            [data_pagamento, fluxoCaixaId, contaId]
         );
 
-        // Preserva filtros no redirect
+        console.log(`✅ Conta ID ${contaId} paga em ${data_pagamento}`);
+
         const redirectUrl = buildRedirectUrl('/contas-a-pagar', req.get('Referer'));
         res.redirect(redirectUrl);
     } catch (err) {
@@ -175,7 +186,7 @@ router.post('/pagar/:id', validateParams(idParamSchema), async (req, res) => {
 router.post('/estornar/:id', validateParams(idParamSchema), async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     
-    const contaId = req.params.id; // Já validado pelo middleware
+    const contaId = req.params.id;
     
     try {
         const contaResult = await pool.query('SELECT * FROM contas_a_pagar WHERE id = $1', [contaId]);
@@ -185,7 +196,8 @@ router.post('/estornar/:id', validateParams(idParamSchema), async (req, res) => 
             return res.render('error', { 
                 user: res.locals.user, 
                 titulo: 'Erro', 
-                mensagem: 'Conta a pagar não encontrada.'
+                mensagem: 'Conta a pagar não encontrada.',
+                voltar_url: '/contas-a-pagar'
             });
         }
         
@@ -193,18 +205,17 @@ router.post('/estornar/:id', validateParams(idParamSchema), async (req, res) => 
             return res.redirect('/contas-a-pagar');
         }
 
-        // PASSO 1: Atualiza a conta a pagar PRIMEIRO, removendo a referência ao fluxo_caixa_id
+        // PASSO 1: Atualiza a conta PRIMEIRO
         await pool.query(
             `UPDATE contas_a_pagar SET status = 'Pendente', data_pagamento = NULL, fluxo_caixa_id = NULL WHERE id = $1`,
             [contaId]
         );
 
-        // PASSO 2: Se a conta tinha um lançamento no caixa associado, deleta ele DEPOIS
+        // PASSO 2: Deleta lançamento do fluxo de caixa DEPOIS
         if (conta.fluxo_caixa_id) {
             await pool.query('DELETE FROM fluxo_caixa WHERE id = $1', [conta.fluxo_caixa_id]);
         }
 
-        // Preserva filtros no redirect
         const redirectUrl = buildRedirectUrl('/contas-a-pagar', req.get('Referer'));
         res.redirect(redirectUrl);
     } catch (err) {
@@ -221,9 +232,8 @@ router.post('/delete/:id', validateParams(idParamSchema), async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
     
     try {
-        const { id } = req.params; // Já validado pelo middleware
+        const { id } = req.params;
 
-        // Medida de segurança: só permite excluir contas que ainda não foram pagas
         const contaResult = await pool.query('SELECT status FROM contas_a_pagar WHERE id = $1', [id]);
         const conta = contaResult.rows[0];
         
@@ -231,7 +241,8 @@ router.post('/delete/:id', validateParams(idParamSchema), async (req, res) => {
             return res.render('error', { 
                 user: res.locals.user, 
                 titulo: 'Erro', 
-                mensagem: 'Conta não encontrada.' 
+                mensagem: 'Conta não encontrada.',
+                voltar_url: '/contas-a-pagar'
             });
         }
         
@@ -239,13 +250,13 @@ router.post('/delete/:id', validateParams(idParamSchema), async (req, res) => {
             return res.render('error', { 
                 user: res.locals.user, 
                 titulo: 'Ação Bloqueada', 
-                mensagem: 'Não é possível excluir uma conta que já foi paga. Você deve estornar o pagamento primeiro.' 
+                mensagem: 'Não é possível excluir uma conta que já foi paga. Você deve estornar o pagamento primeiro.',
+                voltar_url: '/contas-a-pagar'
             });
         }
 
         await pool.query('DELETE FROM contas_a_pagar WHERE id = $1', [id]);
         
-        // Preserva filtros no redirect
         const redirectUrl = buildRedirectUrl('/contas-a-pagar', req.get('Referer'));
         res.redirect(redirectUrl);
     } catch (err) {
