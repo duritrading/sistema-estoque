@@ -13,6 +13,18 @@ const idParamSchema = Joi.object({
   id: Joi.number().integer().positive().required()
 });
 
+const receberContaSchema = Joi.object({
+  data_recebimento: Joi.date()
+    .iso()
+    .max('now')
+    .required()
+    .messages({
+      'date.base': 'Data de recebimento inválida',
+      'date.max': 'Data de recebimento não pode ser futura',
+      'any.required': 'Data de recebimento é obrigatória'
+    })
+});
+
 // ========================================
 // HELPER: Preservar query params no redirect
 // ========================================
@@ -87,14 +99,14 @@ router.get('/', async (req, res) => {
 });
 
 // ========================================
-// POST /registrar-pagamento/:id - Registrar pagamento
+// POST /receber/:id - Registrar recebimento com data customizada
 // ========================================
 
-router.post('/registrar-pagamento/:id', validateParams(idParamSchema), async (req, res) => {
+router.post('/receber/:id', validateParams(idParamSchema), validateBody(receberContaSchema), async (req, res) => {
     if (!pool) return res.status(500).send('Erro de configuração.');
 
-    const contaId = req.params.id; // Já validado pelo middleware
-    const dataPagamento = new Date().toISOString().split('T')[0];
+    const contaId = req.params.id;
+    const { data_recebimento } = req.body;
     
     try {
         const contaResult = await pool.query(`
@@ -110,7 +122,8 @@ router.post('/registrar-pagamento/:id', validateParams(idParamSchema), async (re
             return res.render('error', { 
                 user: res.locals.user, 
                 titulo: 'Erro', 
-                mensagem: 'Conta a receber não encontrada.' 
+                mensagem: 'Conta a receber não encontrada.',
+                voltar_url: '/contas-a-receber'
             });
         }
         
@@ -120,28 +133,33 @@ router.post('/registrar-pagamento/:id', validateParams(idParamSchema), async (re
 
         const descricaoFluxo = `Recebimento Parcela ${conta.numero_parcela}/${conta.total_parcelas} - ${conta.produto_descricao || conta.cliente_nome}`;
         
+        // Usar a data escolhida pelo usuário ao invés da data atual
         const insertResult = await pool.query(`
             INSERT INTO fluxo_caixa (data_operacao, tipo, valor, descricao, categoria_id, status)
             VALUES ($1, 'CREDITO', $2, $3, $4, 'PAGO')
             RETURNING id
-        `, [dataPagamento, conta.valor, descricaoFluxo, 1]);
+        `, [data_recebimento, conta.valor, descricaoFluxo, 1]);
 
         const fluxoCaixaId = insertResult.rows[0].id;
 
+        // Atualizar com a data de recebimento escolhida
         await pool.query(
             `UPDATE contas_a_receber SET status = 'Pago', data_pagamento = $1, fluxo_caixa_id = $2 WHERE id = $3`,
-            [dataPagamento, fluxoCaixaId, contaId]
+            [data_recebimento, fluxoCaixaId, contaId]
         );
+        
+        console.log(`✅ Conta ID ${contaId} recebida em ${data_recebimento}`);
         
         // Preserva filtros no redirect
         const redirectUrl = buildRedirectUrl('/contas-a-receber', req.get('Referer'));
         res.redirect(redirectUrl);
     } catch (err) {
-        console.error("Erro ao registrar pagamento:", err);
+        console.error("Erro ao registrar recebimento:", err);
         return res.render('error', { 
             user: res.locals.user, 
             titulo: 'Erro', 
-            mensagem: 'Não foi possível registrar o pagamento: ' + err.message 
+            mensagem: 'Não foi possível registrar o recebimento: ' + err.message,
+            voltar_url: '/contas-a-receber'
         });
     }
 });
@@ -204,7 +222,8 @@ router.post('/delete/:id', validateParams(idParamSchema), async (req, res) => {
             return res.render('error', { 
                 user: res.locals.user, 
                 titulo: 'Erro', 
-                mensagem: 'Conta não encontrada.' 
+                mensagem: 'Conta não encontrada.',
+                voltar_url: '/contas-a-receber'
             });
         }
         
@@ -212,7 +231,8 @@ router.post('/delete/:id', validateParams(idParamSchema), async (req, res) => {
             return res.render('error', { 
                 user: res.locals.user, 
                 titulo: 'Ação Bloqueada', 
-                mensagem: 'Esta conta está vinculada a uma movimentação e não pode ser excluída diretamente.' 
+                mensagem: 'Esta conta está vinculada a uma movimentação e não pode ser excluída diretamente.',
+                voltar_url: '/contas-a-receber'
             });
         }
         
@@ -220,7 +240,8 @@ router.post('/delete/:id', validateParams(idParamSchema), async (req, res) => {
             return res.render('error', { 
                 user: res.locals.user, 
                 titulo: 'Ação Bloqueada', 
-                mensagem: 'Não é possível excluir uma conta que já foi paga.' 
+                mensagem: 'Não é possível excluir uma conta que já foi paga.',
+                voltar_url: '/contas-a-receber'
             });
         }
         
