@@ -172,82 +172,13 @@
                   </span>
                 </td>
                 <td class="td-status">
-                <% if (conta.status !== 'Pago') { %>
-  <button 
-    class="btn-action success btn-pagar-conta" 
-    data-conta-id="<%= conta.id %>"
-    data-descricao="<%= conta.descricao %>"
-    data-fornecedor="<%= conta.fornecedor_nome || 'Não informado' %>"
-    data-valor="<%= conta.valor %>"
-    title="Registrar pagamento"
-  >
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <polyline points="20,6 9,17 4,12"></polyline>
-    </svg>
-  </button>
-<% } else { %>
-  <!-- Botão de estornar continua igual -->
-<% } %>
-
-<style>
-/* Estilos adicionais para o modal de pagamento */
-.payment-info {
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.info-group {
-  margin-bottom: 12px;
-}
-
-.info-group:last-child {
-  margin-bottom: 0;
-}
-
-.info-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-  display: block;
-}
-
-.info-value {
-  font-size: 15px;
-  color: #1e293b;
-  font-weight: 500;
-}
-
-.info-value.highlight {
-  font-size: 18px;
-  font-weight: 700;
-  color: #059669;
-}
-
-.info-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.btn-success {
-  background: #059669;
-  color: white;
-}
-
-.btn-success:hover {
-  background: #047857;
-}
-
-.field-hint small {
-  color: #f59e0b;
-  font-size: 12px;
-}
-</style>
+                  <% if (conta.status === 'Pago') { %>
+                    <span class="status-badge status-paid">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20,6 9,17 4,12"></polyline>
+                      </svg>
+                      Pago
+                    </span>
                   <% } else { %>
                     <span class="status-badge status-pending">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -264,15 +195,20 @@
                 <td class="td-actions">
                   <div class="action-buttons">
                     <% if (conta.status === 'Pendente') { %>
-                      <form action="/contas-a-pagar/pagar/<%= conta.id %>" method="POST" style="display: inline;" 
-                            onsubmit="return confirm('Confirma o pagamento desta conta?');">
-                        <button type="submit" class="btn-action btn-success" title="Registrar pagamento">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                          </svg>
-                          Pagar
-                        </button>
-                      </form>
+                      <button 
+                        type="button"
+                        class="btn-action btn-success btn-pagar-conta" 
+                        data-conta-id="<%= conta.id %>"
+                        data-descricao="<%= conta.descricao %>"
+                        data-fornecedor="<%= conta.fornecedor_nome || 'Não informado' %>"
+                        data-valor="<%= conta.valor %>"
+                        title="Registrar pagamento"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                        Pagar
+                      </button>
 
                       <form action="/contas-a-pagar/delete/<%= conta.id %>" method="POST" style="display: inline;" 
                             onsubmit="return confirm('Confirma a exclusão desta conta?');">
@@ -452,8 +388,10 @@
       </div>
     </form>
   </div>
+</div>
 
-  <div id="modalPagamento" class="modal-overlay">
+<!-- PAYMENT MODAL -->
+<div id="modalPagamento" class="modal-overlay">
   <div class="modal-container" style="max-width: 500px;">
     <div class="modal-header">
       <h3 class="modal-title">
@@ -511,10 +449,28 @@
             max="<%= new Date().toISOString().split('T')[0] %>"
           >
           <div class="field-hint">
-            <small>⚠️ A data não pode ser futura</small>
+            <small style="color: #f59e0b;">⚠️ A data não pode ser futura</small>
           </div>
         </div>
       </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn-modal btn-secondary" onclick="fecharModalPagamento()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          Cancelar
+        </button>
+        <button type="submit" class="btn-modal btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20,6 9,17 4,12"></polyline>
+          </svg>
+          Confirmar Pagamento
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <style>
@@ -646,16 +602,6 @@
   font-size: 14px;
   color: #1e40af;
   line-height: 1.5;
-}
-
-.banner-link {
-  color: var(--primary-color);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.banner-link:hover {
-  text-decoration: underline;
 }
 
 /* CONTROLS PANEL */
@@ -1036,6 +982,8 @@
   max-width: 600px;
   max-height: 90vh;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -1045,6 +993,7 @@
   justify-content: space-between;
   align-items: center;
   background: #f8fafc;
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -1073,6 +1022,8 @@
 
 .modal-body {
   padding: 24px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .form-row {
@@ -1136,6 +1087,7 @@
   justify-content: flex-end;
   gap: 12px;
   background: #f8fafc;
+  flex-shrink: 0;
 }
 
 .btn-modal {
@@ -1149,6 +1101,50 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+/* PAYMENT MODAL SPECIFIC */
+.payment-info {
+  background: #f8fafc;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.info-group {
+  margin-bottom: 12px;
+}
+
+.info-group:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.info-value {
+  font-size: 15px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.info-value.highlight {
+  font-size: 18px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
 /* RESPONSIVE DESIGN */
@@ -1182,7 +1178,7 @@
     font-size: 24px;
   }
   
-  .form-row {
+  .form-row, .info-row {
     grid-template-columns: 1fr;
   }
   
@@ -1212,12 +1208,71 @@
 }
 </style>
 
-
 <script>
+function abrirModalConta() {
+  document.getElementById('modalNovaConta').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharModalConta() {
+  document.getElementById('modalNovaConta').classList.remove('active');
+  document.body.style.overflow = 'auto';
+}
+
+function abrirModalPagamento(contaId, descricao, fornecedor, valor) {
+  console.log('🔓 Abrindo modal de pagamento', { contaId, descricao, fornecedor, valor });
+  
+  try {
+    const modalEl = document.getElementById('modalPagamento');
+    const formEl = document.getElementById('formPagamento');
+    const descricaoEl = document.getElementById('pagamentoDescricao');
+    const fornecedorEl = document.getElementById('pagamentoFornecedor');
+    const valorEl = document.getElementById('pagamentoValor');
+    const dataEl = document.getElementById('dataPagamento');
+
+    if (!modalEl || !formEl || !descricaoEl || !fornecedorEl || !valorEl || !dataEl) {
+      console.error('❌ Erro: Elementos do modal não encontrados');
+      alert('Erro interno: Elementos do modal não encontrados. Recarregue a página.');
+      return;
+    }
+
+    descricaoEl.textContent = descricao;
+    fornecedorEl.textContent = fornecedor;
+    valorEl.textContent = 'R$ ' + parseFloat(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    
+    formEl.action = '/contas-a-pagar/pagar/' + contaId;
+    
+    const hoje = new Date().toISOString().split('T')[0];
+    dataEl.value = hoje;
+    
+    modalEl.classList.add('active');
+    modalEl.style.display = 'flex';
+    
+    console.log('✅ Modal aberto com sucesso');
+    
+    setTimeout(() => {
+      dataEl.focus();
+    }, 300);
+    
+  } catch (error) {
+    console.error('❌ Erro ao abrir modal:', error);
+    alert('Erro ao abrir modal de pagamento. Recarregue a página e tente novamente.');
+  }
+}
+
+function fecharModalPagamento() {
+  console.log('🔒 Fechando modal de pagamento');
+  const modalEl = document.getElementById('modalPagamento');
+  if (modalEl) {
+    modalEl.classList.remove('active');
+    modalEl.style.display = 'none';
+  }
+  document.body.style.overflow = 'auto';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   console.log('📄 DOM carregado, configurando modal de pagamento...');
   
-  // Event delegation para botões de pagar conta
   document.addEventListener('click', function(e) {
     const btnPagar = e.target.closest('.btn-pagar-conta');
     if (!btnPagar) return;
@@ -1238,21 +1293,18 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
 
-  // Fechar modal ao clicar fora
   modalEl.addEventListener('click', function(e) {
     if (e.target === modalEl) {
       fecharModalPagamento();
     }
   });
 
-  // Fechar modal com ESC
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && modalEl.classList.contains('active')) {
       fecharModalPagamento();
     }
   });
 
-  // Validação do formulário
   formEl.addEventListener('submit', function(e) {
     const dataPagamento = document.getElementById('dataPagamento').value;
     
@@ -1262,7 +1314,6 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Validar se a data não é futura
     const hoje = new Date().toISOString().split('T')[0];
     if (dataPagamento > hoje) {
       e.preventDefault();
@@ -1281,64 +1332,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   console.log('✅ Modal de pagamento configurado com sucesso');
 });
-
-// Abrir modal de pagamento com dados da conta
-function abrirModalPagamento(contaId, descricao, fornecedor, valor) {
-  console.log('🔓 Abrindo modal de pagamento', { contaId, descricao, fornecedor, valor });
-  
-  try {
-    const modalEl = document.getElementById('modalPagamento');
-    const formEl = document.getElementById('formPagamento');
-    const descricaoEl = document.getElementById('pagamentoDescricao');
-    const fornecedorEl = document.getElementById('pagamentoFornecedor');
-    const valorEl = document.getElementById('pagamentoValor');
-    const dataEl = document.getElementById('dataPagamento');
-
-    if (!modalEl || !formEl || !descricaoEl || !fornecedorEl || !valorEl || !dataEl) {
-      console.error('❌ Erro: Elementos do modal não encontrados');
-      alert('Erro interno: Elementos do modal não encontrados. Recarregue a página.');
-      return;
-    }
-
-    // Preencher dados da conta
-    descricaoEl.textContent = descricao;
-    fornecedorEl.textContent = fornecedor;
-    valorEl.textContent = 'R$ ' + parseFloat(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    
-    // Configurar action do form
-    formEl.action = '/contas-a-pagar/pagar/' + contaId;
-    
-    // Setar data padrão como hoje
-    const hoje = new Date().toISOString().split('T')[0];
-    dataEl.value = hoje;
-    
-    // Abrir modal
-    modalEl.classList.add('active');
-    modalEl.style.display = 'flex';
-    
-    console.log('✅ Modal aberto com sucesso');
-    
-    // Focus no input de data
-    setTimeout(() => {
-      dataEl.focus();
-    }, 300);
-    
-  } catch (error) {
-    console.error('❌ Erro ao abrir modal:', error);
-    alert('Erro ao abrir modal de pagamento. Recarregue a página e tente novamente.');
-  }
-}
-
-// Fechar modal de pagamento
-function fecharModalPagamento() {
-  console.log('🔒 Fechando modal de pagamento');
-  
-  const modalEl = document.getElementById('modalPagamento');
-  if (modalEl) {
-    modalEl.classList.remove('active');
-    modalEl.style.display = 'none';
-  }
-}
 </script>
 
 <%- include('partials/footer') %>
