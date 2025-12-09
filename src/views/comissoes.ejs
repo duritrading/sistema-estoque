@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comissões de RCAs - OF Distribuidora</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .comissoes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .filtros-form {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .filtros-form select, .filtros-form input {
+      padding: 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 0;
+    }
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { color: var(--text-primary); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .kpi-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .kpi-card h3 {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+    .kpi-card .valor {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .kpi-card .valor.destaque { color: var(--success); }
+    .kpi-card .valor.alerta { color: var(--warning); }
+    
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 1.5rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .table-container {
+      overflow-x: auto;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+    th {
+      background: var(--bg-primary);
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    tr:hover { background: rgba(255,255,255,0.02); }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-pendente { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+    .badge-pago { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+    .badge-cancelado { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { opacity: 0.9; }
+    .btn-danger { background: var(--error); color: white; }
+    .btn-danger:hover { opacity: 0.9; }
+    .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); }
+    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+    
+    .actions-cell {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+    
+    .percentual-input {
+      width: 65px;
+      padding: 0.35rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      text-align: center;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .modal-header h2 { margin: 0; font-size: 1.25rem; }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+    .preview-box {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    .preview-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .preview-row:last-child { border-bottom: none; }
+    .preview-label { color: var(--text-secondary); }
+    .preview-value { font-weight: 600; }
+    .preview-value.total { color: var(--success); font-size: 1.25rem; }
+    
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-secondary);
+    }
+    
+    .info-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+    .info-box strong { color: var(--accent); }
+    
+    .search-input {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      width: 250px;
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/sidebar') %>
+  
+  <main class="main-content">
+    <div class="comissoes-header">
+      <h1>💰 Comissões de RCAs</h1>
+      
+      <form class="filtros-form" method="GET" action="/comissoes">
+        <select name="mes">
+          <% for(let m = 1; m <= 12; m++) { %>
+            <option value="<%= m %>" <%= filtros.mes == m ? 'selected' : '' %>>
+              <%= new Date(2000, m-1).toLocaleString('pt-BR', {month: 'long'}) %>
+            </option>
+          <% } %>
+        </select>
+        
+        <select name="ano">
+          <% for(let a = new Date().getFullYear(); a >= 2020; a--) { %>
+            <option value="<%= a %>" <%= filtros.ano == a ? 'selected' : '' %>><%= a %></option>
+          <% } %>
+        </select>
+        
+        <select name="rca_id">
+          <option value="">Todos os RCAs</option>
+          <% rcasList.forEach(rca => { %>
+            <option value="<%= rca.id %>" <%= filtros.rca_id == rca.id ? 'selected' : '' %>><%= rca.nome %></option>
+          <% }) %>
+        </select>
+        
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+      </form>
+    </div>
+
+    <div class="info-box">
+      <strong>📌 Comissão por Produto:</strong> Cada produto tem seu próprio percentual de comissão. 
+      O RCA recebe a soma das comissões dos produtos que vendeu.
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <h3>Total Vendas no Período</h3>
+        <div class="valor">R$ <%= totais.total_vendas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
+      </div>
+      <div class="kpi-card">
+        <h3>Total Comissões a Pagar</h3>
+        <div class="valor alerta">R$ <%= totais.total_comissoes.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
+      </div>
+      <div class="kpi-card">
+        <h3>RCAs com Vendas</h3>
+        <div class="valor"><%= totais.total_rcas %></div>
+      </div>
+      <div class="kpi-card">
+        <h3>Período</h3>
+        <div class="valor" style="font-size: 1rem;"><%= new Date(filtros.periodo_inicio).toLocaleDateString('pt-BR') %> a <%= new Date(filtros.periodo_fim).toLocaleDateString('pt-BR') %></div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('rcas')">📊 Vendas por RCA</button>
+      <button class="tab-btn" onclick="showTab('produtos')">📦 Comissão por Produto</button>
+      <button class="tab-btn" onclick="showTab('historico')">📋 Histórico de Pagamentos</button>
+    </div>
+
+    <!-- Tab: Vendas por RCA -->
+    <div id="tab-rcas" class="tab-content active">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>RCA</th>
+              <th>Praça</th>
+              <th class="text-center">Vendas</th>
+              <th class="text-right">Valor Vendas</th>
+              <th class="text-right">Valor Comissão</th>
+              <th class="text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (rcas.length === 0) { %>
+              <tr>
+                <td colspan="6" class="empty-state">Nenhum RCA encontrado</td>
+              </tr>
+            <% } else { %>
+              <% rcas.forEach(rca => { %>
+                <tr>
+                  <td><strong><%= rca.nome %></strong></td>
+                  <td><%= rca.praca || '-' %></td>
+                  <td class="text-center"><%= rca.qtd_vendas %></td>
+                  <td class="text-right">R$ <%= rca.vendas_periodo.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+                  <td class="text-right" style="color: var(--success); font-weight: 600;">
+                    R$ <%= rca.valor_comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+                  </td>
+                  <td class="text-right">
+                    <div class="actions-cell">
+                      <% if (rca.vendas_periodo > 0) { %>
+                        <button class="btn btn-outline btn-sm" onclick="verDetalhes(<%= rca.id %>, '<%= rca.nome %>')">
+                          Ver Detalhes
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="abrirModalGerar(<%= rca.id %>, '<%= rca.nome %>')">
+                          Gerar Comissão
+                        </button>
+                      <% } else { %>
+                        <span style="color: var(--text-secondary);">Sem vendas</span>
+                      <% } %>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+          <tfoot>
+            <tr style="background: var(--bg-primary); font-weight: 600;">
+              <td colspan="3">TOTAL</td>
+              <td class="text-right">R$ <%= totais.total_vendas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+              <td class="text-right" style="color: var(--success);">R$ <%= totais.total_comissoes.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Comissão por Produto -->
+    <div id="tab-produtos" class="tab-content">
+      <div style="margin-bottom: 1rem;">
+        <input type="text" class="search-input" placeholder="Buscar produto..." id="searchProduto" onkeyup="filtrarProdutos()">
+      </div>
+      
+      <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+        <table id="tabelaProdutos">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Produto</th>
+              <th class="text-center">% Comissão</th>
+              <th class="text-center">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% produtos.forEach(prod => { %>
+              <tr>
+                <td><strong><%= prod.codigo %></strong></td>
+                <td><%= prod.descricao %></td>
+                <td class="text-center">
+                  <input type="number" class="percentual-input" 
+                         id="comissao-<%= prod.id %>"
+                         value="<%= prod.percentual_comissao %>" 
+                         step="0.5" min="0" max="100">%
+                </td>
+                <td class="text-center">
+                  <button class="btn btn-primary btn-sm" onclick="salvarComissaoProduto(<%= prod.id %>)">
+                    Salvar
+                  </button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Histórico de Pagamentos -->
+    <div id="tab-historico" class="tab-content">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>RCA</th>
+              <th>Período</th>
+              <th class="text-right">Valor Vendas</th>
+              <th class="text-right">Valor Comissão</th>
+              <th class="text-center">Status</th>
+              <th class="text-center">Data Pagamento</th>
+              <th class="text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (comissoes.length === 0) { %>
+              <tr>
+                <td colspan="7" class="empty-state">Nenhuma comissão registrada neste período</td>
+              </tr>
+            <% } else { %>
+              <% comissoes.forEach(c => { %>
+                <tr>
+                  <td><strong><%= c.rca_nome %></strong></td>
+                  <td><%= new Date(c.periodo_inicio).toLocaleDateString('pt-BR') %> - <%= new Date(c.periodo_fim).toLocaleDateString('pt-BR') %></td>
+                  <td class="text-right">R$ <%= parseFloat(c.valor_vendas).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+                  <td class="text-right" style="font-weight: 600;">R$ <%= parseFloat(c.valor_comissao).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+                  <td class="text-center">
+                    <span class="badge badge-<%= c.status.toLowerCase() %>"><%= c.status %></span>
+                  </td>
+                  <td class="text-center"><%= c.data_pagamento ? new Date(c.data_pagamento).toLocaleDateString('pt-BR') : '-' %></td>
+                  <td class="text-right">
+                    <div class="actions-cell">
+                      <button class="btn btn-outline btn-sm" onclick="verItensComissao(<%= c.id %>)">
+                        Ver Itens
+                      </button>
+                      <% if (c.status === 'PENDENTE') { %>
+                        <button class="btn btn-success btn-sm" onclick="abrirModalPagar(<%= c.id %>, '<%= c.rca_nome %>', <%= c.valor_comissao %>)">
+                          Pagar
+                        </button>
+                        <form action="/comissoes/cancelar/<%= c.id %>" method="POST" style="display: inline;" 
+                              onsubmit="return confirm('Cancelar esta comissão?')">
+                          <button type="submit" class="btn btn-danger btn-sm">Cancelar</button>
+                        </form>
+                      <% } %>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Gerar Comissão -->
+  <div id="modalGerar" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Gerar Comissão</h2>
+        <button class="modal-close" onclick="fecharModal('modalGerar')">&times;</button>
+      </div>
+      
+      <form action="/comissoes/gerar" method="POST">
+        <input type="hidden" name="rca_id" id="gerarRcaId">
+        <input type="hidden" name="periodo_inicio" value="<%= filtros.periodo_inicio %>">
+        <input type="hidden" name="periodo_fim" value="<%= filtros.periodo_fim %>">
+        
+        <div class="form-group">
+          <label>RCA</label>
+          <input type="text" id="gerarRcaNome" readonly>
+        </div>
+        
+        <div class="preview-box" id="previewComissao">
+          <div class="preview-row">
+            <span class="preview-label">Período:</span>
+            <span class="preview-value"><%= new Date(filtros.periodo_inicio).toLocaleDateString('pt-BR') %> - <%= new Date(filtros.periodo_fim).toLocaleDateString('pt-BR') %></span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-label">Vendas:</span>
+            <span class="preview-value" id="previewVendas">Carregando...</span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-label">Produtos Vendidos:</span>
+            <span class="preview-value" id="previewProdutos">-</span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-label">Valor Comissão:</span>
+            <span class="preview-value total" id="previewValor">-</span>
+          </div>
+        </div>
+        
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+          A comissão é calculada com base no % de cada produto vendido pelo RCA.
+        </p>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Confirmar e Gerar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Pagar Comissão -->
+  <div id="modalPagar" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Pagar Comissão</h2>
+        <button class="modal-close" onclick="fecharModal('modalPagar')">&times;</button>
+      </div>
+      
+      <form id="formPagar" method="POST">
+        <div class="form-group">
+          <label>RCA</label>
+          <input type="text" id="pagarRcaNome" readonly>
+        </div>
+        
+        <div class="form-group">
+          <label>Valor a Pagar</label>
+          <input type="text" id="pagarValor" readonly style="font-size: 1.5rem; color: var(--success); font-weight: 700;">
+        </div>
+        
+        <div class="form-group">
+          <label>Data do Pagamento</label>
+          <input type="date" name="data_pagamento" value="<%= new Date().toISOString().split('T')[0] %>" required>
+        </div>
+        
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+          ⚠️ Este pagamento será registrado automaticamente no Fluxo de Caixa como débito.
+        </p>
+        
+        <button type="submit" class="btn btn-success" style="width: 100%;">Confirmar Pagamento</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Detalhes -->
+  <div id="modalDetalhes" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="detalhesTitle">Detalhes das Vendas</h2>
+        <button class="modal-close" onclick="fecharModal('modalDetalhes')">&times;</button>
+      </div>
+      
+      <div id="detalhesContent">
+        <p>Carregando...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tabs
+    function showTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('tab-' + tabName).classList.add('active');
+      event.target.classList.add('active');
+    }
+    
+    // Filtrar produtos
+    function filtrarProdutos() {
+      const termo = document.getElementById('searchProduto').value.toLowerCase();
+      const linhas = document.querySelectorAll('#tabelaProdutos tbody tr');
+      linhas.forEach(linha => {
+        const texto = linha.textContent.toLowerCase();
+        linha.style.display = texto.includes(termo) ? '' : 'none';
+      });
+    }
+    
+    // Salvar comissão do produto
+    async function salvarComissaoProduto(produtoId) {
+      const input = document.getElementById('comissao-' + produtoId);
+      const percentual = parseFloat(input.value);
+      
+      if (isNaN(percentual) || percentual < 0 || percentual > 100) {
+        alert('Percentual inválido. Use valores entre 0 e 100.');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/comissoes/produto/' + produtoId + '/comissao', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ percentual_comissao: percentual })
+        });
+        
+        if (response.ok) {
+          input.style.borderColor = '#22c55e';
+          setTimeout(() => input.style.borderColor = '', 2000);
+        } else {
+          throw new Error('Erro ao salvar');
+        }
+      } catch (error) {
+        alert('Erro ao salvar comissão');
+      }
+    }
+    
+    // Ver detalhes de vendas do RCA
+    async function verDetalhes(rcaId, rcaNome) {
+      document.getElementById('detalhesTitle').textContent = 'Detalhes: ' + rcaNome;
+      document.getElementById('detalhesContent').innerHTML = '<p>Carregando...</p>';
+      document.getElementById('modalDetalhes').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      try {
+        const response = await fetch('/comissoes/detalhes/' + rcaId + '?periodo_inicio=<%= filtros.periodo_inicio %>&periodo_fim=<%= filtros.periodo_fim %>');
+        const data = await response.json();
+        
+        let html = `
+          <div class="preview-box" style="margin-bottom: 1rem;">
+            <div class="preview-row">
+              <span class="preview-label">Total Vendido:</span>
+              <span class="preview-value">R$ ${data.totais.valor_vendido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+            </div>
+            <div class="preview-row">
+              <span class="preview-label">Total Comissão:</span>
+              <span class="preview-value total">R$ ${data.totais.valor_comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+            </div>
+          </div>
+          <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th class="text-center">Qtd</th>
+                  <th class="text-right">Valor</th>
+                  <th class="text-center">%</th>
+                  <th class="text-right">Comissão</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        
+        data.vendas.forEach(v => {
+          html += `
+            <tr>
+              <td><strong>${v.codigo}</strong> - ${v.descricao}</td>
+              <td class="text-center">${v.quantidade_vendida}</td>
+              <td class="text-right">R$ ${v.valor_vendido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+              <td class="text-center">${v.percentual_comissao}%</td>
+              <td class="text-right" style="color: var(--success); font-weight: 600;">R$ ${v.valor_comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table></div>';
+        document.getElementById('detalhesContent').innerHTML = html;
+        
+      } catch (error) {
+        document.getElementById('detalhesContent').innerHTML = '<p style="color: var(--error);">Erro ao carregar detalhes</p>';
+      }
+    }
+    
+    // Ver itens de uma comissão paga
+    async function verItensComissao(comissaoId) {
+      document.getElementById('detalhesTitle').textContent = 'Itens da Comissão';
+      document.getElementById('detalhesContent').innerHTML = '<p>Carregando...</p>';
+      document.getElementById('modalDetalhes').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      try {
+        const response = await fetch('/comissoes/itens/' + comissaoId);
+        const itens = await response.json();
+        
+        let html = `
+          <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th class="text-center">Qtd</th>
+                  <th class="text-right">Valor</th>
+                  <th class="text-center">%</th>
+                  <th class="text-right">Comissão</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        
+        itens.forEach(item => {
+          html += `
+            <tr>
+              <td><strong>${item.codigo}</strong> - ${item.descricao}</td>
+              <td class="text-center">${parseFloat(item.quantidade_vendida).toFixed(0)}</td>
+              <td class="text-right">R$ ${parseFloat(item.valor_vendido).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+              <td class="text-center">${item.percentual_aplicado}%</td>
+              <td class="text-right" style="color: var(--success); font-weight: 600;">R$ ${parseFloat(item.valor_comissao_item).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table></div>';
+        document.getElementById('detalhesContent').innerHTML = html;
+        
+      } catch (error) {
+        document.getElementById('detalhesContent').innerHTML = '<p style="color: var(--error);">Erro ao carregar itens</p>';
+      }
+    }
+    
+    function abrirModalGerar(rcaId, rcaNome) {
+      document.getElementById('gerarRcaId').value = rcaId;
+      document.getElementById('gerarRcaNome').value = rcaNome;
+      document.getElementById('modalGerar').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      // Buscar dados via API
+      fetch('/comissoes/api/calcular?rca_id=' + rcaId + '&periodo_inicio=<%= filtros.periodo_inicio %>&periodo_fim=<%= filtros.periodo_fim %>')
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById('previewVendas').textContent = 
+            'R$ ' + data.valor_vendas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' (' + data.qtd_vendas + ' vendas)';
+          document.getElementById('previewProdutos').textContent = data.qtd_produtos + ' produtos diferentes';
+          document.getElementById('previewValor').textContent = 
+            'R$ ' + data.valor_comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        })
+        .catch(() => {
+          document.getElementById('previewVendas').textContent = 'Erro ao carregar';
+        });
+    }
+    
+    function abrirModalPagar(comissaoId, rcaNome, valor) {
+      document.getElementById('formPagar').action = '/comissoes/pagar/' + comissaoId;
+      document.getElementById('pagarRcaNome').value = rcaNome;
+      document.getElementById('pagarValor').value = 'R$ ' + valor.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+      document.getElementById('modalPagar').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function fecharModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+      document.body.style.overflow = '';
+    }
+    
+    // Fechar modal ao clicar fora
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', e => {
+        if (e.target === modal) fecharModal(modal.id);
+      });
+    });
+  </script>
+</body>
+</html>
