@@ -1,0 +1,39 @@
+<!-- partials/stat-card.ejs -->
+<!-- 
+  Props:
+  - title: string (título do card)
+  - value: string|number (valor principal)
+  - icon: string (nome do ícone Lucide)
+  - iconColor: string (cor do ícone - default: primary)
+  - change: number (variação percentual - opcional)
+  - changeLabel: string (label da variação - opcional)
+  - prefix: string (prefixo do valor, ex: "R$" - opcional)
+  - suffix: string (sufixo do valor - opcional)
+-->
+
+<div class="stat-card">
+  <div class="flex items-start justify-between">
+    <div>
+      <p class="stat-card-title"><%= title %></p>
+      <p class="stat-card-value">
+        <% if (typeof prefix !== 'undefined') { %><span class="text-lg"><%= prefix %></span> <% } %>
+        <%= typeof value === 'number' ? value.toLocaleString('pt-BR') : value %>
+        <% if (typeof suffix !== 'undefined') { %><span class="text-lg"><%= suffix %></span><% } %>
+      </p>
+      <% if (typeof change !== 'undefined') { %>
+        <p class="stat-card-change <%= change >= 0 ? 'stat-card-change-positive' : 'stat-card-change-negative' %>">
+          <span class="inline-flex items-center">
+            <i data-lucide="<%= change >= 0 ? 'trending-up' : 'trending-down' %>" class="w-4 h-4 mr-1"></i>
+            <%= Math.abs(change).toFixed(1) %>%
+          </span>
+          <% if (typeof changeLabel !== 'undefined') { %>
+            <span class="text-secondary-500 ml-1"><%= changeLabel %></span>
+          <% } %>
+        </p>
+      <% } %>
+    </div>
+    <div class="w-12 h-12 rounded-xl bg-<%= typeof iconColor !== 'undefined' ? iconColor : 'primary' %>-100 flex items-center justify-center">
+      <i data-lucide="<%= icon %>" class="w-6 h-6 text-<%= typeof iconColor !== 'undefined' ? iconColor : 'primary' %>-600"></i>
+    </div>
+  </div>
+</div>

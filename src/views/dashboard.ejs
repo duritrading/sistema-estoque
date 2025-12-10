@@ -1,1008 +1,259 @@
-<!-- src/views/dashboard.ejs - Dashboard profissional -->
-<%- include('partials/header', {
-  titulo: 'Dashboard Executivo',
-  subtitulo: 'Visão estratégica do negócio',
-  user: locals.user,
-  currentPage: 'dashboard'
-}) %>
-
-<div class="dashboard-pro">
-  <!-- Filtros de Data -->
-  <div class="filters-container">
-    <div class="filter-card">
-      <div class="filter-header">
-        <div class="filter-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-        </div>
-        <h3>Período de Análise</h3>
-      </div>
-      
-      <form id="filterForm" class="filter-form">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-        <div class="date-inputs">
-          <div class="input-group">
-            <label>Data Inicial</label>
-            <input type="date" id="dataInicial" name="dataInicial" 
-                   value="<%= new Date().getFullYear() %>-<%= String(new Date().getMonth() + 1).padStart(2, '0') %>-01">
-          </div>
-          <div class="input-group">
-            <label>Data Final</label>
-            <input type="date" id="dataFinal" name="dataFinal" 
-                   value="<%= new Date().toISOString().split('T')[0] %>">
-          </div>
-        </div>
-        
-        <div class="quick-filters">
-          <button type="button" class="quick-btn active" data-period="month">Este Mês</button>
-          <button type="button" class="quick-btn" data-period="quarter">Trimestre</button>
-          <button type="button" class="quick-btn" data-period="year">Ano</button>
-          <button type="button" class="quick-btn" data-period="custom">Personalizado</button>
-        </div>
-        
-        <button type="submit" class="apply-filter-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-          Aplicar Filtros
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- KPIs Executivos -->
-  <div class="kpi-executive-grid">
-    <div class="kpi-executive positive">
-      <div class="kpi-header">
-        <div class="kpi-icon-pro revenue">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="1" x2="12" y2="23"></line>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-          </svg>
-        </div>
-        <div class="kpi-meta">
-          <h3>Faturamento Bruto</h3>
-          <span class="kpi-period">Período Selecionado</span>
-        </div>
-      </div>
-      
-      <div class="kpi-value-container">
-        <div class="kpi-main-value">
-          R$ <%= dashboardData.faturamentoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-        </div>
-        <div class="kpi-comparison <%= dashboardData.crescimentoFaturamento >= 0 ? 'positive' : 'negative' %>">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <% if (dashboardData.crescimentoFaturamento >= 0) { %>
-              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-              <polyline points="17 6 23 6 23 12"></polyline>
-            <% } else { %>
-              <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
-              <polyline points="17 18 23 18 23 12"></polyline>
-            <% } %>
-          </svg>
-          <%= Math.abs(dashboardData.crescimentoFaturamento) %>% vs período anterior
-        </div>
-      </div>
-      
-      <div class="kpi-chart">
-        <div class="mini-bar-chart">
-          <div class="bar" style="height: 60%"></div>
-          <div class="bar" style="height: 80%"></div>
-          <div class="bar" style="height: 45%"></div>
-          <div class="bar" style="height: 90%"></div>
-          <div class="bar current" style="height: 100%"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="kpi-executive">
-      <div class="kpi-header">
-        <div class="kpi-icon-pro profit">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-          </svg>
-        </div>
-        <div class="kpi-meta">
-          <h3>Resultado Operacional</h3>
-          <span class="kpi-period">Lucro Líquido</span>
-        </div>
-      </div>
-      
-      <div class="kpi-value-container">
-        <div class="kpi-main-value <%= dashboardData.lucroMes >= 0 ? 'positive' : 'negative' %>">
-          R$ <%= dashboardData.lucroMes.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-        </div>
-        <div class="kpi-metric">
-          <span class="metric-label">Margem:</span>
-          <span class="metric-value"><%= dashboardData.margemLucro %>%</span>
-        </div>
-      </div>
-      
-      <div class="kpi-breakdown">
-        <div class="breakdown-item positive">
-          <span class="breakdown-label">Receitas</span>
-          <span class="breakdown-value">R$ <%= dashboardData.fluxoCaixa.entradas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></span>
-        </div>
-        <div class="breakdown-item negative">
-          <span class="breakdown-label">Despesas</span>
-          <span class="breakdown-value">R$ <%= dashboardData.fluxoCaixa.saidas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></span>
-        </div>
-      </div>
-    </div>
-
-    <div class="kpi-executive">
-      <div class="kpi-header">
-        <div class="kpi-icon-pro cashflow">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="1" y="3" width="15" height="13"></rect>
-            <polygon points="16,8 20,8 23,11 23,16 16,16"></polygon>
-            <circle cx="5.5" cy="18.5" r="2.5"></circle>
-            <circle cx="18.5" cy="18.5" r="2.5"></circle>
-          </svg>
-        </div>
-        <div class="kpi-meta">
-          <h3>Fluxo de Caixa</h3>
-          <span class="kpi-period">Saldo Disponível</span>
-        </div>
-      </div>
-      
-      <div class="kpi-value-container">
-        <div class="kpi-main-value <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'positive' : 'negative' %>">
-          R$ <%= dashboardData.fluxoCaixa.saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-        </div>
-        <div class="cash-flow-indicator">
-          <div class="flow-bar">
-            <div class="flow-in" style="width: <%= (dashboardData.fluxoCaixa.entradas / (dashboardData.fluxoCaixa.entradas + dashboardData.fluxoCaixa.saidas) * 100) || 0 %>%"></div>
-          </div>
-          <div class="flow-legend">
-            <span class="legend-in">Entradas</span>
-            <span class="legend-out">Saídas</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="kpi-executive warning">
-      <div class="kpi-header">
-        <div class="kpi-icon-pro overdue">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12,6 12,12 16,14"></polyline>
-          </svg>
-        </div>
-        <div class="kpi-meta">
-          <h3>Inadimplência</h3>
-          <span class="kpi-period">Contas em Atraso</span>
-        </div>
-      </div>
-      
-      <div class="kpi-value-container">
-        <div class="kpi-main-value warning">
-          R$ <%= dashboardData.contasVencidas.total.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
-        </div>
-        <div class="overdue-details">
-          <div class="overdue-count">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="8.5" cy="7" r="4"></circle>
-              <line x1="20" y1="8" x2="20" y2="14"></line>
-              <line x1="23" y1="11" x2="17" y2="11"></line>
-            </svg>
-            <%= dashboardData.contasVencidas.quantidade %> clientes
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Widgets Analytics -->
-  <div class="analytics-grid">
-    <!-- Performance de Produtos -->
-    <div class="analytics-card">
-      <div class="card-header">
-        <div class="card-icon inventory">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-            <line x1="12" y1="22.08" x2="12" y2="12"></line>
-          </svg>
-        </div>
-        <div class="card-title">
-          <h3>Gestão de Estoque</h3>
-          <span class="card-subtitle">Produtos com atenção necessária</span>
-        </div>
-        <div class="card-actions">
-          <button class="action-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-4"></path>
-              <polyline points="9,11 12,14 15,11"></polyline>
-              <line x1="12" y1="2" x2="12" y2="14"></line>
-            </svg>
-          </button>
-        </div>
-      </div>
-      
-      <div class="card-content">
-        <% if (dashboardData.produtosBaixoEstoque.length > 0) { %>
-          <div class="inventory-alerts">
-            <% dashboardData.produtosBaixoEstoque.forEach(produto => { %>
-              <div class="inventory-item critical">
-                <div class="item-info">
-                  <span class="item-code"><%= produto.codigo %></span>
-                  <span class="item-name"><%= produto.descricao %></span>
-                </div>
-                <div class="item-metrics">
-                  <div class="metric">
-                    <span class="metric-label">Atual</span>
-                    <span class="metric-value critical"><%= produto.saldo_atual %></span>
-                  </div>
-                  <div class="metric">
-                    <span class="metric-label">Mínimo</span>
-                    <span class="metric-value"><%= produto.estoque_minimo %></span>
-                  </div>
-                </div>
-              </div>
-            <% }) %>
-          </div>
-        <% } else { %>
-          <div class="status-ok">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20,6 9,17 4,12"></polyline>
-            </svg>
-            <p>Todos os produtos com estoque adequado</p>
-          </div>
-        <% } %>
-      </div>
-    </div>
-
-    <!-- Top Performance -->
-    <div class="analytics-card">
-      <div class="card-header">
-        <div class="card-icon sales">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-            <polyline points="17 6 23 6 23 12"></polyline>
-          </svg>
-        </div>
-        <div class="card-title">
-          <h3>Performance de Vendas</h3>
-          <span class="card-subtitle">Top produtos do período</span>
-        </div>
-      </div>
-      
-      <div class="card-content">
-        <% if (dashboardData.topProdutos.length > 0) { %>
-          <div class="performance-ranking">
-            <% dashboardData.topProdutos.forEach((produto, index) => { %>
-              <div class="ranking-item">
-                <div class="rank-position">
-                  <span class="rank-number">#<%= index + 1 %></span>
-                </div>
-                <div class="product-info">
-                  <span class="product-code"><%= produto.codigo %></span>
-                  <span class="product-name"><%= produto.descricao %></span>
-                </div>
-                <div class="performance-metrics">
-                  <div class="metric">
-                    <span class="metric-value"><%= produto.total_vendido %></span>
-                    <span class="metric-unit">un</span>
-                  </div>
-                  <div class="metric revenue">
-                    <span class="metric-value">R$ <%= parseFloat(produto.faturamento_produto).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></span>
-                  </div>
-                </div>
-              </div>
-            <% }) %>
-          </div>
-        <% } else { %>
-          <div class="no-data">
-            <p>Nenhuma venda registrada no período</p>
-          </div>
-        <% } %>
-      </div>
-    </div>
-
-    <!-- Logistics Overview -->
-    <div class="analytics-card">
-      <div class="card-header">
-        <div class="card-icon logistics">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="1" y="3" width="15" height="13"></rect>
-            <polygon points="16,8 20,8 23,11 23,16 16,16"></polygon>
-            <circle cx="5.5" cy="18.5" r="2.5"></circle>
-            <circle cx="18.5" cy="18.5" r="2.5"></circle>
-          </svg>
-        </div>
-        <div class="card-title">
-          <h3>Operações Logísticas</h3>
-          <span class="card-subtitle">Status das entregas</span>
-        </div>
-      </div>
-      
-      <div class="card-content">
-        <div class="logistics-overview">
-          <div class="logistics-stat">
-            <div class="stat-icon total">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12,6 12,12 16,14"></polyline>
-              </svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value"><%= dashboardData.entregas.total %></span>
-              <span class="stat-label">Total de Entregas</span>
-            </div>
-          </div>
-          
-          <div class="logistics-stat">
-            <div class="stat-icon pending">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="8,12 12,16 16,12"></polyline>
-              </svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value warning"><%= dashboardData.entregas.pendentes %></span>
-              <span class="stat-label">Pendentes</span>
-            </div>
-          </div>
-          
-          <div class="logistics-stat">
-            <div class="stat-icon completed">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20,6 9,17 4,12"></polyline>
-              </svg>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value positive"><%= dashboardData.entregas.entregues %></span>
-              <span class="stat-label">Concluídas</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="delivery-progress">
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: <%= dashboardData.entregas.total > 0 ? (dashboardData.entregas.entregues / dashboardData.entregas.total * 100) : 0 %>%"></div>
-          </div>
-          <span class="progress-label">Taxa de Conclusão: <%= dashboardData.entregas.total > 0 ? Math.round(dashboardData.entregas.entregues / dashboardData.entregas.total * 100) : 0 %>%</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Financial Health -->
-    <div class="analytics-card">
-      <div class="card-header">
-        <div class="card-icon financial">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="1" x2="12" y2="23"></line>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-          </svg>
-        </div>
-        <div class="card-title">
-          <h3>Saúde Financeira</h3>
-          <span class="card-subtitle">Indicadores de risco</span>
-        </div>
-      </div>
-      
-      <div class="card-content">
-        <div class="financial-health">
-          <div class="health-metric">
-            <div class="metric-header">
-              <span class="metric-title">Clientes Inadimplentes</span>
-              <div class="health-indicator <%= dashboardData.inadimplencia.clientes_inadimplentes > 5 ? 'critical' : dashboardData.inadimplencia.clientes_inadimplentes > 2 ? 'warning' : 'good' %>"></div>
-            </div>
-            <div class="metric-value large"><%= dashboardData.inadimplencia.clientes_inadimplentes %></div>
-          </div>
-          
-          <div class="health-metric">
-            <div class="metric-header">
-              <span class="metric-title">Valor em Atraso</span>
-            </div>
-            <div class="metric-value warning">R$ <%= parseFloat(dashboardData.inadimplencia.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></div>
-          </div>
-          
-          <div class="health-metric">
-            <div class="metric-header">
-              <span class="metric-title">Atraso +30 dias</span>
-              <div class="health-indicator <%= dashboardData.inadimplencia.mais_30_dias > 3 ? 'critical' : dashboardData.inadimplencia.mais_30_dias > 1 ? 'warning' : 'good' %>"></div>
-            </div>
-            <div class="metric-value critical"><%= dashboardData.inadimplencia.mais_30_dias %></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<style>
-/* Professional Dashboard Styles */
-.dashboard-pro {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px;
-  background: #f8fafc;
-  min-height: 100vh;
-}
-
-/* Filters */
-.filters-container {
-  margin-bottom: 32px;
-}
-
-.filter-card {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  border: 1px solid #e2e8f0;
-}
-
-.filter-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.filter-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.filter-header h3 {
-  margin: 0;
-  color: #1a202c;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.filter-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  align-items: end;
-}
-
-.date-inputs {
-  display: flex;
-  gap: 16px;
-}
-
-.input-group label {
-  display: block;
-  margin-bottom: 6px;
-  color: #4a5568;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.input-group input {
-  padding: 10px 12px;
-  border: 1px solid #cbd5e0;
-  border-radius: 6px;
-  font-size: 14px;
-  width: 140px;
-}
-
-.quick-filters {
-  display: flex;
-  gap: 8px;
-}
-
-.quick-btn {
-  padding: 8px 16px;
-  border: 1px solid #cbd5e0;
-  background: white;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.quick-btn:hover, .quick-btn.active {
-  background: #667eea;
-  color: white;
-  border-color: #667eea;
-}
-
-.apply-filter-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: transform 0.2s;
-}
-
-.apply-filter-btn:hover {
-  transform: translateY(-1px);
-}
-
-/* Executive KPIs */
-.kpi-executive-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
-  margin-bottom: 32px;
-}
-
-.kpi-executive {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  border: 1px solid #e2e8f0;
-  position: relative;
-  overflow: hidden;
-}
-
-.kpi-executive.positive {
-  border-left: 4px solid #10b981;
-}
-
-.kpi-executive.warning {
-  border-left: 4px solid #f59e0b;
-}
-
-.kpi-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.kpi-icon-pro {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.kpi-icon-pro.revenue { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-.kpi-icon-pro.profit { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
-.kpi-icon-pro.cashflow { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-.kpi-icon-pro.overdue { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-
-.kpi-meta h3 {
-  margin: 0;
-  color: #1a202c;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.kpi-period {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.kpi-main-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1a202c;
-  margin-bottom: 8px;
-}
-
-.kpi-main-value.positive { color: #10b981; }
-.kpi-main-value.negative { color: #ef4444; }
-.kpi-main-value.warning { color: #f59e0b; }
-
-.kpi-comparison {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.kpi-comparison.positive { color: #10b981; }
-.kpi-comparison.negative { color: #ef4444; }
-
-.kpi-breakdown {
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.breakdown-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.breakdown-label {
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.breakdown-value {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.breakdown-item.positive .breakdown-value { color: #10b981; }
-.breakdown-item.negative .breakdown-value { color: #ef4444; }
-
-.mini-bar-chart {
-  display: flex;
-  align-items: end;
-  gap: 4px;
-  height: 40px;
-  margin-top: 16px;
-}
-
-.bar {
-  width: 8px;
-  background: #cbd5e0;
-  border-radius: 2px;
-  transition: all 0.3s;
-}
-
-.bar.current {
-  background: #10b981;
-}
-
-.cash-flow-indicator {
-  margin-top: 12px;
-}
-
-.flow-bar {
-  height: 6px;
-  background: #fef2f2;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.flow-in {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-  transition: width 0.3s;
-}
-
-.flow-legend {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-size: 12px;
-}
-
-.legend-in { color: #10b981; }
-.legend-out { color: #ef4444; }
-
-/* Analytics Grid */
-.analytics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 24px;
-}
-
-.analytics-card {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  border: 1px solid #e2e8f0;
-}
-
-.card-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.card-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.card-icon.inventory { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-.card-icon.sales { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-.card-icon.logistics { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
-.card-icon.financial { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-
-.card-title h3 {
-  margin: 0;
-  color: #1a202c;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.card-subtitle {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.card-content {
-  padding: 24px;
-}
-
-.inventory-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.item-code {
-  font-weight: 600;
-  color: #1a202c;
-  font-size: 14px;
-}
-
-.item-name {
-  color: #6b7280;
-  font-size: 12px;
-  display: block;
-}
-
-.item-metrics {
-  display: flex;
-  gap: 16px;
-}
-
-.metric {
-  text-align: center;
-}
-
-.metric-label {
-  display: block;
-  color: #6b7280;
-  font-size: 10px;
-  text-transform: uppercase;
-}
-
-.metric-value {
-  display: block;
-  font-weight: 600;
-  font-size: 14px;
-  color: #1a202c;
-}
-
-.metric-value.critical { color: #ef4444; }
-
-.ranking-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.rank-position {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 600;
-  font-size: 12px;
-}
-
-.product-code {
-  font-weight: 600;
-  color: #1a202c;
-  font-size: 14px;
-}
-
-.product-name {
-  color: #6b7280;
-  font-size: 12px;
-  display: block;
-}
-
-.performance-metrics {
-  margin-left: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: end;
-  gap: 4px;
-}
-
-.logistics-overview {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.logistics-stat {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.stat-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.stat-icon.total { background: #6b7280; }
-.stat-icon.pending { background: #f59e0b; }
-.stat-icon.completed { background: #10b981; }
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a202c;
-}
-
-.stat-value.positive { color: #10b981; }
-.stat-value.warning { color: #f59e0b; }
-
-.stat-label {
-  color: #6b7280;
-  font-size: 12px;
-  display: block;
-}
-
-.delivery-progress {
-  margin-top: 20px;
-}
-
-.progress-bar {
-  height: 8px;
-  background: #f1f5f9;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 8px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-  transition: width 0.3s;
-}
-
-.progress-label {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.financial-health {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.health-metric {
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-.metric-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.metric-title {
-  color: #4a5568;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.health-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.health-indicator.good { background: #10b981; }
-.health-indicator.warning { background: #f59e0b; }
-.health-indicator.critical { background: #ef4444; }
-
-.metric-value.large {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1a202c;
-}
-
-.metric-value.critical { color: #ef4444; }
-
-.status-ok {
-  text-align: center;
-  padding: 40px 20px;
-  color: #10b981;
-}
-
-.status-ok svg {
-  margin-bottom: 16px;
-}
-
-.no-data {
-  text-align: center;
-  padding: 40px 20px;
-  color: #6b7280;
-}
-
-@media (max-width: 768px) {
-  .dashboard-pro { padding: 16px; }
-  .filter-form { flex-direction: column; align-items: stretch; }
-  .date-inputs { flex-direction: column; }
-  .quick-filters { flex-wrap: wrap; }
-  .kpi-executive-grid { grid-template-columns: 1fr; }
-  .analytics-grid { grid-template-columns: 1fr; }
-}
-</style>
-
+<!-- views/dashboard.ejs -->
+<!-- Dashboard redesenhado com Tailwind -->
+
+<%- include('partials/sidebar', { currentPage: 'dashboard' }) %>
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | OF Distribuidora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script>
-// Date Filter Logic
-document.addEventListener('DOMContentLoaded', function() {
-  const quickBtns = document.querySelectorAll('.quick-btn');
-  const dataInicial = document.getElementById('dataInicial');
-  const dataFinal = document.getElementById('dataFinal');
-  
-  quickBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-      quickBtns.forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      
-      const period = this.dataset.period;
-      const hoje = new Date();
-      
-      switch(period) {
-        case 'month':
-          dataInicial.value = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-          dataFinal.value = hoje.toISOString().split('T')[0];
-          break;
-        case 'quarter':
-          const quarterStart = new Date(hoje.getFullYear(), Math.floor(hoje.getMonth() / 3) * 3, 1);
-          dataInicial.value = quarterStart.toISOString().split('T')[0];
-          dataFinal.value = hoje.toISOString().split('T')[0];
-          break;
-        case 'year':
-          dataInicial.value = new Date(hoje.getFullYear(), 0, 1).toISOString().split('T')[0];
-          dataFinal.value = hoje.toISOString().split('T')[0];
-          break;
-      }
-    });
+  document.addEventListener('DOMContentLoaded', function() {
+    lucide.createIcons();
   });
-  
-  document.getElementById('filterForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    // Aqui você pode implementar a lógica de filtro via AJAX
-    window.location.href = `/?dataInicial=${dataInicial.value}&dataFinal=${dataFinal.value}`;
-  });
-});
 </script>
+</head>
+<body class="bg-secondary-50">
 
-<%- include('partials/footer') %>
+  <%- include('partials/sidebar', { currentPage: 'dashboard' }) %>
+
+  <div class="main-content">
+    <%- include('partials/topbar', { user: user }) %>
+
+    <main class="page-container">
+      <!-- Page Header -->
+      <%- include('partials/page-header', { 
+        title: 'Dashboard', 
+        subtitle: 'Visão geral do seu negócio',
+        actions: `
+          <form method="GET" class="flex items-center gap-2">
+            <input type="date" name="dataInicial" value="${filtros.dataInicial}" class="form-input py-2">
+            <span class="text-secondary-400">até</span>
+            <input type="date" name="dataFinal" value="${filtros.dataFinal}" class="form-input py-2">
+            <button type="submit" class="btn btn-primary">
+              <i data-lucide="filter" class="w-4 h-4 mr-2"></i>
+              Filtrar
+            </button>
+          </form>
+        `
+      }) %>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <%- include('partials/stat-card', {
+          title: 'Faturamento',
+          value: dashboardData.faturamento.atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+          prefix: 'R$',
+          icon: 'dollar-sign',
+          iconColor: 'primary',
+          change: dashboardData.faturamento.variacao,
+          changeLabel: 'vs mês anterior'
+        }) %>
+
+        <%- include('partials/stat-card', {
+          title: 'Lucro',
+          value: dashboardData.lucro.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+          prefix: 'R$',
+          icon: 'trending-up',
+          iconColor: dashboardData.lucro.valor >= 0 ? 'green' : 'red',
+          change: parseFloat(dashboardData.lucro.margem),
+          changeLabel: 'margem'
+        }) %>
+
+        <%- include('partials/stat-card', {
+          title: 'Vendas',
+          value: dashboardData.faturamento.totalVendas,
+          icon: 'shopping-cart',
+          iconColor: 'blue'
+        }) %>
+
+        <%- include('partials/stat-card', {
+          title: 'Saldo Caixa',
+          value: dashboardData.fluxoCaixa.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+          prefix: 'R$',
+          icon: 'wallet',
+          iconColor: dashboardData.fluxoCaixa.saldo >= 0 ? 'green' : 'red'
+        }) %>
+      </div>
+
+      <!-- Alerts Row -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Contas Vencidas -->
+        <% if (dashboardData.contasVencidas.total > 0) { %>
+          <div class="card border-l-4 border-l-danger-500">
+            <div class="card-body flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-danger-100 flex items-center justify-center">
+                <i data-lucide="alert-circle" class="w-6 h-6 text-danger-600"></i>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-secondary-900">Contas Vencidas</p>
+                <p class="text-2xl font-bold text-danger-600"><%= dashboardData.contasVencidas.total %></p>
+                <p class="text-xs text-secondary-500">
+                  R$ <%= parseFloat(dashboardData.contasVencidas.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                </p>
+              </div>
+              <a href="/contas-a-pagar" class="ml-auto btn btn-sm btn-danger">Ver</a>
+            </div>
+          </div>
+        <% } %>
+
+        <!-- Inadimplência -->
+        <% if (dashboardData.inadimplencia.clientes_inadimplentes > 0) { %>
+          <div class="card border-l-4 border-l-warning-500">
+            <div class="card-body flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-warning-100 flex items-center justify-center">
+                <i data-lucide="users" class="w-6 h-6 text-warning-600"></i>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-secondary-900">Inadimplência</p>
+                <p class="text-2xl font-bold text-warning-600"><%= dashboardData.inadimplencia.clientes_inadimplentes %></p>
+                <p class="text-xs text-secondary-500">
+                  R$ <%= parseFloat(dashboardData.inadimplencia.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                </p>
+              </div>
+              <a href="/inadimplencia" class="ml-auto btn btn-sm btn-warning">Ver</a>
+            </div>
+          </div>
+        <% } %>
+
+        <!-- Entregas Pendentes -->
+        <% if (dashboardData.entregas && dashboardData.entregas.pendentes > 0) { %>
+          <div class="card border-l-4 border-l-primary-500">
+            <div class="card-body flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
+                <i data-lucide="truck" class="w-6 h-6 text-primary-600"></i>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-secondary-900">Entregas Pendentes</p>
+                <p class="text-2xl font-bold text-primary-600"><%= dashboardData.entregas.pendentes %></p>
+                <p class="text-xs text-secondary-500">
+                  de <%= dashboardData.entregas.total %> total
+                </p>
+              </div>
+              <a href="/entregas" class="ml-auto btn btn-sm btn-primary">Ver</a>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Two Column Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Top Produtos -->
+        <div class="card">
+          <div class="card-header flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-secondary-900">Top Produtos</h2>
+            <a href="/produtos" class="text-sm text-primary-600 hover:text-primary-700">Ver todos</a>
+          </div>
+          <div class="card-body p-0">
+            <% if (dashboardData.topProdutos && dashboardData.topProdutos.length > 0) { %>
+              <div class="divide-y divide-secondary-100">
+                <% dashboardData.topProdutos.forEach((produto, index) => { %>
+                  <div class="flex items-center gap-4 px-6 py-4">
+                    <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">
+                      <%= index + 1 %>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-secondary-900 truncate"><%= produto.descricao %></p>
+                      <p class="text-xs text-secondary-500"><%= produto.quantidade_vendida %> vendidos</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-sm font-semibold text-secondary-900">
+                        R$ <%= parseFloat(produto.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                      </p>
+                    </div>
+                  </div>
+                <% }); %>
+              </div>
+            <% } else { %>
+              <div class="p-6 text-center text-secondary-500">
+                Nenhuma venda no período
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Produtos com Baixo Estoque -->
+        <div class="card">
+          <div class="card-header flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-secondary-900">Estoque Baixo</h2>
+            <a href="/produtos" class="text-sm text-primary-600 hover:text-primary-700">Ver todos</a>
+          </div>
+          <div class="card-body p-0">
+            <% if (dashboardData.produtosBaixoEstoque && dashboardData.produtosBaixoEstoque.length > 0) { %>
+              <div class="divide-y divide-secondary-100">
+                <% dashboardData.produtosBaixoEstoque.forEach(produto => { %>
+                  <div class="flex items-center gap-4 px-6 py-4">
+                    <div class="w-8 h-8 rounded-full bg-danger-100 flex items-center justify-center">
+                      <i data-lucide="alert-triangle" class="w-4 h-4 text-danger-600"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-secondary-900 truncate"><%= produto.descricao %></p>
+                      <p class="text-xs text-secondary-500"><%= produto.codigo %></p>
+                    </div>
+                    <div class="text-right">
+                      <span class="badge badge-danger">
+                        <%= produto.saldo_atual %> / <%= produto.estoque_minimo %>
+                      </span>
+                    </div>
+                  </div>
+                <% }); %>
+              </div>
+            <% } else { %>
+              <div class="p-6 text-center">
+                <div class="w-12 h-12 rounded-full bg-success-100 flex items-center justify-center mx-auto mb-3">
+                  <i data-lucide="check" class="w-6 h-6 text-success-600"></i>
+                </div>
+                <p class="text-secondary-500">Todos os produtos com estoque adequado</p>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fluxo de Caixa Resumo -->
+      <div class="mt-6">
+        <div class="card">
+          <div class="card-header flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-secondary-900">Resumo Financeiro</h2>
+            <a href="/fluxo-caixa" class="text-sm text-primary-600 hover:text-primary-700">Ver detalhes</a>
+          </div>
+          <div class="card-body">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="text-center p-4 rounded-lg bg-green-50">
+                <p class="text-sm text-green-600 font-medium mb-1">Entradas</p>
+                <p class="text-2xl font-bold text-green-700">
+                  R$ <%= dashboardData.fluxoCaixa.creditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                </p>
+              </div>
+              <div class="text-center p-4 rounded-lg bg-red-50">
+                <p class="text-sm text-red-600 font-medium mb-1">Saídas</p>
+                <p class="text-2xl font-bold text-red-700">
+                  R$ <%= dashboardData.fluxoCaixa.debitos.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                </p>
+              </div>
+              <div class="text-center p-4 rounded-lg <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'bg-blue-50' : 'bg-orange-50' %>">
+                <p class="text-sm <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'text-blue-600' : 'text-orange-600' %> font-medium mb-1">Saldo</p>
+                <p class="text-2xl font-bold <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'text-blue-700' : 'text-orange-700' %>">
+                  R$ <%= dashboardData.fluxoCaixa.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

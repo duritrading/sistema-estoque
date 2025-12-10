@@ -1,0 +1,79 @@
+<!-- partials/components.ejs -->
+<!-- 
+  Componentes reutilizáveis do sistema
+  Uso: <%- include('partials/components') %>
+  Depois: use as funções ou copie o HTML necessário
+-->
+
+<%# ========================================
+    STAT CARD
+    Uso: <%- include('partials/stat-card', { title, value, icon, change, changeType }) %>
+======================================== %>
+
+<%# ========================================
+    PAGE HEADER
+    Uso: <%- include('partials/page-header', { title, subtitle, actions }) %>
+======================================== %>
+
+<%# ========================================
+    EMPTY STATE
+    Uso: <%- include('partials/empty-state', { icon, title, description, actionUrl, actionText }) %>
+======================================== %>
+
+<%# ========================================
+    CONFIRM MODAL
+    Uso: Incluir uma vez, usar via JavaScript
+======================================== %>
+
+<!-- Confirm Delete Modal (Global) -->
+<div id="confirmModal" class="modal-overlay hidden">
+  <div class="modal max-w-md">
+    <div class="modal-header">
+      <h3 class="text-lg font-semibold text-secondary-900">Confirmar Exclusão</h3>
+      <button onclick="closeConfirmModal()" class="btn-icon btn-ghost">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-full bg-danger-100 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="alert-triangle" class="w-6 h-6 text-danger-600"></i>
+        </div>
+        <div>
+          <p class="text-secondary-900 font-medium" id="confirmModalTitle">Tem certeza?</p>
+          <p class="text-secondary-500 text-sm mt-1" id="confirmModalMessage">Esta ação não pode ser desfeita.</p>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeConfirmModal()" class="btn btn-secondary">Cancelar</button>
+      <form id="confirmModalForm" method="POST" class="inline">
+        <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+        <button type="submit" class="btn btn-danger">Excluir</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function openConfirmModal(action, title, message) {
+  document.getElementById('confirmModalForm').action = action;
+  if (title) document.getElementById('confirmModalTitle').textContent = title;
+  if (message) document.getElementById('confirmModalMessage').textContent = message;
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirmModal').classList.add('hidden');
+}
+
+// Close on backdrop click
+document.getElementById('confirmModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'confirmModal') closeConfirmModal();
+});
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeConfirmModal();
+});
+</script>

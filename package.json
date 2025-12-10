@@ -1,15 +1,24 @@
 {
   "name": "sistema-estoque",
-  "version": "1.0.0",
-  "description": "Sistema de Estoque Completo com Autenticação",
-  "main": "src/app.js",
+  "version": "2.0.0",
+  "description": "Sistema de Estoque OF Distribuidora - TypeScript + Tailwind",
+  "main": "dist/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "start": "node dist/app.js",
+    "dev": "concurrently \"npm run dev:ts\" \"npm run dev:css\"",
+    "dev:ts": "tsx watch src/app.ts",
+    "dev:js": "nodemon src/app.js",
+    "dev:css": "tailwindcss -i ./src/styles/input.css -o ./public/css/styles.css --watch",
+    "build": "npm run build:ts && npm run build:css",
+    "build:ts": "tsc",
+    "build:css": "tailwindcss -i ./src/styles/input.css -o ./public/css/styles.css --minify",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
     "connect-pg-simple": "^10.0.0",
+    "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
     "express": "^4.18.2",
     "express-rate-limit": "^8.1.0",
@@ -19,7 +28,20 @@
     "pg": "^8.11.3"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "@types/bcrypt": "^5.0.2",
+    "@types/connect-pg-simple": "^7.0.3",
+    "@types/ejs": "^3.1.5",
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.18.0",
+    "@types/node": "^20.10.0",
+    "@types/pg": "^8.10.9",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0"

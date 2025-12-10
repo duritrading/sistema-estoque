@@ -1,0 +1,377 @@
+<!-- partials/sidebar.ejs -->
+<!-- Sidebar Colapsável -->
+<aside id="sidebar" class="sidebar-container">
+  
+  <!-- Logo + Toggle -->
+  <div class="sidebar-header">
+    <a href="/" class="sidebar-logo-link">
+      <img src="/logo-of.png" alt="OF Distribuidora" class="sidebar-logo-img">
+      <div class="sidebar-logo-text">
+        <h1>OF Distribuidora</h1>
+        <p>Sistema de Gestão</p>
+      </div>
+    </a>
+    
+    <!-- Toggle Button -->
+    <button id="sidebarToggle" class="sidebar-toggle" title="Recolher menu">
+      <svg class="toggle-icon-close" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+        <line x1="9" x2="9" y1="3" y2="21"></line>
+        <path d="m16 15-3-3 3-3"></path>
+      </svg>
+      <svg class="toggle-icon-open" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+        <line x1="9" x2="9" y1="3" y2="21"></line>
+        <path d="m14 9 3 3-3 3"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sidebar-nav">
+    
+    <!-- Principal -->
+    <div class="sidebar-section-title">Principal</div>
+    
+    <a href="/" class="sidebar-link <%= currentPage === 'dashboard' ? 'active' : '' %>" data-title="Dashboard">
+      <i data-lucide="layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <!-- Estoque -->
+    <div class="sidebar-section-title">Estoque</div>
+    
+    <a href="/produtos" class="sidebar-link <%= currentPage === 'produtos' ? 'active' : '' %>" data-title="Produtos">
+      <i data-lucide="box"></i>
+      <span>Produtos</span>
+    </a>
+    
+    <a href="/movimentacoes" class="sidebar-link <%= currentPage === 'movimentacoes' ? 'active' : '' %>" data-title="Movimentações">
+      <i data-lucide="arrow-left-right"></i>
+      <span>Movimentações</span>
+    </a>
+
+    <!-- Financeiro -->
+    <div class="sidebar-section-title">Financeiro</div>
+    
+    <a href="/contas-a-receber" class="sidebar-link <%= currentPage === 'contas-a-receber' ? 'active' : '' %>" data-title="Contas a Receber">
+      <i data-lucide="trending-up"></i>
+      <span>Contas a Receber</span>
+    </a>
+    
+    <a href="/contas-a-pagar" class="sidebar-link <%= currentPage === 'contas-a-pagar' ? 'active' : '' %>" data-title="Contas a Pagar">
+      <i data-lucide="trending-down"></i>
+      <span>Contas a Pagar</span>
+    </a>
+    
+    <a href="/fluxo-caixa" class="sidebar-link <%= currentPage === 'fluxo-caixa' ? 'active' : '' %>" data-title="Fluxo de Caixa">
+      <i data-lucide="wallet"></i>
+      <span>Fluxo de Caixa</span>
+    </a>
+    
+    <a href="/inadimplencia" class="sidebar-link <%= currentPage === 'inadimplencia' ? 'active' : '' %>" data-title="Inadimplência">
+      <i data-lucide="alert-triangle"></i>
+      <span>Inadimplência</span>
+    </a>
+    
+    <a href="/dre" class="sidebar-link <%= currentPage === 'dre' ? 'active' : '' %>" data-title="DRE">
+      <i data-lucide="file-bar-chart"></i>
+      <span>DRE</span>
+    </a>
+
+    <!-- Cadastros -->
+    <div class="sidebar-section-title">Cadastros</div>
+    
+    <a href="/clientes" class="sidebar-link <%= currentPage === 'clientes' ? 'active' : '' %>" data-title="Clientes">
+      <i data-lucide="users"></i>
+      <span>Clientes</span>
+    </a>
+    
+    <a href="/fornecedores" class="sidebar-link <%= currentPage === 'fornecedores' ? 'active' : '' %>" data-title="Fornecedores">
+      <i data-lucide="truck"></i>
+      <span>Fornecedores</span>
+    </a>
+    
+    <a href="/rcas" class="sidebar-link <%= currentPage === 'rcas' ? 'active' : '' %>" data-title="RCAs">
+      <i data-lucide="user-check"></i>
+      <span>RCAs</span>
+    </a>
+
+    <!-- Operações -->
+    <div class="sidebar-section-title">Operações</div>
+    
+    <a href="/entregas" class="sidebar-link <%= currentPage === 'entregas' ? 'active' : '' %>" data-title="Entregas">
+      <i data-lucide="map-pin"></i>
+      <span>Entregas</span>
+    </a>
+    
+    <a href="/comissoes" class="sidebar-link <%= currentPage === 'comissoes' ? 'active' : '' %>" data-title="Comissões">
+      <i data-lucide="percent"></i>
+      <span>Comissões</span>
+    </a>
+
+    <!-- Sistema -->
+    <div class="sidebar-section-title">Sistema</div>
+    
+    <a href="/usuarios" class="sidebar-link <%= currentPage === 'usuarios' ? 'active' : '' %>" data-title="Usuários">
+      <i data-lucide="shield"></i>
+      <span>Usuários</span>
+    </a>
+    
+    <a href="/backup" class="sidebar-link <%= currentPage === 'backup' ? 'active' : '' %>" data-title="Backup">
+      <i data-lucide="hard-drive-download"></i>
+      <span>Backup</span>
+    </a>
+  </nav>
+</aside>
+
+<style>
+  /* ============================
+     SIDEBAR STYLES
+     ============================ */
+  
+  .sidebar-container {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: 256px;
+    background-color: #0f172a;
+    color: #ffffff;
+    z-index: 40;
+    transition: width 0.3s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .sidebar-container.collapsed {
+    width: 72px;
+  }
+  
+  /* Header */
+  .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 72px;
+  }
+  
+  .sidebar-logo-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    overflow: hidden;
+  }
+  
+  .sidebar-logo-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  
+  .sidebar-logo-text {
+    overflow: hidden;
+    transition: opacity 0.2s, width 0.2s;
+  }
+  
+  .sidebar-logo-text h1 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    white-space: nowrap;
+  }
+  
+  .sidebar-logo-text p {
+    font-size: 11px;
+    color: #94a3b8;
+    margin: 0;
+    white-space: nowrap;
+  }
+  
+  .sidebar-container.collapsed .sidebar-logo-text {
+    opacity: 0;
+    width: 0;
+  }
+  
+  /* Toggle Button */
+  .sidebar-toggle {
+    padding: 8px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+  }
+  
+  .sidebar-toggle:hover {
+    background-color: #1e293b;
+    color: #ffffff;
+  }
+  
+  .sidebar-container.collapsed .toggle-icon-close {
+    display: none !important;
+  }
+  
+  .sidebar-container.collapsed .toggle-icon-open {
+    display: block !important;
+  }
+  
+  /* Navigation */
+  .sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 0;
+  }
+  
+  .sidebar-nav::-webkit-scrollbar {
+    width: 0;
+  }
+  
+  /* Section Titles */
+  .sidebar-section-title {
+    padding: 8px 24px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  
+  .sidebar-section-title:first-child {
+    margin-top: 0;
+  }
+  
+  .sidebar-container.collapsed .sidebar-section-title {
+    opacity: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+  }
+  
+  /* Links */
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    color: #cbd5e1;
+    text-decoration: none;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+    gap: 12px;
+  }
+  
+  .sidebar-link:hover {
+    background-color: #1e293b;
+    color: #ffffff;
+  }
+  
+  .sidebar-link.active {
+    background-color: #1e293b;
+    color: #ffffff;
+    border-left-color: #3b82f6;
+  }
+  
+  .sidebar-link i,
+  .sidebar-link svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  
+  .sidebar-link span {
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity 0.2s, width 0.2s;
+  }
+  
+  /* Collapsed State */
+  .sidebar-container.collapsed .sidebar-link {
+    padding: 12px 0;
+    justify-content: center;
+  }
+  
+  .sidebar-container.collapsed .sidebar-link span {
+    opacity: 0;
+    width: 0;
+    position: absolute;
+  }
+  
+  /* Tooltip on collapsed */
+  .sidebar-container.collapsed .sidebar-link {
+    position: relative;
+  }
+  
+  .sidebar-container.collapsed .sidebar-link:hover::after {
+    content: attr(data-title);
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #1e293b;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    white-space: nowrap;
+    margin-left: 8px;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  
+  /* Main Content Adjustment */
+  .main-content {
+    margin-left: 256px;
+    transition: margin-left 0.3s ease;
+  }
+  
+  .main-content.sidebar-collapsed {
+    margin-left: 72px;
+  }
+</style>
+
+<script>
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const toggle = document.getElementById('sidebarToggle');
+  const mainContent = document.querySelector('.main-content');
+  
+  if (!sidebar || !toggle) return;
+  
+  // Load saved state
+  const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+  
+  if (isCollapsed) {
+    sidebar.classList.add('collapsed');
+    if (mainContent) mainContent.classList.add('sidebar-collapsed');
+  }
+  
+  // Toggle handler
+  toggle.addEventListener('click', function(e) {
+    e.preventDefault();
+    sidebar.classList.toggle('collapsed');
+    if (mainContent) mainContent.classList.toggle('sidebar-collapsed');
+    
+    // Save state
+    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+    
+    // Re-render lucide icons
+    if (typeof lucide !== 'undefined') {
+      setTimeout(function() { lucide.createIcons(); }, 100);
+    }
+  });
+})();
+</script>

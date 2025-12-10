@@ -3,6 +3,7 @@
 // Score: 7.8 → 9.0/10
 // ========================================
 
+require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
@@ -34,11 +35,11 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://unpkg.com"],
       scriptSrcAttr: ["'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'"]
+      connectSrc: ["'self'", "https://unpkg.com"]
     },
   },
   hsts: {
@@ -59,6 +60,7 @@ const limiter = rateLimit({
   message: 'Muitas requisições. Tente novamente em 15 minutos.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false }  // ← ADICIONAR
 });
 app.use(limiter);
 
@@ -77,7 +79,7 @@ const financialLimiter = rateLimit({
   message: 'Muitas operações financeiras. Aguarde 15 minutos.',
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.session?.userId || req.ip,
+  validate: { xForwardedForHeader: false }  // ← ADICIONAR
 });
 
 // ✅ NOVO: Rate limiter para estornos
@@ -87,7 +89,7 @@ const estornoLimiter = rateLimit({
   message: 'Limite de estornos atingido. Aguarde 1 hora.',
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.session?.userId || req.ip,
+  validate: { xForwardedForHeader: false }  // ← ADICIONAR
 });
 
 // ✅ NOVO: Rate limiter para backup
@@ -97,6 +99,7 @@ const backupLimiter = rateLimit({
   message: 'Limite de backups atingido. Aguarde 1 hora.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false }  // ← ADICIONAR
 });
 
 // ========================================

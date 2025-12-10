@@ -1,0 +1,27 @@
+<!-- partials/empty-state.ejs -->
+<!-- 
+  Props:
+  - icon: string (nome do ícone Lucide)
+  - title: string (título)
+  - description: string (descrição)
+  - actionUrl: string (URL do botão - opcional)
+  - actionText: string (texto do botão - opcional)
+  - actionIcon: string (ícone do botão - opcional)
+-->
+
+<div class="empty-state">
+  <div class="empty-state-icon">
+    <i data-lucide="<%= icon %>" class="w-16 h-16"></i>
+  </div>
+  <h3 class="empty-state-title"><%= title %></h3>
+  <p class="empty-state-description"><%= description %></p>
+  
+  <% if (typeof actionUrl !== 'undefined' && typeof actionText !== 'undefined') { %>
+    <a href="<%= actionUrl %>" class="btn btn-primary">
+      <% if (typeof actionIcon !== 'undefined') { %>
+        <i data-lucide="<%= actionIcon %>" class="w-4 h-4 mr-2"></i>
+      <% } %>
+      <%= actionText %>
+    </a>
+  <% } %>
+</div>

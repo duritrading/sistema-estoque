@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' | ' : '' %>OF Distribuidora</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/css/styles.css">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-secondary-50">
+  
+  <%- include('partials/sidebar', { currentPage: typeof currentPage !== 'undefined' ? currentPage : '' }) %>
+  
+  <div class="main-content">
+    <%- include('partials/topbar', { user: user }) %>
+    
+    <main class="page-container">
+      <%- body %>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+    
+    // CSRF Token for AJAX requests
+    const csrfToken = '<%= typeof csrfToken !== "undefined" ? csrfToken : "" %>';
+    
+    // Global fetch wrapper with CSRF
+    window.api = {
+      post: (url, data) => fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify(data)
+      }).then(r => r.json()),
+      
+      delete: (url) => fetch(url, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrfToken }
+      }).then(r => r.json())
+    };
+  </script>
+  
+  <%- typeof scripts !== 'undefined' ? scripts : '' %>
+</body>
+</html>
