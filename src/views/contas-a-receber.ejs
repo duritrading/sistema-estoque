@@ -66,6 +66,7 @@
     </div>
     
     <form method="GET" action="/contas-a-receber" class="controls-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="controls-content">
         <div class="control-group">
           <label class="control-label">
@@ -199,7 +200,8 @@
                       </button>
 
                       <% if (!conta.movimentacao_id) { %>
-                        <form action="/contas-a-receber/delete/<%= conta.id %>" method="POST" style="display: inline;" 
+                        <form action="/contas-a-receber/delete/<%= conta.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" style="display: inline;" 
                               onsubmit="return confirm('Confirma a exclusão desta conta manual?');">
                           <button type="submit" class="btn-action btn-danger" title="Excluir conta">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -273,6 +275,7 @@
     </div>
     
     <form action="/contas-a-receber" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-body">
         <div class="form-row">
           <div class="form-field">
@@ -390,6 +393,7 @@
     </div>
     
     <form id="formRecebimento" method="POST" action="">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-body">
         <div class="payment-info-box">
           <div class="info-row">

@@ -66,6 +66,7 @@
     </div>
     
     <form method="GET" action="/contas-a-pagar" class="controls-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="controls-content">
         <div class="control-group">
           <label class="control-label">
@@ -210,7 +211,8 @@
                         Pagar
                       </button>
 
-                      <form action="/contas-a-pagar/delete/<%= conta.id %>" method="POST" style="display: inline;" 
+                      <form action="/contas-a-pagar/delete/<%= conta.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" style="display: inline;" 
                             onsubmit="return confirm('Confirma a exclusão desta conta?');">
                         <button type="submit" class="btn-action btn-danger" title="Excluir conta">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -221,7 +223,8 @@
                         </button>
                       </form>
                     <% } else { %>
-                      <form action="/contas-a-pagar/estornar/<%= conta.id %>" method="POST" style="display: inline;" 
+                      <form action="/contas-a-pagar/estornar/<%= conta.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" style="display: inline;" 
                             onsubmit="return confirm('Confirma o estorno deste pagamento?');">
                         <button type="submit" class="btn-action btn-warning" title="Estornar pagamento">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -292,6 +295,7 @@
     </div>
     
     <form action="/contas-a-pagar" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-body">
         <div class="form-row">
           <div class="form-field">
@@ -410,6 +414,7 @@
     </div>
     
     <form id="formPagamento" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-body">
         <div class="payment-info">
           <div class="info-group">

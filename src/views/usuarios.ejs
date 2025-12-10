@@ -7,6 +7,7 @@
 <div class="card">
   <h2>➕ Criar Novo Usuário</h2>
   <form action="/usuarios" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="form-row">
       <div class="form-group">
         <label for="username">Nome de Usuário *</label>

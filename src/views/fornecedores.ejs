@@ -7,6 +7,7 @@
 <div class="card">
   <h2>➕ Cadastrar Fornecedor</h2>
   <form action="/fornecedores" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="form-row">
       <div class="form-group">
         <label for="codigo">Código</label>
@@ -68,7 +69,8 @@
           <td><%= f.contato || '-' %></td>
           <td><%= f.telefone || '-' %></td>
           <td><%= f.email || '-' %></td>
-          <td> <form action="/fornecedores/delete/<%= f.id %>" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este fornecedor?');">
+          <td> <form action="/fornecedores/delete/<%= f.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este fornecedor?');">
             <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
           </form>
         </td>

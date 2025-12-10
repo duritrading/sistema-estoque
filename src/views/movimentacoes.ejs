@@ -223,6 +223,7 @@
     </div>
 
     <form id="movimentacaoForm" method="POST" class="modal-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="form-grid">
         <div class="form-group">
           <label for="tipo">Tipo *</label>

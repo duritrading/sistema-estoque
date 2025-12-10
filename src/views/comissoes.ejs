@@ -266,6 +266,7 @@
       <h1>💰 Comissões de RCAs</h1>
       
       <form class="filtros-form" method="GET" action="/comissoes">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <select name="mes">
           <% for(let m = 1; m <= 12; m++) { %>
             <option value="<%= m %>" <%= filtros.mes == m ? 'selected' : '' %>>
@@ -461,7 +462,8 @@
                         <button class="btn btn-success btn-sm" onclick="abrirModalPagar(<%= c.id %>, '<%= c.rca_nome %>', <%= c.valor_comissao %>)">
                           Pagar
                         </button>
-                        <form action="/comissoes/cancelar/<%= c.id %>" method="POST" style="display: inline;" 
+                        <form action="/comissoes/cancelar/<%= c.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" style="display: inline;" 
                               onsubmit="return confirm('Cancelar esta comissão?')">
                           <button type="submit" class="btn btn-danger btn-sm">Cancelar</button>
                         </form>
@@ -486,6 +488,7 @@
       </div>
       
       <form action="/comissoes/gerar" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <input type="hidden" name="rca_id" id="gerarRcaId">
         <input type="hidden" name="periodo_inicio" value="<%= filtros.periodo_inicio %>">
         <input type="hidden" name="periodo_fim" value="<%= filtros.periodo_fim %>">
@@ -532,6 +535,7 @@
       </div>
       
       <form id="formPagar" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div class="form-group">
           <label>RCA</label>
           <input type="text" id="pagarRcaNome" readonly>

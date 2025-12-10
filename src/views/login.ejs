@@ -360,6 +360,7 @@
 
     <!-- Login Form -->
     <form action="/login" method="POST" class="login-form" id="loginForm">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="redirect" value="<%= locals.redirectUrl || '/' %>">
 
       <div class="form-group">

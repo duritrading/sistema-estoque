@@ -7,6 +7,7 @@
 <div class="card">
   <h2>➕ Cadastrar Novo RCA</h2>
   <form action="/rcas" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="form-row">
       <div class="form-group">
         <label for="nome">Nome *</label>
@@ -69,7 +70,8 @@
         <td><%= rca.cpf || '-' %></td>
         <td><%= rca.telefone || '-' %></td>
         <td><%= rca.email || '-' %></td>
-        <td> <form action="/rcas/delete/<%= rca.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este RCA?');">
+        <td> <form action="/rcas/delete/<%= rca.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este RCA?');">
             <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
           </form>
         </td>

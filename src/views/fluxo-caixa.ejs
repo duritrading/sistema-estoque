@@ -290,7 +290,8 @@
                 <td class="td-actions">
                   <div class="action-buttons">
                     <% if (item.descricao && (item.descricao.includes('Recebimento Parcela') || item.descricao.includes('Pagamento:'))) { %>
-                      <form action="/fluxo-caixa/estornar/<%= item.id %>" method="POST" style="display: inline;" 
+                      <form action="/fluxo-caixa/estornar/<%= item.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" style="display: inline;" 
                             onsubmit="return confirm('⚠️ ATENÇÃO: Estornar este lançamento irá reverter o pagamento da conta associada. Continuar?');">
                         <button type="submit" class="btn-action btn-warning" title="Estornar lançamento">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -301,7 +302,8 @@
                         </button>
                       </form>
                     <% } else { %>
-                      <form action="/fluxo-caixa/delete/<%= item.id %>" method="POST" style="display: inline;" 
+                      <form action="/fluxo-caixa/delete/<%= item.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" style="display: inline;" 
                             onsubmit="return confirm('Confirma a exclusão deste lançamento?');">
                         <button type="submit" class="btn-action btn-danger" title="Excluir lançamento">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -426,6 +428,7 @@
     </div>
     
     <form action="/fluxo-caixa/lancamento" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-body">
         <div class="form-row">
           <div class="form-field">

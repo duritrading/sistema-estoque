@@ -7,6 +7,7 @@
 <div class="card">
   <h2>➕ Cadastrar Novo Cliente</h2>
   <form action="/clientes" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="form-row">
       <div class="form-group">
         <label for="nome">Nome/Razão Social *</label>
@@ -78,7 +79,8 @@
           <td><%= c.telefone || '-' %></td>
           <td><%= c.email || '-' %></td>
           <td>
-            <form action="/clientes/delete/<%= c.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este cliente?');">
+            <form action="/clientes/delete/<%= c.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este cliente?');">
               <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
             </form>
           </td>

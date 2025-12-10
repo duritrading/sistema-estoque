@@ -7,6 +7,7 @@
 <div class="card">
   <h2>📝 Cadastrar Novo Produto</h2>
   <form action="/produtos" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="form-row">
         <div class="form-group">
           <label for="codigo">Código *</label>
@@ -72,7 +73,8 @@
       <% if (parseFloat(produto.saldo_atual) <= parseFloat(produto.estoque_minimo || 0)) { %><span class="badge badge-warning">Estoque Baixo</span><% } %>
 
       <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
-        <form action="/produtos/delete/<%= produto.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este produto? Esta ação é irreversível.');">
+        <form action="/produtos/delete/<%= produto.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este produto? Esta ação é irreversível.');">
           <button type="submit" class="btn btn-danger" style="width: 100%; padding: 8px; font-size: 14px;">Excluir Produto</button>
         </form>
       </div>

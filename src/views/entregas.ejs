@@ -72,6 +72,7 @@
   <h3>📦 Nova Entrega</h3>
   
   <form action="/entregas" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="form-row">
       <div class="form-group">
         <label for="data_entrega">Data da Entrega:</label>
@@ -172,7 +173,8 @@
               <td>
                 <div class="action-buttons">
                   <% if (entrega.status !== 'ENTREGUE') { %>
-                    <form action="/entregas/marcar-entregue/<%= entrega.id %>" method="POST" style="display: inline;">
+                    <form action="/entregas/marcar-entregue/<%= entrega.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" style="display: inline;">
                       <button type="submit" class="btn btn-sm btn-success" 
                               onclick="return confirm('Marcar como entregue?')">
                         ✅ Entregar
@@ -180,7 +182,8 @@
                     </form>
                   <% } %>
                   
-                  <form action="/entregas/delete/<%= entrega.id %>" method="POST" style="display: inline;">
+                  <form action="/entregas/delete/<%= entrega.id %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" style="display: inline;">
                     <button type="submit" class="btn btn-sm btn-danger" 
                             onclick="return confirm('Excluir esta entrega?')">
                       🗑️ Excluir
