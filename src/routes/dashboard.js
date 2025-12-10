@@ -1,150 +1,218 @@
-// src/routes/dashboard.js - REFATORADO
+// ========================================
+// DASHBOARD - COM VALIDAÇÃO JOI
+// ========================================
+
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
-const asyncHandler = require('../middleware/asyncHandler');
+const { validateQuery } = require('../middleware/validation');
+const Joi = require('joi');
 
-const ROUTE = '/';
+// ========================================
+// SCHEMA DE VALIDAÇÃO
+// ========================================
 
-// Helper: Calcular período com base nos filtros
-function calcularPeriodo(query) {
-  const { dataInicial, dataFinal } = query;
-  const hoje = new Date();
-  
-  let inicioMes = dataInicial ? new Date(dataInicial) : new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  let fimMes = dataFinal ? new Date(dataFinal) : new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
-  
-  const inicioMesPassado = new Date(inicioMes);
-  inicioMesPassado.setMonth(inicioMesPassado.getMonth() - 1);
-  const fimMesPassado = new Date(fimMes);
-  fimMesPassado.setMonth(fimMesPassado.getMonth() - 1);
-  
-  return { inicioMes, fimMes, inicioMesPassado, fimMesPassado };
-}
+const filtrosDashboardSchema = Joi.object({
+  dataInicial: Joi.date()
+    .iso()
+    .optional()
+    .messages({
+      'date.base': 'Data inicial inválida'
+    }),
+  dataFinal: Joi.date()
+    .iso()
+    .optional()
+    .min(Joi.ref('dataInicial'))
+    .messages({
+      'date.base': 'Data final inválida',
+      'date.min': 'Data final deve ser maior que data inicial'
+    })
+});
 
+// ========================================
 // GET / - Dashboard principal
-router.get('/', asyncHandler(async (req, res) => {
-  const { inicioMes, fimMes, inicioMesPassado, fimMesPassado } = calcularPeriodo(req.query);
-  const dashboardData = {};
+// ========================================
 
-  // Queries paralelas para performance
-  const [
-    faturamentoAtual,
-    faturamentoAnterior,
-    lucroResult,
-    contasVencidasResult,
-    produtosBaixoEstoque,
-    topProdutos,
-    inadimplenciaResult
-  ] = await Promise.all([
-    // 1. Faturamento atual
-    pool.query(`
-      SELECT COALESCE(SUM(valor_total), 0) as total
-      FROM movimentacoes WHERE tipo = 'SAIDA' AND created_at >= $1 AND created_at <= $2
-    `, [inicioMes, fimMes]),
-    
-    // 2. Faturamento anterior
-    pool.query(`
-      SELECT COALESCE(SUM(valor_total), 0) as total
-      FROM movimentacoes WHERE tipo = 'SAIDA' AND created_at >= $1 AND created_at <= $2
-    `, [inicioMesPassado, fimMesPassado]),
-    
-    // 3. Lucro (Receitas - Despesas)
-    pool.query(`
-      SELECT 
-        COALESCE(SUM(CASE WHEN tipo = 'CREDITO' THEN valor ELSE 0 END), 0) as receitas,
-        COALESCE(SUM(CASE WHEN tipo = 'DEBITO' THEN valor ELSE 0 END), 0) as despesas
-      FROM fluxo_caixa WHERE status = 'PAGO' AND data_operacao >= $1 AND data_operacao <= $2
-    `, [inicioMes, fimMes]),
-    
-    // 4. Contas vencidas
-    pool.query(`
-      SELECT COUNT(*) as quantidade, COALESCE(SUM(valor), 0) as total
-      FROM contas_a_receber WHERE status = 'Pendente' AND data_vencimento < CURRENT_DATE
-    `),
-    
-    // 5. Produtos com estoque baixo
-    pool.query(`
-      SELECT p.codigo, p.descricao, p.estoque_minimo,
-        COALESCE(SUM(CASE WHEN m.tipo = 'ENTRADA' THEN m.quantidade 
-                         WHEN m.tipo = 'SAIDA' THEN -m.quantidade ELSE 0 END), 0) as saldo_atual
-      FROM produtos p
-      LEFT JOIN movimentacoes m ON p.id = m.produto_id
-      GROUP BY p.id, p.codigo, p.descricao, p.estoque_minimo
-      HAVING COALESCE(SUM(CASE WHEN m.tipo = 'ENTRADA' THEN m.quantidade 
-                              WHEN m.tipo = 'SAIDA' THEN -m.quantidade ELSE 0 END), 0) <= p.estoque_minimo
-      ORDER BY saldo_atual ASC LIMIT 5
-    `),
-    
-    // 6. Top produtos
-    pool.query(`
-      SELECT p.codigo, p.descricao, SUM(m.quantidade) as total_vendido, SUM(m.valor_total) as faturamento_produto
-      FROM movimentacoes m
-      JOIN produtos p ON m.produto_id = p.id
-      WHERE m.tipo = 'SAIDA' AND m.created_at >= $1 AND m.created_at <= $2
-      GROUP BY p.id, p.codigo, p.descricao
-      ORDER BY total_vendido DESC LIMIT 5
-    `, [inicioMes, fimMes]),
-    
-    // 7. Inadimplência
-    pool.query(`
-      SELECT COUNT(*) as clientes_inadimplentes, COALESCE(SUM(valor), 0) as valor_total,
-        COUNT(CASE WHEN data_vencimento < CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as mais_30_dias
-      FROM contas_a_receber WHERE status = 'Pendente' AND data_vencimento < CURRENT_DATE
-    `)
-  ]);
-
-  // Processar faturamento
-  dashboardData.faturamentoMes = parseFloat(faturamentoAtual.rows[0].total);
-  dashboardData.faturamentoMesPassado = parseFloat(faturamentoAnterior.rows[0].total);
-  dashboardData.crescimentoFaturamento = dashboardData.faturamentoMesPassado > 0
-    ? ((dashboardData.faturamentoMes - dashboardData.faturamentoMesPassado) / dashboardData.faturamentoMesPassado * 100).toFixed(1)
-    : 0;
-
-  // Processar lucro
-  const receitas = parseFloat(lucroResult.rows[0].receitas);
-  const despesas = parseFloat(lucroResult.rows[0].despesas);
-  dashboardData.lucroMes = receitas - despesas;
-  dashboardData.margemLucro = dashboardData.faturamentoMes > 0
-    ? ((dashboardData.lucroMes / dashboardData.faturamentoMes) * 100).toFixed(1)
-    : 0;
-
-  // Fluxo de caixa
-  dashboardData.fluxoCaixa = { entradas: receitas, saidas: despesas, saldo: receitas - despesas };
-
-  // Contas vencidas
-  dashboardData.contasVencidas = {
-    quantidade: parseInt(contasVencidasResult.rows[0].quantidade),
-    total: parseFloat(contasVencidasResult.rows[0].total)
-  };
-
-  // Listas
-  dashboardData.produtosBaixoEstoque = produtosBaixoEstoque.rows;
-  dashboardData.topProdutos = topProdutos.rows;
-  dashboardData.inadimplencia = inadimplenciaResult.rows[0];
-
-  // Entregas (opcional - pode não existir tabela)
+router.get('/', validateQuery(filtrosDashboardSchema), async (req, res) => {
   try {
-    const entregasResult = await pool.query(`
-      SELECT COUNT(*) as total,
-        COUNT(CASE WHEN status = 'PENDENTE' THEN 1 END) as pendentes,
-        COUNT(CASE WHEN status = 'ENTREGUE' THEN 1 END) as entregues
-      FROM entregas WHERE data_entrega >= $1 AND data_entrega <= $2
-    `, [inicioMes, fimMes]);
-    dashboardData.entregas = entregasResult.rows[0];
-  } catch {
-    dashboardData.entregas = { total: 0, pendentes: 0, entregues: 0 };
-  }
+    let { dataInicial, dataFinal } = req.query;
 
-  res.render('dashboard', {
-    user: res.locals.user,
-    currentPage: 'dashboard',
-    dashboardData,
-    filtros: {
-      dataInicial: req.query.dataInicial || inicioMes.toISOString().split('T')[0],
-      dataFinal: req.query.dataFinal || fimMes.toISOString().split('T')[0]
-    }
-  });
-}, ROUTE));
+    // Definir período padrão (mês atual)
+    const hoje = new Date();
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+    if (!dataInicial) dataInicial = inicioMes.toISOString().split('T')[0];
+    if (!dataFinal) dataFinal = fimMes.toISOString().split('T')[0];
+
+    // Período anterior (para comparação)
+    const inicioMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+    const fimMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+
+    const dashboardData = {};
+
+    // Executar todas as queries em paralelo
+    const [
+      faturamentoAtual,
+      faturamentoAnterior,
+      fluxoCaixa,
+      contasVencidas,
+      produtosBaixoEstoque,
+      topProdutos,
+      inadimplencia,
+      entregas
+    ] = await Promise.all([
+      // 1. FATURAMENTO ATUAL
+      pool.query(`
+        SELECT 
+          COALESCE(SUM(CASE WHEN tipo = 'SAIDA' THEN COALESCE(valor_total, quantidade * COALESCE(preco_unitario, 0)) ELSE 0 END), 0) as faturamento,
+          COUNT(CASE WHEN tipo = 'SAIDA' THEN 1 END) as total_vendas
+        FROM movimentacoes
+        WHERE created_at >= $1 AND created_at <= $2
+      `, [dataInicial, dataFinal]),
+
+      // 2. FATURAMENTO MÊS ANTERIOR
+      pool.query(`
+        SELECT 
+          COALESCE(SUM(CASE WHEN tipo = 'SAIDA' THEN COALESCE(valor_total, quantidade * COALESCE(preco_unitario, 0)) ELSE 0 END), 0) as faturamento
+        FROM movimentacoes
+        WHERE created_at >= $1 AND created_at <= $2
+      `, [inicioMesAnterior, fimMesAnterior]),
+
+      // 3. FLUXO DE CAIXA
+      pool.query(`
+        SELECT 
+          COALESCE(SUM(CASE WHEN tipo = 'CREDITO' THEN valor ELSE 0 END), 0) as creditos,
+          COALESCE(SUM(CASE WHEN tipo = 'DEBITO' THEN valor ELSE 0 END), 0) as debitos
+        FROM fluxo_caixa
+        WHERE data_operacao >= $1 AND data_operacao <= $2 AND status = 'PAGO'
+      `, [dataInicial, dataFinal]),
+
+      // 4. CONTAS VENCIDAS
+      pool.query(`
+        SELECT 
+          COUNT(*) as total,
+          COALESCE(SUM(valor), 0) as valor_total
+        FROM contas_a_pagar
+        WHERE status = 'Pendente' AND data_vencimento < CURRENT_DATE
+      `),
+
+      // 5. PRODUTOS BAIXO ESTOQUE
+      pool.query(`
+        SELECT 
+          p.codigo,
+          p.descricao,
+          p.estoque_minimo,
+          COALESCE(SUM(
+            CASE 
+              WHEN m.tipo = 'ENTRADA' THEN m.quantidade 
+              WHEN m.tipo = 'SAIDA' THEN -m.quantidade 
+              ELSE 0 
+            END
+          ), 0) as saldo_atual
+        FROM produtos p
+        LEFT JOIN movimentacoes m ON p.id = m.produto_id
+        GROUP BY p.id
+        HAVING COALESCE(SUM(
+          CASE 
+            WHEN m.tipo = 'ENTRADA' THEN m.quantidade 
+            WHEN m.tipo = 'SAIDA' THEN -m.quantidade 
+            ELSE 0 
+          END
+        ), 0) <= p.estoque_minimo
+        ORDER BY saldo_atual ASC
+        LIMIT 10
+      `),
+
+      // 6. TOP PRODUTOS
+      pool.query(`
+        SELECT 
+          p.descricao,
+          SUM(m.quantidade) as quantidade_vendida,
+          SUM(COALESCE(m.valor_total, m.quantidade * COALESCE(m.preco_unitario, 0))) as valor_total
+        FROM movimentacoes m
+        JOIN produtos p ON m.produto_id = p.id
+        WHERE m.tipo = 'SAIDA' AND m.created_at >= $1 AND m.created_at <= $2
+        GROUP BY p.id, p.descricao
+        ORDER BY quantidade_vendida DESC
+        LIMIT 5
+      `, [dataInicial, dataFinal]),
+
+      // 7. INADIMPLÊNCIA
+      pool.query(`
+        SELECT 
+          COUNT(*) as clientes_inadimplentes,
+          COALESCE(SUM(valor), 0) as valor_total,
+          COUNT(CASE WHEN data_vencimento < CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as mais_30_dias
+        FROM contas_a_receber 
+        WHERE status = 'Pendente' AND data_vencimento < CURRENT_DATE
+      `),
+
+      // 8. ENTREGAS (tabela pode não existir)
+      pool.query(`
+        SELECT 
+          COUNT(*) as total,
+          COUNT(CASE WHEN status = 'PENDENTE' THEN 1 END) as pendentes,
+          COUNT(CASE WHEN status = 'ENTREGUE' THEN 1 END) as entregues
+        FROM entregas 
+        WHERE data_entrega >= $1 AND data_entrega <= $2
+      `, [inicioMes, fimMes]).catch(() => ({ rows: [{ total: 0, pendentes: 0, entregues: 0 }] }))
+    ]);
+
+    // Processar resultados
+    const fatAtual = parseFloat(faturamentoAtual.rows[0].faturamento) || 0;
+    const fatAnterior = parseFloat(faturamentoAnterior.rows[0].faturamento) || 0;
+    const variacaoFaturamento = fatAnterior > 0 ? ((fatAtual - fatAnterior) / fatAnterior * 100).toFixed(1) : 0;
+
+    const creditos = parseFloat(fluxoCaixa.rows[0].creditos) || 0;
+    const debitos = parseFloat(fluxoCaixa.rows[0].debitos) || 0;
+    const saldoFluxo = creditos - debitos;
+    const lucro = fatAtual - debitos;
+    const margemLucro = fatAtual > 0 ? (lucro / fatAtual * 100).toFixed(1) : 0;
+
+    dashboardData.faturamento = {
+      atual: fatAtual,
+      anterior: fatAnterior,
+      variacao: variacaoFaturamento,
+      totalVendas: parseInt(faturamentoAtual.rows[0].total_vendas) || 0
+    };
+
+    dashboardData.fluxoCaixa = {
+      creditos,
+      debitos,
+      saldo: saldoFluxo
+    };
+
+    dashboardData.lucro = {
+      valor: lucro,
+      margem: margemLucro
+    };
+
+    dashboardData.contasVencidas = contasVencidas.rows[0];
+    dashboardData.produtosBaixoEstoque = produtosBaixoEstoque.rows;
+    dashboardData.topProdutos = topProdutos.rows;
+    dashboardData.inadimplencia = inadimplencia.rows[0];
+    dashboardData.entregas = entregas.rows[0];
+
+    res.render('dashboard', {
+      user: res.locals.user,
+      currentPage: 'dashboard',
+      dashboardData,
+      filtros: {
+        dataInicial,
+        dataFinal
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao carregar dashboard:', error);
+    res.status(500).render('error', {
+      user: res.locals.user,
+      titulo: 'Erro',
+      mensagem: 'Erro ao carregar dashboard.',
+      voltarUrl: '/'
+    });
+  }
+});
 
 module.exports = router;
