@@ -1,86 +1,289 @@
-<%- include('partials/header', {
-  titulo: 'Produtos',
-  subtitulo: 'Cadastro e gestão de produtos',
-  user: locals.user
-}) %>
+<!-- views/produtos.ejs -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Produtos | OF Distribuidora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="bg-secondary-50">
 
-<div class="card">
-  <h2>📝 Cadastrar Novo Produto</h2>
-  <form action="/produtos" method="POST">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <div class="form-row">
-        <div class="form-group">
-          <label for="codigo">Código *</label>
-          <input type="text" id="codigo" name="codigo" required>
-        </div>
-        <div class="form-group">
-          <label for="descricao">Descrição *</label>
-          <input type="text" id="descricao" name="descricao" required>
+  <%- include('partials/sidebar', { currentPage: 'produtos' }) %>
+
+  <div class="main-content">
+    <%- include('partials/topbar', { user: user }) %>
+
+    <main class="page-container">
+      
+      <!-- Page Header -->
+      <div class="mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-secondary-900">Produtos</h1>
+            <p class="mt-1 text-secondary-500">Cadastro e gestão de produtos</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-secondary-500"><%= produtos.length %> produtos cadastrados</span>
+            <button type="button" onclick="document.getElementById('formCadastro').classList.toggle('hidden')" class="btn btn-primary">
+              <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+              Novo Produto
+            </button>
+          </div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="unidade">Unidade</label>
-          <select id="unidade" name="unidade">
-            <option value="UN">Unidade</option>
-            <option value="KG">Quilograma</option>
-            <option value="LT">Litro</option>
-            <option value="MT">Metro</option>
-            <option value="CX">Caixa</option>
-            <option value="CT">Cartela</option>
-          </select>
+
+      <!-- Formulário de Cadastro (inicialmente oculto) -->
+      <div id="formCadastro" class="card mb-6 hidden">
+        <div class="card-header flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-secondary-900">Cadastrar Novo Produto</h2>
+          <button type="button" onclick="document.getElementById('formCadastro').classList.add('hidden')" class="btn-icon btn-ghost">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
         </div>
-        <div class="form-group">
-          <label for="categoria">Categoria</label>
-          <input type="text" id="categoria" name="categoria" list="categorias">
-          <datalist id="categorias">
-            <% categorias.forEach(cat => { %>
-                <option value="<%= cat %>">
-            <% }) %>
-          </datalist>
+        <div class="card-body">
+          <form action="/produtos" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Código -->
+              <div class="form-group">
+                <label for="codigo" class="form-label">Código *</label>
+                <input type="text" id="codigo" name="codigo" required class="form-input" placeholder="Ex: PROD001">
+              </div>
+              
+              <!-- Descrição -->
+              <div class="form-group lg:col-span-2">
+                <label for="descricao" class="form-label">Descrição *</label>
+                <input type="text" id="descricao" name="descricao" required class="form-input" placeholder="Nome do produto">
+              </div>
+              
+              <!-- Unidade -->
+              <div class="form-group">
+                <label for="unidade" class="form-label">Unidade</label>
+                <select id="unidade" name="unidade" class="form-select">
+                  <option value="UN">Unidade (UN)</option>
+                  <option value="KG">Quilograma (KG)</option>
+                  <option value="LT">Litro (LT)</option>
+                  <option value="MT">Metro (MT)</option>
+                  <option value="CX">Caixa (CX)</option>
+                  <option value="CT">Cartela (CT)</option>
+                  <option value="PC">Pacote (PC)</option>
+                  <option value="DZ">Dúzia (DZ)</option>
+                </select>
+              </div>
+              
+              <!-- Categoria -->
+              <div class="form-group">
+                <label for="categoria" class="form-label">Categoria</label>
+                <input type="text" id="categoria" name="categoria" list="categorias" class="form-input" placeholder="Selecione ou digite">
+                <datalist id="categorias">
+                  <% categorias.forEach(cat => { %>
+                    <option value="<%= cat %>">
+                  <% }) %>
+                </datalist>
+              </div>
+              
+              <!-- Estoque Mínimo -->
+              <div class="form-group">
+                <label for="estoque_minimo" class="form-label">Estoque Mínimo</label>
+                <input type="number" id="estoque_minimo" name="estoque_minimo" min="0" value="0" class="form-input">
+              </div>
+              
+              <!-- Preço de Custo -->
+              <div class="form-group">
+                <label for="preco_custo" class="form-label">Preço de Custo (R$)</label>
+                <input type="number" id="preco_custo" name="preco_custo" step="0.01" min="0" class="form-input" placeholder="0,00">
+              </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-secondary-200">
+              <button type="button" onclick="document.getElementById('formCadastro').classList.add('hidden')" class="btn btn-secondary">
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+                Cadastrar Produto
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="estoque_minimo">Estoque Mínimo</label>
-          <input type="number" id="estoque_minimo" name="estoque_minimo" min="0" value="0">
-        </div>
-        <div class="form-group">
-          <label for="preco_custo">Preço de Custo (R$)</label>
-          <input type="number" id="preco_custo" name="preco_custo" step="0.01" min="0">
+
+      <!-- Filtros e Busca -->
+      <div class="card mb-6">
+        <div class="card-body py-4">
+          <div class="flex flex-col sm:flex-row gap-4">
+            <div class="flex-1 relative">
+              <input type="text" id="busca" placeholder="Buscar por código ou descrição..." class="form-input pl-10" onkeyup="filtrarProdutos()">
+              <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400"></i>
+            </div>
+            <select id="filtroCategoria" class="form-select w-full sm:w-48" onchange="filtrarProdutos()">
+              <option value="">Todas as categorias</option>
+              <% categorias.forEach(cat => { %>
+                <option value="<%= cat %>"><%= cat %></option>
+              <% }) %>
+            </select>
+            <select id="filtroEstoque" class="form-select w-full sm:w-48" onchange="filtrarProdutos()">
+              <option value="">Todos os estoques</option>
+              <option value="baixo">Estoque baixo</option>
+              <option value="ok">Estoque OK</option>
+              <option value="zerado">Sem estoque</option>
+            </select>
+          </div>
         </div>
       </div>
-      <button type="submit" class="btn">Cadastrar Produto</button>
-  </form>
-</div>
 
-<div class="card">
-  <h2>📋 Produtos Cadastrados</h2>
-  <div class="produtos-grid">
-  <% produtos.forEach(produto => { %>
-    <div class="produto-card">
-      <div class="produto-header">
-        <div class="produto-codigo"><%= produto.codigo %></div>
-        <div class="produto-saldo <%= parseFloat(produto.saldo_atual) > 0 ? 'saldo-positivo' : parseFloat(produto.saldo_atual) === 0 ? 'saldo-zero' : 'saldo-negativo' %>">
-          <%= parseFloat(produto.saldo_atual).toLocaleString('pt-BR') %>
+      <!-- Grid de Produtos -->
+      <% if (produtos.length === 0) { %>
+        <div class="card">
+          <div class="card-body py-12 text-center">
+            <div class="w-16 h-16 rounded-full bg-secondary-100 flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="package" class="w-8 h-8 text-secondary-400"></i>
+            </div>
+            <h3 class="text-lg font-medium text-secondary-900 mb-2">Nenhum produto cadastrado</h3>
+            <p class="text-secondary-500 mb-6">Comece adicionando seu primeiro produto ao sistema.</p>
+            <button type="button" onclick="document.getElementById('formCadastro').classList.remove('hidden')" class="btn btn-primary">
+              <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+              Cadastrar Produto
+            </button>
+          </div>
         </div>
-      </div>
-      <h3><%= produto.descricao %></h3>
-      <p><strong>Unidade:</strong> <%= produto.unidade || 'UN' %></p>
-      <% if (produto.categoria) { %><p><strong>Categoria:</strong> <%= produto.categoria %></p><% } %>
-      <p><strong>Estoque Mínimo:</strong> <%= produto.estoque_minimo || 0 %></p>
-      <% if (produto.preco_custo) { %><p><strong>Preço:</strong> R$ <%= parseFloat(produto.preco_custo).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p><% } %>
-      <% if (parseFloat(produto.saldo_atual) <= parseFloat(produto.estoque_minimo || 0)) { %><span class="badge badge-warning">Estoque Baixo</span><% } %>
+      <% } else { %>
+        <div id="produtosGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <% produtos.forEach(produto => { 
+            const saldo = parseFloat(produto.saldo_atual) || 0;
+            const estoqueMin = parseFloat(produto.estoque_minimo) || 0;
+            const estoqueBaixo = saldo <= estoqueMin;
+            const semEstoque = saldo === 0;
+          %>
+            <div class="produto-item card hover:shadow-md transition-shadow" 
+                 data-codigo="<%= produto.codigo.toLowerCase() %>" 
+                 data-descricao="<%= produto.descricao.toLowerCase() %>"
+                 data-categoria="<%= produto.categoria || '' %>"
+                 data-estoque="<%= semEstoque ? 'zerado' : estoqueBaixo ? 'baixo' : 'ok' %>">
+              
+              <!-- Header do Card -->
+              <div class="px-4 py-3 bg-secondary-50 border-b border-secondary-200 flex items-center justify-between">
+                <span class="text-sm font-mono font-medium text-secondary-600"><%= produto.codigo %></span>
+                <div class="flex items-center gap-2">
+                  <% if (estoqueBaixo) { %>
+                    <span class="badge <%= semEstoque ? 'badge-danger' : 'badge-warning' %>">
+                      <%= semEstoque ? 'Sem estoque' : 'Estoque baixo' %>
+                    </span>
+                  <% } %>
+                </div>
+              </div>
+              
+              <!-- Body do Card -->
+              <div class="p-4">
+                <h3 class="font-semibold text-secondary-900 mb-3 line-clamp-2"><%= produto.descricao %></h3>
+                
+                <!-- Saldo em Estoque -->
+                <div class="flex items-center justify-between p-3 rounded-lg <%= semEstoque ? 'bg-red-50' : estoqueBaixo ? 'bg-yellow-50' : 'bg-green-50' %> mb-3">
+                  <span class="text-sm <%= semEstoque ? 'text-red-600' : estoqueBaixo ? 'text-yellow-600' : 'text-green-600' %>">Saldo em estoque</span>
+                  <span class="text-lg font-bold <%= semEstoque ? 'text-red-700' : estoqueBaixo ? 'text-yellow-700' : 'text-green-700' %>">
+                    <%= saldo.toLocaleString('pt-BR') %> <%= produto.unidade || 'UN' %>
+                  </span>
+                </div>
+                
+                <!-- Detalhes -->
+                <div class="space-y-2 text-sm">
+                  <% if (produto.categoria) { %>
+                    <div class="flex justify-between">
+                      <span class="text-secondary-500">Categoria</span>
+                      <span class="text-secondary-900"><%= produto.categoria %></span>
+                    </div>
+                  <% } %>
+                  <div class="flex justify-between">
+                    <span class="text-secondary-500">Estoque mínimo</span>
+                    <span class="text-secondary-900"><%= estoqueMin %> <%= produto.unidade || 'UN' %></span>
+                  </div>
+                  <% if (produto.preco_custo) { %>
+                    <div class="flex justify-between">
+                      <span class="text-secondary-500">Preço de custo</span>
+                      <span class="text-secondary-900 font-medium">R$ <%= parseFloat(produto.preco_custo).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></span>
+                    </div>
+                  <% } %>
+                </div>
+              </div>
+              
+              <!-- Footer do Card -->
+              <div class="px-4 py-3 border-t border-secondary-200 flex justify-between items-center">
+                <a href="/movimentacoes?produto=<%= produto.id %>" class="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                  <i data-lucide="history" class="w-4 h-4"></i>
+                  Movimentações
+                </a>
+                <form action="/produtos/delete/<%= produto.id %>" method="POST" class="inline" data-nome="<%= produto.descricao %>" onsubmit="return confirm('Excluir produto ' + this.dataset.nome + '?');">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="text-sm text-danger-600 hover:text-danger-700 flex items-center gap-1">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    Excluir
+                  </button>
+                </form>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+        
+        <!-- Contador de Resultados -->
+        <div id="contadorResultados" class="mt-4 text-center text-sm text-secondary-500">
+          Exibindo <span id="totalVisivel"><%= produtos.length %></span> de <%= produtos.length %> produtos
+        </div>
+      <% } %>
 
-      <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
-        <form action="/produtos/delete/<%= produto.id %>
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este produto? Esta ação é irreversível.');">
-          <button type="submit" class="btn btn-danger" style="width: 100%; padding: 8px; font-size: 14px;">Excluir Produto</button>
-        </form>
-      </div>
+    </main>
+  </div>
 
-    </div>
-  <% }) %>
-</div>    
-
-<%- include('partials/footer') %>
+  <script>
+    // Inicializa ícones
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+    });
+    
+    // Filtro de produtos
+    function filtrarProdutos() {
+      const busca = document.getElementById('busca').value.toLowerCase();
+      const categoria = document.getElementById('filtroCategoria').value;
+      const estoque = document.getElementById('filtroEstoque').value;
+      
+      const produtos = document.querySelectorAll('.produto-item');
+      let visiveis = 0;
+      
+      produtos.forEach(function(produto) {
+        const codigo = produto.dataset.codigo;
+        const descricao = produto.dataset.descricao;
+        const prodCategoria = produto.dataset.categoria;
+        const prodEstoque = produto.dataset.estoque;
+        
+        let mostrar = true;
+        
+        // Filtro de busca
+        if (busca && !codigo.includes(busca) && !descricao.includes(busca)) {
+          mostrar = false;
+        }
+        
+        // Filtro de categoria
+        if (categoria && prodCategoria !== categoria) {
+          mostrar = false;
+        }
+        
+        // Filtro de estoque
+        if (estoque && prodEstoque !== estoque) {
+          mostrar = false;
+        }
+        
+        produto.style.display = mostrar ? 'block' : 'none';
+        if (mostrar) visiveis++;
+      });
+      
+      // Atualiza contador
+      document.getElementById('totalVisivel').textContent = visiveis;
+    }
+  </script>
+</body>
+</html>

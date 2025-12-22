@@ -1,67 +1,293 @@
-<%- include('partials/header', {
-  titulo: 'Gerenciar Usuários',
-  subtitulo: 'Controle de acesso ao sistema',
-  user: locals.user
-}) %>
+<!-- views/usuarios.ejs -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usuários | OF Distribuidora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="bg-secondary-50">
 
-<div class="card">
-  <h2>➕ Criar Novo Usuário</h2>
-  <form action="/usuarios" method="POST">
+  <%- include('partials/sidebar', { currentPage: 'usuarios' }) %>
+
+  <div class="main-content">
+    <%- include('partials/topbar', { user: user }) %>
+
+    <main class="page-container">
+      
+      <!-- Page Header -->
+      <div class="mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-secondary-900">Usuários</h1>
+            <p class="mt-1 text-secondary-500">Controle de acesso ao sistema</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-secondary-500"><%= usuarios.length %> usuários cadastrados</span>
+            <button type="button" onclick="document.getElementById('formCadastro').classList.toggle('hidden')" class="btn btn-primary">
+              <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+              Novo Usuário
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulário de Cadastro -->
+      <div id="formCadastro" class="card mb-6 hidden">
+        <div class="card-header flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-secondary-900">Criar Novo Usuário</h2>
+          <button type="button" onclick="document.getElementById('formCadastro').classList.add('hidden')" class="text-secondary-400 hover:text-secondary-600">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="card-body">
+          <form action="/usuarios" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Username -->
+              <div class="form-group">
+                <label for="username" class="form-label">Nome de Usuário *</label>
+                <input type="text" id="username" name="username" required class="form-input" placeholder="usuario123">
+                <p class="text-xs text-secondary-500 mt-1">Usado para login no sistema</p>
+              </div>
+              
+              <!-- Email -->
+              <div class="form-group">
+                <label for="email" class="form-label">E-mail *</label>
+                <input type="email" id="email" name="email" required class="form-input" placeholder="usuario@empresa.com">
+              </div>
+              
+              <!-- Nome Completo -->
+              <div class="form-group">
+                <label for="nome_completo" class="form-label">Nome Completo</label>
+                <input type="text" id="nome_completo" name="nome_completo" class="form-input" placeholder="Nome completo do usuário">
+              </div>
+              
+              <!-- Senha -->
+              <div class="form-group">
+                <label for="password" class="form-label">Senha *</label>
+                <div class="relative">
+                  <input type="password" id="password" name="password" required minlength="6" class="form-input pr-10" placeholder="Mínimo 6 caracteres">
+                  <button type="button" onclick="togglePassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400 hover:text-secondary-600">
+                    <i data-lucide="eye" id="eyeIcon" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-secondary-200">
+              <button type="button" onclick="document.getElementById('formCadastro').classList.add('hidden')" class="btn btn-secondary">
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i data-lucide="user-plus" class="w-4 h-4 mr-2"></i>
+                Criar Usuário
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Lista de Usuários -->
+      <% if (usuarios.length === 0) { %>
+        <div class="card">
+          <div class="card-body py-12 text-center">
+            <div class="w-16 h-16 rounded-full bg-secondary-100 flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="users" class="w-8 h-8 text-secondary-400"></i>
+            </div>
+            <h3 class="text-lg font-medium text-secondary-900 mb-2">Nenhum usuário cadastrado</h3>
+            <p class="text-secondary-500 mb-6">Crie o primeiro usuário do sistema.</p>
+            <button type="button" onclick="document.getElementById('formCadastro').classList.remove('hidden')" class="btn btn-primary">
+              <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+              Criar Usuário
+            </button>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="card">
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Usuário</th>
+                  <th>E-mail</th>
+                  <th class="text-center">Status</th>
+                  <th>Último Login</th>
+                  <th>Cadastro</th>
+                  <th class="text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% usuarios.forEach(function(u) { %>
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full <%= u.ativo ? 'bg-primary-100' : 'bg-secondary-100' %> flex items-center justify-center">
+                          <span class="text-sm font-semibold <%= u.ativo ? 'text-primary-700' : 'text-secondary-500' %>">
+                            <%= u.username.charAt(0).toUpperCase() %>
+                          </span>
+                        </div>
+                        <div>
+                          <p class="font-medium text-secondary-900"><%= u.username %></p>
+                          <% if (u.nome_completo) { %>
+                            <p class="text-xs text-secondary-500"><%= u.nome_completo %></p>
+                          <% } %>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <a href="mailto:<%= u.email %>" class="text-secondary-600 hover:text-primary-600">
+                        <%= u.email %>
+                      </a>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge <%= u.ativo ? 'badge-success' : 'badge-danger' %>">
+                        <%= u.ativo ? 'Ativo' : 'Inativo' %>
+                      </span>
+                    </td>
+                    <td class="text-secondary-600">
+                      <% if (u.ultimo_login) { %>
+                        <div class="flex items-center gap-1">
+                          <i data-lucide="clock" class="w-3 h-3"></i>
+                          <%= new Date(u.ultimo_login).toLocaleDateString('pt-BR') %>
+                        </div>
+                      <% } else { %>
+                        <span class="text-secondary-400">Nunca</span>
+                      <% } %>
+                    </td>
+                    <td class="text-secondary-500 text-sm">
+                      <%= new Date(u.created_at).toLocaleDateString('pt-BR') %>
+                    </td>
+                    <td class="text-right">
+                      <div class="flex justify-end gap-2">
+                        <% if (u.ativo) { %>
+                          <form action="/usuarios/desativar/<%= u.id %>" method="POST" class="inline">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <button type="submit" class="text-sm text-warning-600 hover:text-warning-700 flex items-center gap-1">
+                              <i data-lucide="user-x" class="w-4 h-4"></i>
+                              Desativar
+                            </button>
+                          </form>
+                        <% } else { %>
+                          <form action="/usuarios/ativar/<%= u.id %>" method="POST" class="inline">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <button type="submit" class="text-sm text-success-600 hover:text-success-700 flex items-center gap-1">
+                              <i data-lucide="user-check" class="w-4 h-4"></i>
+                              Ativar
+                            </button>
+                          </form>
+                        <% } %>
+                        <button type="button" class="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1" 
+                                data-user-id="<%= u.id %>" 
+                                data-username="<%= u.username %>" 
+                                onclick="abrirModalSenha(this)">
+                          <i data-lucide="key" class="w-4 h-4"></i>
+                          Senha
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+
+    </main>
+  </div>
+
+  <!-- Modal Alterar Senha -->
+  <div id="modalSenha" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+      <div class="px-6 py-4 border-b border-secondary-200 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-secondary-900">Alterar Senha</h2>
+        <button type="button" onclick="fecharModal('modalSenha')" class="text-secondary-400 hover:text-secondary-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <form id="formSenha" method="POST">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <div class="form-row">
-      <div class="form-group">
-        <label for="username">Nome de Usuário *</label>
-        <input type="text" id="username" name="username" required>
-      </div>
-      <div class="form-group">
-        <label for="email">E-mail *</label>
-        <input type="email" id="email" name="email" required>
-      </div>
+        
+        <div class="p-6">
+          <div class="form-group mb-4">
+            <label class="form-label">Usuário</label>
+            <input type="text" id="senhaUsername" readonly class="form-input bg-secondary-50">
+          </div>
+          
+          <div class="form-group">
+            <label for="novaSenha" class="form-label">Nova Senha *</label>
+            <input type="password" id="novaSenha" name="nova_senha" required minlength="6" class="form-input" placeholder="Mínimo 6 caracteres">
+          </div>
+          
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
+            <p class="text-sm text-yellow-800">
+              <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i>
+              O usuário precisará usar a nova senha no próximo login.
+            </p>
+          </div>
+        </div>
+        
+        <div class="px-6 py-4 border-t border-secondary-200 flex justify-end gap-3">
+          <button type="button" onclick="fecharModal('modalSenha')" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Alterar Senha</button>
+        </div>
+      </form>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="nome_completo">Nome Completo</label>
-        <input type="text" id="nome_completo" name="nome_completo">
-      </div>
-      <div class="form-group">
-        <label for="password">Senha *</label>
-        <input type="password" id="password" name="password" required minlength="6">
-      </div>
-    </div>
-    <button type="submit" class="btn">Criar Usuário</button>
-  </form>
-</div>
+  </div>
 
-<div class="card">
-  <h2>📋 Usuários Cadastrados</h2>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Usuário</th>
-        <th>Nome Completo</th>
-        <th>E-mail</th>
-        <th>Status</th>
-        <th>Último Login</th>
-        <th>Cadastro</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% usuarios.forEach(user => { %>
-        <tr>
-          <td><strong><%= user.username %></strong></td>
-          <td><%= user.nome_completo || '-' %></td>
-          <td><%= user.email %></td>
-          <td>
-            <span class="badge <%= user.ativo ? 'badge-success' : 'badge-danger' %>">
-              <%= user.ativo ? 'Ativo' : 'Inativo' %>
-            </span>
-          </td>
-          <td><%= user.ultimo_login ? new Date(user.ultimo_login).toLocaleDateString('pt-BR') : 'Nunca' %></td>
-          <td><%= new Date(user.created_at).toLocaleDateString('pt-BR') %></td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
-</div>
-
-<%- include('partials/footer') %>
+  <script>
+    // Inicializa ícones
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+    });
+    
+    // Toggle visibilidade senha
+    function togglePassword() {
+      var input = document.getElementById('password');
+      var icon = document.getElementById('eyeIcon');
+      
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+    
+    // Modal alterar senha
+    function abrirModalSenha(btn) {
+      var userId = btn.dataset.userId;
+      var username = btn.dataset.username;
+      
+      document.getElementById('formSenha').action = '/usuarios/senha/' + userId;
+      document.getElementById('senhaUsername').value = username;
+      document.getElementById('novaSenha').value = '';
+      document.getElementById('modalSenha').classList.remove('hidden');
+      document.getElementById('modalSenha').classList.add('flex');
+      
+      lucide.createIcons();
+    }
+    
+    // Fechar modal
+    function fecharModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+      document.getElementById(modalId).classList.remove('flex');
+    }
+    
+    // Fechar modal ao clicar fora
+    document.getElementById('modalSenha').addEventListener('click', function(e) {
+      if (e.target === this) fecharModal('modalSenha');
+    });
+  </script>
+</body>
+</html>

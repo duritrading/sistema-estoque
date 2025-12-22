@@ -1,93 +1,316 @@
-<%- include('partials/header', {
-  titulo: 'Clientes',
-  subtitulo: 'Gestão da carteira de clientes',
-  user: locals.user
-}) %>
+<!-- views/clientes.ejs -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clientes | OF Distribuidora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="bg-secondary-50">
 
-<div class="card">
-  <h2>➕ Cadastrar Novo Cliente</h2>
-  <form action="/clientes" method="POST">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <div class="form-row">
-      <div class="form-group">
-        <label for="nome">Nome/Razão Social *</label>
-        <input type="text" id="nome" name="nome" class="form-control" required>
-      </div>
-      <div class="form-group">
-        <label for="cpf_cnpj">CPF/CNPJ</label>
-        <input type="text" id="cpf_cnpj" name="cpf_cnpj" class="form-control">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="endereco">Endereço</label>
-        <input type="text" id="endereco" name="endereco" class="form-control">
-      </div>
-      <div class="form-group">
-        <label for="cep">CEP</label>
-        <input type="text" id="cep" name="cep" class="form-control">
-      </div>
-    </div>
-    <div class="form-row">
-        <div class="form-group">
-            <label for="telefone">Telefone</label>
-            <input type="text" id="telefone" name="telefone" class="form-control">
+  <%- include('partials/sidebar', { currentPage: 'clientes' }) %>
+
+  <div class="main-content">
+    <%- include('partials/topbar', { user: user }) %>
+
+    <main class="page-container">
+      
+      <!-- Page Header -->
+      <div class="mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-secondary-900">Clientes</h1>
+            <p class="mt-1 text-secondary-500">Gestão da carteira de clientes</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-secondary-500"><%= clientes.length %> clientes cadastrados</span>
+            <button type="button" onclick="document.getElementById('formCadastro').classList.toggle('hidden')" class="btn btn-primary">
+              <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+              Novo Cliente
+            </button>
+          </div>
         </div>
-        <div class="form-group">
-            <label for="email">E-mail</label>
-            <input type="email" id="email" name="email" class="form-control">
+      </div>
+
+      <!-- Formulário de Cadastro -->
+      <div id="formCadastro" class="card mb-6 hidden">
+        <div class="card-header flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-secondary-900">Cadastrar Novo Cliente</h2>
+          <button type="button" onclick="document.getElementById('formCadastro').classList.add('hidden')" class="text-secondary-400 hover:text-secondary-600">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
         </div>
-    </div>
+        <div class="card-body">
+          <form action="/clientes" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Nome -->
+              <div class="form-group lg:col-span-2">
+                <label for="nome" class="form-label">Nome / Razão Social *</label>
+                <input type="text" id="nome" name="nome" required class="form-input" placeholder="Nome completo ou razão social">
+              </div>
+              
+              <!-- CPF/CNPJ -->
+              <div class="form-group">
+                <label for="cpf_cnpj" class="form-label">CPF / CNPJ</label>
+                <input type="text" id="cpf_cnpj" name="cpf_cnpj" class="form-input" placeholder="000.000.000-00" maxlength="18">
+              </div>
+              
+              <!-- Endereço -->
+              <div class="form-group lg:col-span-2">
+                <label for="endereco" class="form-label">Endereço</label>
+                <input type="text" id="endereco" name="endereco" class="form-input" placeholder="Rua, número, bairro, cidade - UF">
+              </div>
+              
+              <!-- CEP -->
+              <div class="form-group">
+                <label for="cep" class="form-label">CEP</label>
+                <input type="text" id="cep" name="cep" class="form-input" placeholder="00000-000" maxlength="9">
+              </div>
+              
+              <!-- Telefone -->
+              <div class="form-group">
+                <label for="telefone" class="form-label">Telefone</label>
+                <input type="text" id="telefone" name="telefone" class="form-input" placeholder="(00) 00000-0000">
+              </div>
+              
+              <!-- Email -->
+              <div class="form-group">
+                <label for="email" class="form-label">E-mail</label>
+                <input type="email" id="email" name="email" class="form-input" placeholder="cliente@email.com">
+              </div>
+              
+              <!-- RCA -->
+              <div class="form-group">
+                <label for="rca_id" class="form-label">RCA Associado</label>
+                <select id="rca_id" name="rca_id" class="form-select">
+                  <option value="">Nenhum</option>
+                  <% rcas.forEach(function(rca) { %>
+                    <option value="<%= rca.id %>"><%= rca.nome %></option>
+                  <% }); %>
+                </select>
+              </div>
+              
+              <!-- Observações -->
+              <div class="form-group lg:col-span-3">
+                <label for="observacao" class="form-label">Observações</label>
+                <textarea id="observacao" name="observacao" rows="3" class="form-input" placeholder="Informações adicionais..."></textarea>
+              </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-secondary-200">
+              <button type="button" onclick="document.getElementById('formCadastro').classList.add('hidden')" class="btn btn-secondary">
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+                Cadastrar Cliente
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
-    <div class="form-group">
-        <label for="rca_id">RCA Associado</label>
-        <select id="rca_id" name="rca_id" class="form-control">
-            <option value="">Nenhum</option>
-            <% rcas.forEach(rca => { %>
-                <option value="<%= rca.id %>"><%= rca.nome %></option>
-            <% }) %>
-        </select>
-    </div>
+      <!-- Filtros e Busca -->
+      <div class="card mb-6">
+        <div class="card-body py-4">
+          <div class="flex flex-col sm:flex-row gap-4">
+            <div class="flex-1 relative">
+              <input type="text" id="busca" placeholder="Buscar por nome, CPF/CNPJ ou telefone..." class="form-input pl-10" onkeyup="filtrarClientes()">
+              <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400"></i>
+            </div>
+            <select id="filtroRCA" class="form-select w-full sm:w-48" onchange="filtrarClientes()">
+              <option value="">Todos os RCAs</option>
+              <% rcas.forEach(function(rca) { %>
+                <option value="<%= rca.nome %>"><%= rca.nome %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+      </div>
 
-    <div class="form-group">
-      <label for="observacao">Observações</label>
-      <textarea id="observacao" name="observacao" rows="3" class="form-control"></textarea>
-    </div>
-    <button type="submit" class="btn">Cadastrar Cliente</button>
-  </form>
-</div>
+      <!-- Lista de Clientes -->
+      <% if (clientes.length === 0) { %>
+        <div class="card">
+          <div class="card-body py-12 text-center">
+            <div class="w-16 h-16 rounded-full bg-secondary-100 flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="users" class="w-8 h-8 text-secondary-400"></i>
+            </div>
+            <h3 class="text-lg font-medium text-secondary-900 mb-2">Nenhum cliente cadastrado</h3>
+            <p class="text-secondary-500 mb-6">Comece adicionando seu primeiro cliente.</p>
+            <button type="button" onclick="document.getElementById('formCadastro').classList.remove('hidden')" class="btn btn-primary">
+              <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+              Cadastrar Cliente
+            </button>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="card">
+          <div class="table-container">
+            <table class="table" id="tabelaClientes">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>RCA</th>
+                  <th>CPF/CNPJ</th>
+                  <th>Telefone</th>
+                  <th class="text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% clientes.forEach(function(c) { %>
+                  <tr class="cliente-row" 
+                      data-nome="<%= c.nome.toLowerCase() %>" 
+                      data-cpf="<%= (c.cpf_cnpj || '').toLowerCase() %>"
+                      data-telefone="<%= (c.telefone || '').toLowerCase() %>"
+                      data-rca="<%= (c.rca_nome || '').toLowerCase() %>">
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center">
+                          <span class="text-sm font-semibold text-primary-700"><%= c.nome.charAt(0).toUpperCase() %></span>
+                        </div>
+                        <div>
+                          <p class="font-medium text-secondary-900"><%= c.nome %></p>
+                          <% if (c.email) { %>
+                            <a href="mailto:<%= c.email %>" class="text-xs text-primary-600 hover:text-primary-700"><%= c.email %></a>
+                          <% } %>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <% if (c.rca_nome) { %>
+                        <span class="badge badge-primary"><%= c.rca_nome %></span>
+                      <% } else { %>
+                        <span class="text-secondary-400">-</span>
+                      <% } %>
+                    </td>
+                    <td class="font-mono text-sm text-secondary-600"><%= c.cpf_cnpj || '-' %></td>
+                    <td>
+                      <% if (c.telefone) { %>
+                        <a href="tel:<%= c.telefone %>" class="text-secondary-600 hover:text-primary-600"><%= c.telefone %></a>
+                      <% } else { %>
+                        <span class="text-secondary-400">-</span>
+                      <% } %>
+                    </td>
+                    <td class="text-right">
+                      <div class="flex justify-end gap-2">
+                        <a href="/contas-a-receber?cliente_id=<%= c.id %>" class="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                          <i data-lucide="receipt" class="w-4 h-4"></i>
+                          Contas
+                        </a>
+                        <form action="/clientes/delete/<%= c.id %>" method="POST" class="inline" data-nome="<%= c.nome %>" onsubmit="return confirm('Excluir cliente ' + this.dataset.nome + '?');">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button type="submit" class="text-sm text-danger-600 hover:text-danger-700 flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            Excluir
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Contador -->
+        <div class="mt-4 text-center text-sm text-secondary-500">
+          Exibindo <span id="totalVisivel"><%= clientes.length %></span> de <%= clientes.length %> clientes
+        </div>
+      <% } %>
 
-<div class="card">
-  <h2>📋 Clientes Cadastrados</h2>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Nome</th>
-        <th>RCA Associado</th>
-        <th>CPF/CNPJ</th>
-        <th>Telefone</th>
-        <th>E-mail</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% clientes.forEach(c => { %>
-        <tr>
-          <td><strong><%= c.nome %></strong></td>
-          <td><%= c.rca_nome || '-' %></td>
-          <td><%= c.cpf_cnpj || '-' %></td>
-          <td><%= c.telefone || '-' %></td>
-          <td><%= c.email || '-' %></td>
-          <td>
-            <form action="/clientes/delete/<%= c.id %>
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este cliente?');">
-              <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
-            </form>
-          </td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
-</div>
+    </main>
+  </div>
 
-<%- include('partials/footer') %>
+  <script>
+    // Inicializa ícones
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+    });
+    
+    // Máscara CPF/CNPJ (detecta automaticamente)
+    document.getElementById('cpf_cnpj').addEventListener('input', function(e) {
+      var value = e.target.value.replace(/\D/g, '');
+      
+      if (value.length <= 11) {
+        // CPF: 000.000.000-00
+        if (value.length > 9) {
+          value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+        } else if (value.length > 6) {
+          value = value.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+        } else if (value.length > 3) {
+          value = value.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+        }
+      } else {
+        // CNPJ: 00.000.000/0000-00
+        if (value.length > 14) value = value.slice(0, 14);
+        if (value.length > 12) {
+          value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/, '$1.$2.$3/$4-$5');
+        } else if (value.length > 8) {
+          value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{1,4})/, '$1.$2.$3/$4');
+        } else if (value.length > 5) {
+          value = value.replace(/(\d{2})(\d{3})(\d{1,3})/, '$1.$2.$3');
+        } else if (value.length > 2) {
+          value = value.replace(/(\d{2})(\d{1,3})/, '$1.$2');
+        }
+      }
+      e.target.value = value;
+    });
+    
+    // Máscara CEP
+    document.getElementById('cep').addEventListener('input', function(e) {
+      var value = e.target.value.replace(/\D/g, '');
+      if (value.length > 8) value = value.slice(0, 8);
+      if (value.length > 5) {
+        value = value.replace(/(\d{5})(\d{1,3})/, '$1-$2');
+      }
+      e.target.value = value;
+    });
+    
+    // Máscara Telefone
+    document.getElementById('telefone').addEventListener('input', function(e) {
+      var value = e.target.value.replace(/\D/g, '');
+      if (value.length > 11) value = value.slice(0, 11);
+      if (value.length > 10) {
+        value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+      } else if (value.length > 6) {
+        value = value.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+      } else if (value.length > 2) {
+        value = value.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+      }
+      e.target.value = value;
+    });
+    
+    // Filtro de clientes
+    function filtrarClientes() {
+      var busca = document.getElementById('busca').value.toLowerCase();
+      var filtroRCA = document.getElementById('filtroRCA').value.toLowerCase();
+      var linhas = document.querySelectorAll('.cliente-row');
+      var visiveis = 0;
+      
+      linhas.forEach(function(linha) {
+        var nome = linha.dataset.nome;
+        var cpf = linha.dataset.cpf;
+        var telefone = linha.dataset.telefone;
+        var rca = linha.dataset.rca;
+        
+        var matchBusca = !busca || nome.includes(busca) || cpf.includes(busca) || telefone.includes(busca);
+        var matchRCA = !filtroRCA || rca === filtroRCA;
+        
+        var mostrar = matchBusca && matchRCA;
+        linha.style.display = mostrar ? '' : 'none';
+        if (mostrar) visiveis++;
+      });
+      
+      document.getElementById('totalVisivel').textContent = visiveis;
+    }
+  </script>
+</body>
+</html>

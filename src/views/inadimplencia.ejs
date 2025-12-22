@@ -1,1021 +1,306 @@
-<%- include('partials/header', {
-  titulo: 'Inadimplência',
-  subtitulo: 'Gerenciamento de contas vencidas',
-  user: locals.user
-}) %>
+<!-- views/inadimplencia.ejs -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inadimplência | OF Distribuidora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="bg-secondary-50">
 
-<div class="container-professional">
-  <!-- ESTATÍSTICAS -->
-  <div class="stats-container">
-    <div class="stat-card stat-danger">
-      <div class="stat-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
+  <%- include('partials/sidebar', { currentPage: 'inadimplencia' }) %>
+
+  <div class="main-content">
+    <%- include('partials/topbar', { user: user }) %>
+
+    <main class="page-container" style="max-width: 1400px;">
+      
+      <!-- Page Header -->
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-secondary-900">Inadimplência</h1>
+        <p class="mt-1 text-secondary-500">Gerenciamento de contas vencidas</p>
       </div>
-      <div class="stat-content">
-        <h3 class="stat-title">Total em Atraso</h3>
-        <p class="stat-value stat-value-danger">R$ <%= totalEmAtraso.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p>
-        <p class="stat-description">Valor total vencido</p>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <!-- Total em Atraso -->
+        <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-red-500">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center">
+              <i data-lucide="alert-circle" class="w-7 h-7 text-red-600"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-secondary-500 uppercase tracking-wide">Total em Atraso</p>
+              <p class="text-3xl font-bold text-red-600">R$ <%= totalEmAtraso.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p>
+              <p class="text-sm text-secondary-500">Valor total vencido</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contas Vencidas -->
+        <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-yellow-500">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-xl bg-yellow-100 flex items-center justify-center">
+              <i data-lucide="file-text" class="w-7 h-7 text-yellow-600"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-secondary-500 uppercase tracking-wide">Contas Vencidas</p>
+              <p class="text-3xl font-bold text-yellow-600"><%= contasVencidas.length %></p>
+              <p class="text-sm text-secondary-500">Parcelas em atraso</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clientes Inadimplentes -->
+        <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-cyan-500">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-xl bg-cyan-100 flex items-center justify-center">
+              <i data-lucide="users" class="w-7 h-7 text-cyan-600"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-secondary-500 uppercase tracking-wide">Clientes Inadimplentes</p>
+              <p class="text-3xl font-bold text-cyan-600"><%= clientesInadimplentes %></p>
+              <p class="text-sm text-secondary-500">Com parcelas vencidas</p>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-    
-    <div class="stat-card stat-warning">
-      <div class="stat-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14,2 14,8 20,8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-          <polyline points="10,9 9,9 8,9"></polyline>
-        </svg>
+
+      <!-- Tabela de Parcelas -->
+      <div class="card">
+        <div class="card-header flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center">
+            <i data-lucide="receipt" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-secondary-900">Parcelas Vencidas e Não Pagas</h2>
+            <p class="text-secondary-500">Gerencie contas em atraso e registre pagamentos</p>
+          </div>
+        </div>
+        
+        <% if (contasVencidas.length > 0) { %>
+          <div class="table-container">
+            <table class="table" style="min-width: 1100px;">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Produto</th>
+                  <th>Descrição</th>
+                  <th class="text-center">Parcela</th>
+                  <th class="text-right">Valor</th>
+                  <th>Vencimento</th>
+                  <th class="text-center">Dias em Atraso</th>
+                  <th class="text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% contasVencidas.forEach(function(conta) { %>
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center">
+                          <i data-lucide="user" class="w-4 h-4 text-primary-600"></i>
+                        </div>
+                        <span class="font-medium text-secondary-900"><%= conta.cliente_nome %></span>
+                      </div>
+                    </td>
+                    <td class="text-secondary-600"><%= conta.produto_descricao || '-' %></td>
+                    <td class="text-secondary-600 max-w-xs truncate" title="<%= conta.conta_descricao || '' %>">
+                      <%= conta.conta_descricao || '-' %>
+                    </td>
+                    <td class="text-center">
+                      <span class="inline-flex items-center px-3 py-1 rounded-md bg-secondary-100 text-secondary-700 text-sm font-semibold">
+                        <%= conta.numero_parcela %>/<%= conta.total_parcelas %>
+                      </span>
+                    </td>
+                    <td class="text-right font-semibold text-green-600">
+                      R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+                    </td>
+                    <td class="font-mono text-sm text-secondary-600">
+                      <%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %>
+                    </td>
+                    <td class="text-center">
+                      <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold <%= conta.dias_atraso > 90 ? 'bg-red-100 text-red-700' : conta.dias_atraso > 30 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700' %>">
+                        <%= conta.dias_atraso %> dias
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <div class="flex justify-end gap-2">
+                        <button type="button" 
+                                class="btn btn-sm btn-success"
+                                data-conta-id="<%= conta.id %>"
+                                data-cliente-nome="<%= conta.cliente_nome %>"
+                                data-valor="<%= conta.valor %>"
+                                data-parcela="<%= conta.numero_parcela %>"
+                                data-total="<%= conta.total_parcelas %>"
+                                onclick="abrirModalPagamento(this)">
+                          <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i>
+                          Pagar
+                        </button>
+                        <form action="/inadimplencia/excluir/<%= conta.id %>" method="POST" class="inline" onsubmit="return confirm('Excluir esta conta?');">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button type="submit" class="btn btn-sm btn-secondary">
+                            <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i>
+                            Excluir
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } else { %>
+          <div class="card-body py-16 text-center">
+            <div class="w-20 h-20 rounded-2xl bg-green-100 flex items-center justify-center mx-auto mb-6">
+              <i data-lucide="check-circle" class="w-10 h-10 text-green-600"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-secondary-900 mb-2">Nenhuma conta vencida</h3>
+            <p class="text-secondary-500">Todas as contas estão em dia!</p>
+          </div>
+        <% } %>
       </div>
-      <div class="stat-content">
-        <h3 class="stat-title">Contas Vencidas</h3>
-        <p class="stat-value stat-value-warning"><%= contasVencidas.length %></p>
-        <p class="stat-description">Parcelas em atraso</p>
-      </div>
-    </div>
-    
-    <div class="stat-card stat-info">
-      <div class="stat-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
-          <circle cx="9" cy="7" r="4"></circle>
-          <path d="M23 21v-2a4 4 0 00-3-3.87"></path>
-          <path d="M16 3.13a4 4 0 010 7.75"></path>
-        </svg>
-      </div>
-      <div class="stat-content">
-        <h3 class="stat-title">Clientes Inadimplentes</h3>
-        <p class="stat-value stat-value-info"><%= clientesInadimplentes %></p>
-        <p class="stat-description">Com parcelas vencidas</p>
-      </div>
-    </div>
+
+    </main>
   </div>
 
-  <!-- Tabela de Parcelas -->
-  <div class="content-card">
-    <div class="card-header">
-      <div class="header-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 17H7A5 5 0 017 7h2a3 3 0 013 3v2.5A1.5 1.5 0 0010.5 14H9a1 1 0 00-1 1v2z"></path>
-          <path d="M17 17h2a5 5 0 000-10h-2a3 3 0 00-3 3v2.5A1.5 1.5 0 0015.5 14H17a1 1 0 011 1v2z"></path>
-        </svg>
-      </div>
-      <div class="header-content">
-        <h2 class="card-title">Parcelas Vencidas e Não Pagas</h2>
-        <p class="card-subtitle">Gerencie contas em atraso e registre pagamentos</p>
-      </div>
-    </div>
-    
-    <% if (contasVencidas.length > 0) { %>
-      <div class="table-container">
-        <table class="professional-table">
-          <thead>
-            <tr>
-              <th class="th-cliente">Cliente</th>
-              <th class="th-produto">Produto</th>
-              <th class="th-descricao">Descrição</th>
-              <th class="th-parcela">Parcela</th>
-              <th class="th-valor">Valor</th>
-              <th class="th-vencimento">Vencimento</th>
-              <th class="th-dias">Dias em Atraso</th>
-              <th class="th-acoes">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% contasVencidas.forEach(conta => { %>
-              <tr class="table-row">
-                <td class="td-cliente">
-                  <div class="client-info">
-                    <div class="client-avatar">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                      </svg>
-                    </div>
-                    <span class="client-name"><%= conta.cliente_nome %></span>
-                  </div>
-                </td>
-                <td class="td-produto">
-                  <span class="product-name"><%= conta.produto_descricao || '-' %></span>
-                </td>
-                <td class="td-descricao">
-                  <span class="description-text"><%= conta.conta_descricao || '-' %></span>
-                </td>
-                <td class="td-parcela">
-                  <span class="installment-badge"><%= conta.numero_parcela %>/<%= conta.total_parcelas %></span>
-                </td>
-                <td class="td-valor">
-                  <span class="value-amount">R$ <%= parseFloat(conta.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></span>
-                </td>
-                <td class="td-vencimento">
-                  <span class="due-date"><%= new Date(conta.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></span>
-                </td>
-                <td class="td-dias">
-                  <span class="overdue-badge <%= conta.dias_atraso > 90 ? 'overdue-critical' : conta.dias_atraso > 30 ? 'overdue-high' : 'overdue-medium' %>">
-                    <%= conta.dias_atraso %> dias
-                  </span>
-                </td>
-                <td class="td-acoes">
-                  <div class="action-group">
-                    <button class="action-btn action-pay" onclick="abrirModalPagamento(<%= conta.id %>, '<%= conta.cliente_nome %>', <%= conta.valor %>, <%= conta.numero_parcela %>, <%= conta.total_parcelas %>)">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 11l3 3L22 4"></path>
-                        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
-                      </svg>
-                      Marcar como Pago
-                    </button>
-                    <form action="/inadimplencia/excluir/<%= conta.id %>
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" class="inline-form" onsubmit="return confirm('Tem certeza que deseja excluir esta conta?')">
-                      <button type="submit" class="action-btn action-delete">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <polyline points="3,6 5,6 21,6"></polyline>
-                          <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                        </svg>
-                        Excluir
-                      </button>
-                    </form>
-                  </div>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-    <% } else { %>
-      <div class="empty-state">
-        <div class="empty-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M9 12l2 2 4-4"></path>
-            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
-          </svg>
+  <!-- Modal de Pagamento -->
+  <div id="modalPagamento" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4">
+      <div class="px-6 py-5 border-b border-secondary-200 bg-secondary-50 rounded-t-2xl flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center">
+            <i data-lucide="check-circle" class="w-5 h-5 text-white"></i>
+          </div>
+          <h3 class="text-lg font-bold text-secondary-900">Registrar Pagamento</h3>
         </div>
-        <h3 class="empty-title">Nenhuma conta vencida</h3>
-        <p class="empty-description">Todas as contas estão em dia! 🎉</p>
-      </div>
-    <% } %>
-  </div>
-</div>
-
-<!-- MODAL DE PAGAMENTO -->
-<div id="modalPagamento" class="modal-overlay-pagamento">
-  <div class="modal-content-pagamento">
-    <div class="modal-header-pagamento">
-      <div class="modal-title-container">
-        <div class="modal-title-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 11l3 3L22 4"></path>
-            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
-          </svg>
-        </div>
-        <h3 class="modal-title">Registrar Pagamento</h3>
-      </div>
-      <button type="button" class="btn-close-modal" onclick="fecharModalPagamento()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
-    
-    <div class="modal-body-pagamento">
-      <div class="payment-info-grid">
-        <div class="info-row">
-          <p class="info-label">Cliente:</p>
-          <p class="info-value" id="clienteNome">-</p>
-        </div>
-        <div class="info-row">
-          <p class="info-label">Parcela:</p>
-          <p class="info-value" id="parcelaInfo">-</p>
-        </div>
-        <div class="info-row">
-          <p class="info-label">Valor:</p>
-          <p class="info-value valor-destaque" id="valorConta">R$ 0,00</p>
-        </div>
+        <button type="button" onclick="fecharModal()" class="w-10 h-10 rounded-lg bg-secondary-200 hover:bg-secondary-300 flex items-center justify-center text-secondary-600 transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
       </div>
       
-      <form id="formPagamento" method="POST">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-        <div class="form-group-modal">
-          <label for="dataPagamento" class="form-label">
-            Data do Pagamento <span class="required-indicator">*</span>
-          </label>
-          <input type="date" id="dataPagamento" name="data_pagamento" class="input-date" required>
-          <p class="field-hint">Selecione a data em que o pagamento foi realmente recebido</p>
+      <div class="p-6">
+        <!-- Info do Pagamento -->
+        <div class="space-y-4 mb-6">
+          <div class="flex justify-between items-center py-3 border-b border-secondary-100">
+            <span class="text-sm font-medium text-secondary-500">Cliente:</span>
+            <span class="font-semibold text-secondary-900" id="modalClienteNome">-</span>
+          </div>
+          <div class="flex justify-between items-center py-3 border-b border-secondary-100">
+            <span class="text-sm font-medium text-secondary-500">Parcela:</span>
+            <span class="font-semibold text-secondary-900" id="modalParcelaInfo">-</span>
+          </div>
+          <div class="flex justify-between items-center py-3">
+            <span class="text-sm font-medium text-secondary-500">Valor:</span>
+            <span class="text-2xl font-bold text-green-600" id="modalValorConta">R$ 0,00</span>
+          </div>
         </div>
-      </form>
-    </div>
-    
-    <div class="modal-footer-pagamento">
-      <button type="button" class="btn-modal-cancel" onclick="fecharModalPagamento()">
-        Cancelar
-      </button>
-      <button type="submit" form="formPagamento" class="btn-modal-confirm">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 11l3 3L22 4"></path>
-          <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
-        </svg>
-        Confirmar Pagamento
-      </button>
+        
+        <!-- Formulário -->
+        <form id="formPagamento" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          
+          <div class="form-group">
+            <label for="dataPagamento" class="form-label">
+              Data do Pagamento <span class="text-red-500">*</span>
+            </label>
+            <input type="date" id="dataPagamento" name="data_pagamento" class="form-input" required>
+            <p class="text-xs text-secondary-500 mt-1">Selecione a data em que o pagamento foi recebido</p>
+          </div>
+        </form>
+      </div>
+      
+      <div class="px-6 py-4 border-t border-secondary-200 bg-secondary-50 rounded-b-2xl flex justify-end gap-3">
+        <button type="button" onclick="fecharModal()" class="btn btn-secondary">
+          Cancelar
+        </button>
+        <button type="submit" form="formPagamento" class="btn btn-success">
+          <i data-lucide="check" class="w-4 h-4 mr-2"></i>
+          Confirmar Pagamento
+        </button>
+      </div>
     </div>
   </div>
-</div>
 
-<style>
-/* ====== CONTAINER E LAYOUT ====== */
-.container-professional {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 40px 32px;
-  background: #f8fafc;
-  min-height: 100vh;
-}
-
-/* ====== ESTATÍSTICAS ====== */
-.stats-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
-  margin-bottom: 40px;
-}
-
-.stat-card {
-  background: white;
-  padding: 32px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 5px rgba(0, 0, 0, 0.15);
-}
-
-.stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.stat-danger .stat-icon {
-  background: linear-gradient(135deg, #fef2f2, #fee2e2);
-  color: #dc2626;
-}
-
-.stat-warning .stat-icon {
-  background: linear-gradient(135deg, #fffbeb, #fef3c7);
-  color: #d97706;
-}
-
-.stat-info .stat-icon {
-  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-  color: #0891b2;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #64748b;
-  margin: 0 0 8px 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.stat-value {
-  font-size: 36px;
-  font-weight: 700;
-  margin: 0 0 4px 0;
-  line-height: 1.1;
-}
-
-.stat-value-danger { color: #dc2626; }
-.stat-value-warning { color: #d97706; }
-.stat-value-info { color: #0891b2; }
-
-.stat-description {
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
-}
-
-/* ====== CARD DE CONTEÚDO ====== */
-.content-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
-}
-
-.card-header {
-  padding: 32px 40px 24px 40px;
-  border-bottom: 1px solid #f1f5f9;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.header-icon {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.header-content {
-  flex: 1;
-}
-
-.card-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 4px 0;
-}
-
-.card-subtitle {
-  font-size: 16px;
-  color: #64748b;
-  margin: 0;
-}
-
-/* ====== TABELA PROFISSIONAL ====== */
-.table-container {
-  overflow-x: auto;
-}
-
-.professional-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0;
-  min-width: 1200px;
-}
-
-.professional-table thead {
-  background: #f8fafc;
-}
-
-.professional-table th {
-  padding: 20px 24px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 700;
-  color: #374151;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-.professional-table td {
-  padding: 24px;
-  border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle;
-}
-
-.table-row:hover {
-  background: #f8fafc;
-}
-
-/* Células específicas */
-.client-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.client-avatar {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #4f46e5;
-}
-
-.client-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.product-name {
-  font-size: 14px;
-  color: #64748b;
-}
-
-/* ====== NOVA COLUNA DESCRIÇÃO ====== */
-.th-descricao {
-  min-width: 200px;
-  max-width: 300px;
-}
-
-.td-descricao {
-  padding: 24px 16px;
-  max-width: 300px;
-}
-
-.description-text {
-  font-size: 14px;
-  color: #374151;
-  font-weight: 500;
-  line-height: 1.4;
-  display: block;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
-  max-height: 3.2em;
-  overflow: hidden;
-  position: relative;
-}
-
-.description-text::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 30px;
-  height: 1.2em;
-  background: linear-gradient(to right, transparent, white);
-  pointer-events: none;
-}
-
-.td-descricao:hover .description-text {
-  max-height: none;
-  overflow: visible;
-  background: #f9fafb;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-  position: relative;
-  white-space: pre-wrap;
-}
-
-.td-descricao:hover .description-text::after {
-  display: none;
-}
-
-.installment-badge {
-  background: #f1f5f9;
-  color: #475569;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.value-amount {
-  font-size: 16px;
-  font-weight: 700;
-  color: #059669;
-}
-
-.due-date {
-  font-size: 14px;
-  color: #64748b;
-  font-family: 'Monaco', 'Menlo', monospace;
-}
-
-.overdue-badge {
-  background: linear-gradient(135deg, #fef2f2, #fee2e2);
-  color: #dc2626;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* ====== AÇÕES ====== */
-.action-group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.action-btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-  text-decoration: none;
-}
-
-.action-pay {
-  background: linear-gradient(135deg, #059669, #047857);
-  color: white;
-  box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
-}
-
-.action-pay:hover {
-  background: linear-gradient(135deg, #047857, #065f46);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-}
-
-.action-delete {
-  background: #f8fafc;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-}
-
-.action-delete:hover {
-  background: #fef2f2;
-  color: #dc2626;
-  border-color: #fecaca;
-}
-
-.inline-form {
-  display: inline;
-}
-
-/* ====== ESTADO VAZIO ====== */
-.empty-state {
-  padding: 80px 40px;
-  text-align: center;
-}
-
-.empty-icon {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 24px auto;
-  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #059669;
-}
-
-.empty-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 8px 0;
-}
-
-.empty-description {
-  font-size: 16px;
-  color: #64748b;
-  margin: 0;
-}
-
-/* ====== MODAL PROFISSIONAL ====== */
-.modal-overlay-pagamento {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  background: rgba(15, 23, 42, 0.75) !important;
-  z-index: 99999 !important;
-  display: none !important;
-  align-items: center !important;
-  justify-content: center !important;
-  backdrop-filter: blur(8px) !important;
-}
-
-.modal-overlay-pagamento.show {
-  display: flex !important;
-}
-
-.modal-content-pagamento {
-  background: white !important;
-  border-radius: 20px !important;
-  width: 90% !important;
-  max-width: 560px !important;
-  max-height: 90vh !important;
-  overflow-y: auto !important;
-  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.25) !important;
-  animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  position: relative !important;
-}
-
-.modal-header-pagamento {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  padding: 32px 32px 24px 32px !important;
-  border-bottom: 1px solid #f1f5f9 !important;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9) !important;
-  border-radius: 20px 20px 0 0 !important;
-}
-
-.modal-title-container {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-}
-
-.modal-title-icon {
-  width: 40px !important;
-  height: 40px !important;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
-  border-radius: 10px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: white !important;
-}
-
-.modal-title {
-  font-size: 20px !important;
-  font-weight: 700 !important;
-  color: #1e293b !important;
-  margin: 0 !important;
-}
-
-.btn-close-modal {
-  width: 40px !important;
-  height: 40px !important;
-  border: none !important;
-  background: #f1f5f9 !important;
-  border-radius: 10px !important;
-  color: #64748b !important;
-  cursor: pointer !important;
-  font-size: 16px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: all 0.2s !important;
-}
-
-.btn-close-modal:hover {
-  background: #e2e8f0 !important;
-  color: #475569 !important;
-}
-
-.modal-body-pagamento {
-  padding: 32px !important;
-}
-
-.payment-info-grid {
-  margin-bottom: 32px !important;
-}
-
-.info-row {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  padding: 16px 0 !important;
-  border-bottom: 1px solid #f8fafc !important;
-}
-
-.info-row:last-child {
-  border-bottom: none !important;
-}
-
-.info-label {
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  color: #64748b !important;
-  margin: 0 !important;
-}
-
-.info-value {
-  font-size: 16px !important;
-  font-weight: 600 !important;
-  color: #1e293b !important;
-}
-
-.valor-destaque {
-  font-size: 24px !important;
-  font-weight: 700 !important;
-  color: #059669 !important;
-}
-
-.form-group-modal {
-  margin-top: 24px !important;
-}
-
-.form-label {
-  display: block !important;
-  margin-bottom: 8px !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  color: #374151 !important;
-}
-
-.required-indicator {
-  color: #dc2626 !important;
-  margin-left: 2px !important;
-}
-
-.input-date {
-  width: 100% !important;
-  padding: 16px !important;
-  border: 2px solid #e2e8f0 !important;
-  border-radius: 10px !important;
-  font-size: 16px !important;
-  transition: all 0.3s !important;
-  box-sizing: border-box !important;
-  background: #fafbfc !important;
-}
-
-.input-date:focus {
-  outline: none !important;
-  border-color: #3b82f6 !important;
-  background: white !important;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
-}
-
-.field-hint {
-  font-size: 12px !important;
-  color: #64748b !important;
-  margin-top: 6px !important;
-}
-
-.modal-footer-pagamento {
-  display: flex !important;
-  gap: 16px !important;
-  justify-content: flex-end !important;
-  padding: 24px 32px 32px 32px !important;
-  border-top: 1px solid #f1f5f9 !important;
-  background: #fafbfc !important;
-  border-radius: 0 0 20px 20px !important;
-}
-
-.btn-modal-cancel {
-  padding: 14px 24px !important;
-  border: 2px solid #e2e8f0 !important;
-  background: white !important;
-  color: #64748b !important;
-  border-radius: 10px !important;
-  cursor: pointer !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  transition: all 0.2s !important;
-}
-
-.btn-modal-cancel:hover {
-  background: #f8fafc !important;
-  border-color: #cbd5e1 !important;
-  color: #475569 !important;
-}
-
-.btn-modal-confirm {
-  padding: 14px 24px !important;
-  background: linear-gradient(135deg, #059669, #047857) !important;
-  color: white !important;
-  border: none !important;
-  border-radius: 10px !important;
-  cursor: pointer !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  transition: all 0.2s !important;
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25) !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.btn-modal-confirm:hover {
-  background: linear-gradient(135deg, #047857, #065f46) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3) !important;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0 !important;
-    transform: scale(0.95) translateY(-20px) !important;
-  }
-  to {
-    opacity: 1 !important;
-    transform: scale(1) translateY(0) !important;
-  }
-}
-
-/* ====== RESPONSIVIDADE ====== */
-@media (max-width: 1024px) {
-  .container-professional {
-    padding: 24px 24px;
-  }
-  
-  .stats-container {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  
-  .card-header {
-    padding: 24px 24px 20px 24px;
-  }
-  
-  .professional-table th,
-  .professional-table td {
-    padding: 16px;
-  }
-  
-  .th-descricao {
-    min-width: 150px;
-    max-width: 200px;
-  }
-  
-  .td-descricao {
-    padding: 16px 12px;
-    max-width: 200px;
-  }
-  
-  .description-text {
-    font-size: 13px;
-    max-height: 2.6em;
-  }
-}
-
-@media (max-width: 768px) {
-  .container-professional {
-    padding: 16px;
-  }
-  
-  .stat-card {
-    padding: 24px;
-  }
-  
-  .stat-value {
-    font-size: 28px;
-  }
-  
-  .professional-table {
-    font-size: 14px;
-  }
-  
-  .action-group {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .action-btn {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .modal-content-pagamento {
-    width: 95% !important;
-    margin: 10px !important;
-  }
-  
-  .modal-header-pagamento,
-  .modal-body-pagamento,
-  .modal-footer-pagamento {
-    padding: 20px !important;
-  }
-  
-  .modal-footer-pagamento {
-    flex-direction: column !important;
-  }
-  
-  .btn-modal-cancel,
-  .btn-modal-confirm {
-    width: 100% !important;
-    justify-content: center !important;
-  }
-  
-  /* Em mobile, esconder coluna de descrição por padrão */
-  .th-descricao,
-  .td-descricao {
-    display: none;
-  }
-}
-</style>
-
-<!-- JAVASCRIPT OTIMIZADO -->
-<script>
-console.log('🔧 Sistema de inadimplência carregado');
-
-function abrirModalPagamento(contaId, clienteNome, valor, numeroParcela, totalParcelas) {
-  console.log('🎯 Abrindo modal para conta:', contaId);
-  
-  try {
-    const modalEl = document.getElementById('modalPagamento');
-    const formEl = document.getElementById('formPagamento');
-    const clienteEl = document.getElementById('clienteNome');
-    const parcelaEl = document.getElementById('parcelaInfo');
-    const valorEl = document.getElementById('valorConta');
-    const dataEl = document.getElementById('dataPagamento');
-
-    if (!modalEl || !formEl || !clienteEl || !parcelaEl || !valorEl || !dataEl) {
-      console.error('❌ Elementos do modal não encontrados!');
-      alert('Erro interno: Elementos do modal não encontrados. Recarregue a página.');
-      return;
-    }
-
-    clienteEl.textContent = clienteNome;
-    parcelaEl.textContent = `${numeroParcela}/${totalParcelas}`;
-    valorEl.textContent = 'R$ ' + parseFloat(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+  <script>
+    // Inicializa ícones
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+      
+      // Data de hoje como padrão
+      var hoje = new Date().toISOString().split('T')[0];
+      document.getElementById('dataPagamento').value = hoje;
+      
+      // Fechar modal ao clicar fora
+      document.getElementById('modalPagamento').addEventListener('click', function(e) {
+        if (e.target === this) fecharModal();
+      });
+      
+      // Fechar com ESC
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') fecharModal();
+      });
+      
+      // Validação do formulário
+      document.getElementById('formPagamento').addEventListener('submit', function(e) {
+        var dataPagamento = document.getElementById('dataPagamento').value;
+        var hoje = new Date().toISOString().split('T')[0];
+        
+        if (!dataPagamento) {
+          e.preventDefault();
+          alert('Por favor, selecione a data do pagamento.');
+          return;
+        }
+        
+        if (dataPagamento > hoje) {
+          e.preventDefault();
+          alert('A data de pagamento não pode ser no futuro.');
+          return;
+        }
+        
+        if (!confirm('Confirma o recebimento desta parcela na data selecionada?')) {
+          e.preventDefault();
+        }
+      });
+    });
     
-    formEl.action = '/inadimplencia/marcar-paga/' + contaId;
-    
-    const hoje = new Date().toISOString().split('T')[0];
-    dataEl.value = hoje;
-    
-    modalEl.classList.add('show');
-    modalEl.style.display = 'flex';
-    
-    console.log('✅ Modal aberto com sucesso');
-    
-    setTimeout(() => {
-      dataEl.focus();
-    }, 300);
-    
-  } catch (error) {
-    console.error('❌ Erro ao abrir modal:', error);
-    alert('Erro ao abrir modal de pagamento. Recarregue a página e tente novamente.');
-  }
-}
-
-function fecharModalPagamento() {
-  console.log('🔒 Fechando modal de pagamento');
-  
-  const modalEl = document.getElementById('modalPagamento');
-  if (modalEl) {
-    modalEl.classList.remove('show');
-    modalEl.style.display = 'none';
-  }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('📄 DOM carregado, configurando eventos...');
-  
-  const modalEl = document.getElementById('modalPagamento');
-  const formEl = document.getElementById('formPagamento');
-  
-  if (!modalEl || !formEl) {
-    console.error('❌ Elementos críticos não encontrados!');
-    return;
-  }
-
-  modalEl.addEventListener('click', function(e) {
-    if (e.target === modalEl) {
-      fecharModalPagamento();
-    }
-  });
-
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-      fecharModalPagamento();
-    }
-  });
-
-  formEl.addEventListener('submit', function(e) {
-    const dataPagamento = document.getElementById('dataPagamento').value;
-    
-    if (!dataPagamento) {
-      e.preventDefault();
-      alert('Por favor, selecione a data do pagamento.');
-      return;
+    // Abrir modal de pagamento usando data attributes
+    function abrirModalPagamento(btn) {
+      var contaId = btn.dataset.contaId;
+      var clienteNome = btn.dataset.clienteNome;
+      var valor = parseFloat(btn.dataset.valor);
+      var parcela = btn.dataset.parcela;
+      var total = btn.dataset.total;
+      
+      document.getElementById('modalClienteNome').textContent = clienteNome;
+      document.getElementById('modalParcelaInfo').textContent = parcela + '/' + total;
+      document.getElementById('modalValorConta').textContent = 'R$ ' + valor.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+      
+      document.getElementById('formPagamento').action = '/inadimplencia/marcar-paga/' + contaId;
+      
+      var modal = document.getElementById('modalPagamento');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      
+      lucide.createIcons();
+      
+      setTimeout(function() {
+        document.getElementById('dataPagamento').focus();
+      }, 100);
     }
     
-    const hoje = new Date().toISOString().split('T')[0];
-    if (dataPagamento > hoje) {
-      e.preventDefault();
-      alert('A data de pagamento não pode ser no futuro.');
-      return;
+    // Fechar modal
+    function fecharModal() {
+      var modal = document.getElementById('modalPagamento');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
     }
-    
-    const confirmacao = confirm('Confirma o recebimento desta parcela na data selecionada?');
-    if (!confirmacao) {
-      e.preventDefault();
-      return;
-    }
-    
-    console.log('✅ Formulário validado e enviado');
-  });
-
-  console.log('✅ Eventos configurados com sucesso');
-});
-</script>
-
-<%- include('partials/footer') %>
+  </script>
+</body>
+</html>

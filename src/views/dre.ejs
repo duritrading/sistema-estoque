@@ -1,135 +1,248 @@
-<%- include('partials/header', {
-  titulo: 'DRE - Demonstrativo de Resultado',
-  subtitulo: `Visão geral para o ano de ${ano}`,
-  user: locals.user
-}) %>
+<!-- views/dre.ejs -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRE | OF Distribuidora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* DRE specific styles */
+    .dre-table {
+      font-size: 13px;
+    }
+    .dre-table th,
+    .dre-table td {
+      padding: 10px 12px;
+      white-space: nowrap;
+    }
+    .dre-table th:first-child,
+    .dre-table td:first-child {
+      min-width: 240px;
+      white-space: normal;
+      position: sticky;
+      left: 0;
+      background: inherit;
+      z-index: 1;
+    }
+    .dre-table thead th:first-child {
+      background: #f8fafc;
+    }
+    .dre-sub-item {
+      padding-left: 24px;
+      color: #64748b;
+    }
+    .dre-header td {
+      font-weight: 600;
+      background-color: #f1f5f9 !important;
+      color: #0f172a;
+    }
+    .dre-total-l1 td {
+      font-weight: 600;
+      background-color: #e2e8f0 !important;
+    }
+    .dre-total-l2 td {
+      font-weight: 600;
+      background-color: #dbeafe !important;
+      color: #1e40af;
+    }
+    .dre-total-l3 td {
+      font-weight: 600;
+      background-color: #fef3c7 !important;
+      color: #92400e;
+    }
+    .dre-total-final td {
+      font-weight: 700;
+      font-size: 14px;
+      background-color: #dcfce7 !important;
+      color: #166534;
+      border-top: 2px solid #166534;
+      border-bottom: 2px solid #166534;
+    }
+    .valor-negativo {
+      color: #dc2626 !important;
+    }
+    .valor-positivo {
+      color: #16a34a;
+    }
+  </style>
+</head>
+<body class="bg-secondary-50">
 
-<div class="container container-wide">
-  <div class="card">
-    <h2>📈 DRE Gerencial - <%= ano %></h2>
-    <div style="overflow-x: auto;">
-      <table class="table mt-2 dre-table">
-        <thead>
-          <tr>
-            <th>Descrição</th>
-            <% meses.forEach(mes => { %>
-              <th class="text-right"><%= mes %></th>
-            <% }) %>
-            <th class="text-right">Total Ano</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% estrutura.forEach(linha => { %>
-            <% 
-              // Pega valores calculados para a linha atual
-              const valoresMensais = (resultados[linha.label] || Array(12).fill(0)).map(v => {
-                const valor = parseFloat(v);
-                return isNaN(valor) ? 0 : valor;
-              });
-              const totalAnual = valoresMensais.reduce((a, b) => a + b, 0); 
-            %>
-            <tr class="<%= linha.css || '' %> <%= linha.tipo === 'header' ? 'dre-header' : '' %>">
-              <td>
-                <span class="<%= linha.tipo === 'item' ? 'dre-sub-item' : '' %>">
-                  <%= linha.label %>
-                </span>
-              </td>
+  <%- include('partials/sidebar', { currentPage: 'dre' }) %>
 
-              <% valoresMensais.forEach(valor => { %>
-                <td class="text-right <%= valor < 0 ? 'saldo-negativo' : '' %>">
-                  <% if (Math.abs(valor) >= 0.01) { %>
-                    <% if (linha.tipo === 'header' || linha.tipo === 'total') { %>
-                      <strong>R$ <%= valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></strong>
+  <div class="main-content">
+    <%- include('partials/topbar', { user: user }) %>
+
+    <main class="page-container" style="max-width: 1600px;">
+      
+      <!-- Page Header -->
+      <div class="mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-secondary-900">DRE - Demonstrativo de Resultado</h1>
+            <p class="mt-1 text-secondary-500">Visão gerencial do exercício <%= ano %></p>
+          </div>
+          
+          <!-- Filtro de Ano -->
+          <form method="GET" class="flex items-center gap-3">
+            <label class="text-sm text-secondary-600">Ano:</label>
+            <select name="ano" class="form-select w-28" onchange="this.form.submit()">
+              <% for (var a = new Date().getFullYear(); a >= 2020; a--) { %>
+                <option value="<%= a %>" <%= ano == a ? 'selected' : '' %>><%= a %></option>
+              <% } %>
+            </select>
+            <button type="button" onclick="window.print()" class="btn btn-secondary">
+              <i data-lucide="printer" class="w-4 h-4 mr-2"></i>
+              Imprimir
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- DRE Table -->
+      <div class="card">
+        <div class="card-header flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-secondary-900 flex items-center gap-2">
+            <i data-lucide="bar-chart-3" class="w-5 h-5 text-primary-600"></i>
+            DRE Gerencial - <%= ano %>
+          </h2>
+          <span class="text-sm text-secondary-500">Valores em R$</span>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table class="table dre-table">
+            <thead>
+              <tr>
+                <th class="text-left">Descrição</th>
+                <% meses.forEach(function(mes) { %>
+                  <th class="text-right"><%= mes %></th>
+                <% }); %>
+                <th class="text-right bg-secondary-100">Total Ano</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% estrutura.forEach(function(linha) { 
+                // Pega valores calculados para a linha atual
+                var valoresMensais = (resultados[linha.label] || Array(12).fill(0)).map(function(v) {
+                  var valor = parseFloat(v);
+                  return isNaN(valor) ? 0 : valor;
+                });
+                var totalAnual = valoresMensais.reduce(function(a, b) { return a + b; }, 0);
+              %>
+                <tr class="<%= linha.css || '' %> <%= linha.tipo === 'header' ? 'dre-header' : '' %>">
+                  <td>
+                    <span class="<%= linha.tipo === 'item' ? 'dre-sub-item' : '' %>">
+                      <%= linha.label %>
+                    </span>
+                  </td>
+
+                  <% valoresMensais.forEach(function(valor) { %>
+                    <td class="text-right <%= valor < 0 ? 'valor-negativo' : '' %>">
+                      <% if (Math.abs(valor) >= 0.01) { %>
+                        <% if (linha.tipo === 'header' || linha.tipo === 'total') { %>
+                          <strong><%= valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></strong>
+                        <% } else { %>
+                          <%= valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                        <% } %>
+                      <% } else { %>
+                        <span class="text-secondary-300">-</span>
+                      <% } %>
+                    </td>
+                  <% }); %>
+
+                  <td class="text-right bg-secondary-50 <%= totalAnual < 0 ? 'valor-negativo' : '' %>">
+                    <% if (Math.abs(totalAnual) >= 0.01) { %>
+                      <strong><%= totalAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></strong>
                     <% } else { %>
-                      R$ <%= valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                      <span class="text-secondary-300">-</span>
                     <% } %>
-                  <% } else { %>
-                    <% if (linha.tipo === 'header' || linha.tipo === 'total') { %>
-                      <strong>-</strong>
-                    <% } else { %>
-                      -
-                    <% } %>
-                  <% } %>
-                </td>
-              <% }) %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-              <td class="text-right <%= totalAnual < 0 ? 'saldo-negativo' : '' %>">
-                <% if (Math.abs(totalAnual) >= 0.01) { %>
-                  <% if (linha.tipo === 'header' || linha.tipo === 'total') { %>
-                    <strong>R$ <%= totalAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></strong>
-                  <% } else { %>
-                    R$ <%= totalAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                  <% } %>
-                <% } else { %>
-                  <% if (linha.tipo === 'header' || linha.tipo === 'total') { %>
-                    <strong>-</strong>
-                  <% } else { %>
-                    -
-                  <% } %>
-                <% } %>
-              </td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
+      <!-- Legenda -->
+      <div class="mt-6 flex flex-wrap gap-4 text-sm">
+        <div class="flex items-center gap-2">
+          <div class="w-4 h-4 rounded bg-[#f1f5f9] border border-secondary-300"></div>
+          <span class="text-secondary-600">Categoria</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-4 h-4 rounded bg-[#e2e8f0] border border-secondary-300"></div>
+          <span class="text-secondary-600">Subtotal</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-4 h-4 rounded bg-[#dbeafe] border border-secondary-300"></div>
+          <span class="text-secondary-600">Total Operacional</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-4 h-4 rounded bg-[#fef3c7] border border-secondary-300"></div>
+          <span class="text-secondary-600">EBITDA</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-4 h-4 rounded bg-[#dcfce7] border border-secondary-300"></div>
+          <span class="text-secondary-600">Resultado Final</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-4 h-4 rounded bg-white border border-red-400 flex items-center justify-center text-red-600 text-xs font-bold">-</div>
+          <span class="text-secondary-600">Valor Negativo</span>
+        </div>
+      </div>
+
+    </main>
   </div>
-</div>
 
-<style>
-.dre-table th, .dre-table td {
-  padding: 10px 8px;
-  white-space: nowrap;
-}
+  <!-- Print Styles -->
+  <style>
+    @media print {
+      .sidebar-container,
+      .topbar,
+      .btn,
+      form,
+      .main-content {
+        margin-left: 0 !important;
+      }
+      
+      .sidebar-container,
+      .topbar,
+      .btn,
+      form select {
+        display: none !important;
+      }
+      
+      .page-container {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      
+      .card {
+        box-shadow: none !important;
+        border: 1px solid #e2e8f0 !important;
+      }
+      
+      .dre-table th:first-child,
+      .dre-table td:first-child {
+        position: static !important;
+      }
+      
+      body {
+        background: white !important;
+      }
+    }
+  </style>
 
-.dre-table th:first-child, .dre-table td:first-child {
-  min-width: 280px;
-  white-space: normal;
-}
-
-.dre-sub-item {
-  padding-left: 20px;
-}
-
-.dre-header {
-  font-weight: bold;
-  background-color: #f8f9fa;
-}
-
-.dre-total-l1 {
-  font-weight: bold;
-  background-color: #e9ecef;
-}
-
-.dre-total-l2 {
-  font-weight: bold;
-  background-color: #cfe2ff;
-}
-
-.dre-total-l3 {
-  font-weight: bold;
-  background-color: #fff3cd;
-}
-
-.dre-total-final {
-  font-weight: bold;
-  font-size: 1.1em;
-  background-color: #d4edda;
-  border-top: 2px solid #333;
-  border-bottom: 2px solid #333;
-}
-
-.saldo-negativo {
-  color: #dc3545;
-}
-
-.text-right {
-  text-align: right;
-}
-
-.container-wide {
-  max-width: 1600px;
-}
-</style>
-
-<%- include('partials/footer') %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

@@ -1,84 +1,259 @@
-<%- include('partials/header', {
-  titulo: 'Fornecedores',
-  subtitulo: 'Gestão de fornecedores e parceiros',
-  user: locals.user
-}) %>
+<!-- views/fornecedores.ejs -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fornecedores | OF Distribuidora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="bg-secondary-50">
 
-<div class="card">
-  <h2>➕ Cadastrar Fornecedor</h2>
-  <form action="/fornecedores" method="POST">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <div class="form-row">
-      <div class="form-group">
-        <label for="codigo">Código</label>
-        <input type="text" id="codigo" name="codigo">
-      </div>
-      <div class="form-group">
-        <label for="nome">Nome/Razão Social *</label>
-        <input type="text" id="nome" name="nome" required>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="contato">Contato</label>
-        <input type="text" id="contato" name="contato">
-      </div>
-      <div class="form-group">
-        <label for="telefone">Telefone</label>
-        <input type="text" id="telefone" name="telefone">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="email">E-mail</label>
-        <input type="email" id="email" name="email">
-      </div>
-      <div class="form-group">
-        <label for="cnpj">CNPJ</label>
-        <input type="text" id="cnpj" name="cnpj">
-      </div>
-    </div>
-    <div class="form-group">
-      <label for="endereco">Endereço</label>
-      <input type="text" id="endereco" name="endereco">
-    </div>
-    <div class="form-group">
-      <label for="observacao">Observações</label>
-      <textarea id="observacao" name="observacao" rows="3"></textarea>
-    </div>
-    <button type="submit" class="btn">Cadastrar Fornecedor</button>
-  </form>
-</div>
+  <%- include('partials/sidebar', { currentPage: 'fornecedores' }) %>
 
-<div class="card">
-  <h2>📋 Fornecedores Cadastrados</h2>
-  <table class="table">
-    <thead>
-  <tr>
-    <th>Código</th>
-    <th>Nome</th>
-    <th>Contato</th>
-    <th>Telefone</th>
-    <th>E-mail</th> <th>Ações</th>  </tr>
-</thead>
-    <tbody>
-      <% fornecedores.forEach(f => { %>
-        <tr>
-          <td><%= f.codigo || '-' %></td>
-          <td><strong><%= f.nome %></strong></td>
-          <td><%= f.contato || '-' %></td>
-          <td><%= f.telefone || '-' %></td>
-          <td><%= f.email || '-' %></td>
-          <td> <form action="/fornecedores/delete/<%= f.id %>
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este fornecedor?');">
-            <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Excluir</button>
+  <div class="main-content">
+    <%- include('partials/topbar', { user: user }) %>
+
+    <main class="page-container">
+      
+      <!-- Page Header -->
+      <div class="mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-secondary-900">Fornecedores</h1>
+            <p class="mt-1 text-secondary-500">Gestão de fornecedores e parceiros</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-secondary-500"><%= fornecedores.length %> fornecedores cadastrados</span>
+            <button type="button" onclick="document.getElementById('formCadastro').classList.toggle('hidden')" class="btn btn-primary">
+              <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+              Novo Fornecedor
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulário de Cadastro -->
+      <div id="formCadastro" class="card mb-6 hidden">
+        <div class="card-header flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-secondary-900">Cadastrar Fornecedor</h2>
+          <button type="button" onclick="document.getElementById('formCadastro').classList.add('hidden')" class="text-secondary-400 hover:text-secondary-600">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="card-body">
+          <form action="/fornecedores" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Código -->
+              <div class="form-group">
+                <label for="codigo" class="form-label">Código</label>
+                <input type="text" id="codigo" name="codigo" class="form-input" placeholder="Ex: FORN001">
+              </div>
+              
+              <!-- Nome -->
+              <div class="form-group lg:col-span-2">
+                <label for="nome" class="form-label">Nome / Razão Social *</label>
+                <input type="text" id="nome" name="nome" required class="form-input" placeholder="Nome da empresa">
+              </div>
+              
+              <!-- CNPJ -->
+              <div class="form-group">
+                <label for="cnpj" class="form-label">CNPJ</label>
+                <input type="text" id="cnpj" name="cnpj" class="form-input" placeholder="00.000.000/0000-00" maxlength="18">
+              </div>
+              
+              <!-- Contato -->
+              <div class="form-group">
+                <label for="contato" class="form-label">Pessoa de Contato</label>
+                <input type="text" id="contato" name="contato" class="form-input" placeholder="Nome do responsável">
+              </div>
+              
+              <!-- Telefone -->
+              <div class="form-group">
+                <label for="telefone" class="form-label">Telefone</label>
+                <input type="text" id="telefone" name="telefone" class="form-input" placeholder="(00) 00000-0000">
+              </div>
+              
+              <!-- Email -->
+              <div class="form-group">
+                <label for="email" class="form-label">E-mail</label>
+                <input type="email" id="email" name="email" class="form-input" placeholder="contato@empresa.com">
+              </div>
+              
+              <!-- Endereço -->
+              <div class="form-group md:col-span-2">
+                <label for="endereco" class="form-label">Endereço</label>
+                <input type="text" id="endereco" name="endereco" class="form-input" placeholder="Rua, número, bairro, cidade - UF">
+              </div>
+              
+              <!-- Observações -->
+              <div class="form-group lg:col-span-3">
+                <label for="observacao" class="form-label">Observações</label>
+                <textarea id="observacao" name="observacao" rows="3" class="form-input" placeholder="Informações adicionais..."></textarea>
+              </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-secondary-200">
+              <button type="button" onclick="document.getElementById('formCadastro').classList.add('hidden')" class="btn btn-secondary">
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+                Cadastrar Fornecedor
+              </button>
+            </div>
           </form>
-        </td>
-      </tr>
-    <% }) %>
-  </tbody>
-</table>
+        </div>
+      </div>
 
-</div>
+      <!-- Busca -->
+      <div class="card mb-6">
+        <div class="card-body py-4">
+          <div class="relative max-w-md">
+            <input type="text" id="busca" placeholder="Buscar por nome, código ou CNPJ..." class="form-input pl-10" onkeyup="filtrarFornecedores()">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400"></i>
+          </div>
+        </div>
+      </div>
 
-<%- include('partials/footer') %>
+      <!-- Lista de Fornecedores -->
+      <% if (fornecedores.length === 0) { %>
+        <div class="card">
+          <div class="card-body py-12 text-center">
+            <div class="w-16 h-16 rounded-full bg-secondary-100 flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="truck" class="w-8 h-8 text-secondary-400"></i>
+            </div>
+            <h3 class="text-lg font-medium text-secondary-900 mb-2">Nenhum fornecedor cadastrado</h3>
+            <p class="text-secondary-500 mb-6">Comece adicionando seu primeiro fornecedor.</p>
+            <button type="button" onclick="document.getElementById('formCadastro').classList.remove('hidden')" class="btn btn-primary">
+              <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+              Cadastrar Fornecedor
+            </button>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="card">
+          <div class="table-container">
+            <table class="table" id="tabelaFornecedores">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Fornecedor</th>
+                  <th>CNPJ</th>
+                  <th>Contato</th>
+                  <th>Telefone</th>
+                  <th class="text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% fornecedores.forEach(function(f) { %>
+                  <tr class="fornecedor-row" 
+                      data-nome="<%= f.nome.toLowerCase() %>" 
+                      data-codigo="<%= (f.codigo || '').toLowerCase() %>"
+                      data-cnpj="<%= (f.cnpj || '').toLowerCase() %>">
+                    <td class="font-mono text-sm text-secondary-600"><%= f.codigo || '-' %></td>
+                    <td>
+                      <div>
+                        <p class="font-medium text-secondary-900"><%= f.nome %></p>
+                        <% if (f.email) { %>
+                          <a href="mailto:<%= f.email %>" class="text-xs text-primary-600 hover:text-primary-700"><%= f.email %></a>
+                        <% } %>
+                      </div>
+                    </td>
+                    <td class="font-mono text-sm text-secondary-600"><%= f.cnpj || '-' %></td>
+                    <td class="text-secondary-600"><%= f.contato || '-' %></td>
+                    <td>
+                      <% if (f.telefone) { %>
+                        <a href="tel:<%= f.telefone %>" class="text-secondary-600 hover:text-primary-600"><%= f.telefone %></a>
+                      <% } else { %>
+                        <span class="text-secondary-400">-</span>
+                      <% } %>
+                    </td>
+                    <td class="text-right">
+                      <form action="/fornecedores/delete/<%= f.id %>" method="POST" class="inline" data-nome="<%= f.nome %>" onsubmit="return confirm('Excluir fornecedor ' + this.dataset.nome + '?');">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" class="text-sm text-danger-600 hover:text-danger-700 flex items-center gap-1 ml-auto">
+                          <i data-lucide="trash-2" class="w-4 h-4"></i>
+                          Excluir
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Contador -->
+        <div class="mt-4 text-center text-sm text-secondary-500">
+          Exibindo <span id="totalVisivel"><%= fornecedores.length %></span> de <%= fornecedores.length %> fornecedores
+        </div>
+      <% } %>
+
+    </main>
+  </div>
+
+  <script>
+    // Inicializa ícones
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+    });
+    
+    // Máscara CNPJ
+    document.getElementById('cnpj').addEventListener('input', function(e) {
+      var value = e.target.value.replace(/\D/g, '');
+      if (value.length > 14) value = value.slice(0, 14);
+      if (value.length > 12) {
+        value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/, '$1.$2.$3/$4-$5');
+      } else if (value.length > 8) {
+        value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{1,4})/, '$1.$2.$3/$4');
+      } else if (value.length > 5) {
+        value = value.replace(/(\d{2})(\d{3})(\d{1,3})/, '$1.$2.$3');
+      } else if (value.length > 2) {
+        value = value.replace(/(\d{2})(\d{1,3})/, '$1.$2');
+      }
+      e.target.value = value;
+    });
+    
+    // Máscara Telefone
+    document.getElementById('telefone').addEventListener('input', function(e) {
+      var value = e.target.value.replace(/\D/g, '');
+      if (value.length > 11) value = value.slice(0, 11);
+      if (value.length > 10) {
+        value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+      } else if (value.length > 6) {
+        value = value.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+      } else if (value.length > 2) {
+        value = value.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+      }
+      e.target.value = value;
+    });
+    
+    // Filtro de fornecedores
+    function filtrarFornecedores() {
+      var busca = document.getElementById('busca').value.toLowerCase();
+      var linhas = document.querySelectorAll('.fornecedor-row');
+      var visiveis = 0;
+      
+      linhas.forEach(function(linha) {
+        var nome = linha.dataset.nome;
+        var codigo = linha.dataset.codigo;
+        var cnpj = linha.dataset.cnpj;
+        
+        var mostrar = nome.includes(busca) || codigo.includes(busca) || cnpj.includes(busca);
+        linha.style.display = mostrar ? '' : 'none';
+        if (mostrar) visiveis++;
+      });
+      
+      document.getElementById('totalVisivel').textContent = visiveis;
+    }
+  </script>
+</body>
+</html>

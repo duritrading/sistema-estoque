@@ -1,26 +1,24 @@
 <!-- partials/sidebar.ejs -->
-<!-- Sidebar Colapsável -->
-<aside id="sidebar" class="sidebar-container">
+<aside id="sidebar" style="position:fixed;left:0;top:0;height:100vh;width:256px;background-color:#0f172a;color:#fff;z-index:40;transition:width 0.3s ease;display:flex;flex-direction:column;overflow:hidden;">
   
   <!-- Logo + Toggle -->
-  <div class="sidebar-header">
-    <a href="/" class="sidebar-logo-link">
-      <img src="/logo-of.png" alt="OF Distribuidora" class="sidebar-logo-img">
-      <div class="sidebar-logo-text">
-        <h1>OF Distribuidora</h1>
-        <p>Sistema de Gestão</p>
+  <div style="padding:16px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;min-height:72px;">
+    <a href="/" style="display:flex;align-items:center;gap:12px;text-decoration:none;overflow:hidden;">
+      <img src="/logo-of.png" alt="OF" style="width:40px;height:40px;border-radius:8px;object-fit:contain;flex-shrink:0;">
+      <div id="logoText" style="overflow:hidden;white-space:nowrap;">
+        <h1 style="font-size:16px;font-weight:700;color:#fff;margin:0;">OF Distribuidora</h1>
+        <p style="font-size:11px;color:#94a3b8;margin:0;">Sistema de Gestão</p>
       </div>
     </a>
     
-    <!-- Toggle Button -->
-    <button id="sidebarToggle" class="sidebar-toggle" title="Recolher menu">
-      <svg class="toggle-icon-close" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+    <button type="button" id="sidebarToggle" style="padding:8px;border-radius:8px;background:transparent;border:none;color:#94a3b8;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;" onmouseover="this.style.backgroundColor='#1e293b';this.style.color='#fff'" onmouseout="this.style.backgroundColor='transparent';this.style.color='#94a3b8'">
+      <svg id="iconClose" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect width="18" height="18" x="3" y="3" rx="2"></rect>
         <line x1="9" x2="9" y1="3" y2="21"></line>
         <path d="m16 15-3-3 3-3"></path>
       </svg>
-      <svg class="toggle-icon-open" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+      <svg id="iconOpen" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+        <rect width="18" height="18" x="3" y="3" rx="2"></rect>
         <line x1="9" x2="9" y1="3" y2="21"></line>
         <path d="m14 9 3 3-3 3"></path>
       </svg>
@@ -28,218 +26,84 @@
   </div>
 
   <!-- Navigation -->
-  <nav class="sidebar-nav">
+  <nav style="flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 0;">
     
-    <!-- Principal -->
-    <div class="sidebar-section-title">Principal</div>
-    
-    <a href="/" class="sidebar-link <%= currentPage === 'dashboard' ? 'active' : '' %>" data-title="Dashboard">
+    <div class="nav-section">Principal</div>
+    <a href="/" class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>">
       <i data-lucide="layout-dashboard"></i>
-      <span>Dashboard</span>
+      <span class="nav-text">Dashboard</span>
     </a>
 
-    <!-- Estoque -->
-    <div class="sidebar-section-title">Estoque</div>
-    
-    <a href="/produtos" class="sidebar-link <%= currentPage === 'produtos' ? 'active' : '' %>" data-title="Produtos">
+    <div class="nav-section">Estoque</div>
+    <a href="/produtos" class="nav-link <%= currentPage === 'produtos' ? 'active' : '' %>">
       <i data-lucide="box"></i>
-      <span>Produtos</span>
+      <span class="nav-text">Produtos</span>
     </a>
-    
-    <a href="/movimentacoes" class="sidebar-link <%= currentPage === 'movimentacoes' ? 'active' : '' %>" data-title="Movimentações">
+    <a href="/movimentacoes" class="nav-link <%= currentPage === 'movimentacoes' ? 'active' : '' %>">
       <i data-lucide="arrow-left-right"></i>
-      <span>Movimentações</span>
+      <span class="nav-text">Movimentações</span>
     </a>
 
-    <!-- Financeiro -->
-    <div class="sidebar-section-title">Financeiro</div>
-    
-    <a href="/contas-a-receber" class="sidebar-link <%= currentPage === 'contas-a-receber' ? 'active' : '' %>" data-title="Contas a Receber">
+    <div class="nav-section">Financeiro</div>
+    <a href="/contas-a-receber" class="nav-link <%= currentPage === 'contas-a-receber' ? 'active' : '' %>">
       <i data-lucide="trending-up"></i>
-      <span>Contas a Receber</span>
+      <span class="nav-text">Contas a Receber</span>
     </a>
-    
-    <a href="/contas-a-pagar" class="sidebar-link <%= currentPage === 'contas-a-pagar' ? 'active' : '' %>" data-title="Contas a Pagar">
+    <a href="/contas-a-pagar" class="nav-link <%= currentPage === 'contas-a-pagar' ? 'active' : '' %>">
       <i data-lucide="trending-down"></i>
-      <span>Contas a Pagar</span>
+      <span class="nav-text">Contas a Pagar</span>
     </a>
-    
-    <a href="/fluxo-caixa" class="sidebar-link <%= currentPage === 'fluxo-caixa' ? 'active' : '' %>" data-title="Fluxo de Caixa">
+    <a href="/fluxo-caixa" class="nav-link <%= currentPage === 'fluxo-caixa' ? 'active' : '' %>">
       <i data-lucide="wallet"></i>
-      <span>Fluxo de Caixa</span>
+      <span class="nav-text">Fluxo de Caixa</span>
     </a>
-    
-    <a href="/inadimplencia" class="sidebar-link <%= currentPage === 'inadimplencia' ? 'active' : '' %>" data-title="Inadimplência">
+    <a href="/inadimplencia" class="nav-link <%= currentPage === 'inadimplencia' ? 'active' : '' %>">
       <i data-lucide="alert-triangle"></i>
-      <span>Inadimplência</span>
+      <span class="nav-text">Inadimplência</span>
     </a>
-    
-    <a href="/dre" class="sidebar-link <%= currentPage === 'dre' ? 'active' : '' %>" data-title="DRE">
+    <a href="/dre" class="nav-link <%= currentPage === 'dre' ? 'active' : '' %>">
       <i data-lucide="file-bar-chart"></i>
-      <span>DRE</span>
+      <span class="nav-text">DRE</span>
     </a>
 
-    <!-- Cadastros -->
-    <div class="sidebar-section-title">Cadastros</div>
-    
-    <a href="/clientes" class="sidebar-link <%= currentPage === 'clientes' ? 'active' : '' %>" data-title="Clientes">
+    <div class="nav-section">Cadastros</div>
+    <a href="/clientes" class="nav-link <%= currentPage === 'clientes' ? 'active' : '' %>">
       <i data-lucide="users"></i>
-      <span>Clientes</span>
+      <span class="nav-text">Clientes</span>
     </a>
-    
-    <a href="/fornecedores" class="sidebar-link <%= currentPage === 'fornecedores' ? 'active' : '' %>" data-title="Fornecedores">
+    <a href="/fornecedores" class="nav-link <%= currentPage === 'fornecedores' ? 'active' : '' %>">
       <i data-lucide="truck"></i>
-      <span>Fornecedores</span>
+      <span class="nav-text">Fornecedores</span>
     </a>
-    
-    <a href="/rcas" class="sidebar-link <%= currentPage === 'rcas' ? 'active' : '' %>" data-title="RCAs">
+    <a href="/rcas" class="nav-link <%= currentPage === 'rcas' ? 'active' : '' %>">
       <i data-lucide="user-check"></i>
-      <span>RCAs</span>
+      <span class="nav-text">RCAs</span>
     </a>
 
-    <!-- Operações -->
-    <div class="sidebar-section-title">Operações</div>
-    
-    <a href="/entregas" class="sidebar-link <%= currentPage === 'entregas' ? 'active' : '' %>" data-title="Entregas">
+    <div class="nav-section">Operações</div>
+    <a href="/entregas" class="nav-link <%= currentPage === 'entregas' ? 'active' : '' %>">
       <i data-lucide="map-pin"></i>
-      <span>Entregas</span>
+      <span class="nav-text">Entregas</span>
     </a>
-    
-    <a href="/comissoes" class="sidebar-link <%= currentPage === 'comissoes' ? 'active' : '' %>" data-title="Comissões">
+    <a href="/comissoes" class="nav-link <%= currentPage === 'comissoes' ? 'active' : '' %>">
       <i data-lucide="percent"></i>
-      <span>Comissões</span>
+      <span class="nav-text">Comissões</span>
     </a>
 
-    <!-- Sistema -->
-    <div class="sidebar-section-title">Sistema</div>
-    
-    <a href="/usuarios" class="sidebar-link <%= currentPage === 'usuarios' ? 'active' : '' %>" data-title="Usuários">
+    <div class="nav-section">Sistema</div>
+    <a href="/usuarios" class="nav-link <%= currentPage === 'usuarios' ? 'active' : '' %>">
       <i data-lucide="shield"></i>
-      <span>Usuários</span>
+      <span class="nav-text">Usuários</span>
     </a>
-    
-    <a href="/backup" class="sidebar-link <%= currentPage === 'backup' ? 'active' : '' %>" data-title="Backup">
+    <a href="/backup" class="nav-link <%= currentPage === 'backup' ? 'active' : '' %>">
       <i data-lucide="hard-drive-download"></i>
-      <span>Backup</span>
+      <span class="nav-text">Backup</span>
     </a>
   </nav>
 </aside>
 
 <style>
-  /* ============================
-     SIDEBAR STYLES
-     ============================ */
-  
-  .sidebar-container {
-    position: fixed;
-    left: 0;
-    top: 0;
-    height: 100vh;
-    width: 256px;
-    background-color: #0f172a;
-    color: #ffffff;
-    z-index: 40;
-    transition: width 0.3s ease;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .sidebar-container.collapsed {
-    width: 72px;
-  }
-  
-  /* Header */
-  .sidebar-header {
-    padding: 16px;
-    border-bottom: 1px solid #1e293b;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 72px;
-  }
-  
-  .sidebar-logo-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    text-decoration: none;
-    overflow: hidden;
-  }
-  
-  .sidebar-logo-img {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    object-fit: contain;
-    flex-shrink: 0;
-  }
-  
-  .sidebar-logo-text {
-    overflow: hidden;
-    transition: opacity 0.2s, width 0.2s;
-  }
-  
-  .sidebar-logo-text h1 {
-    font-size: 16px;
-    font-weight: 700;
-    color: #ffffff;
-    margin: 0;
-    white-space: nowrap;
-  }
-  
-  .sidebar-logo-text p {
-    font-size: 11px;
-    color: #94a3b8;
-    margin: 0;
-    white-space: nowrap;
-  }
-  
-  .sidebar-container.collapsed .sidebar-logo-text {
-    opacity: 0;
-    width: 0;
-  }
-  
-  /* Toggle Button */
-  .sidebar-toggle {
-    padding: 8px;
-    border-radius: 8px;
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s;
-    flex-shrink: 0;
-  }
-  
-  .sidebar-toggle:hover {
-    background-color: #1e293b;
-    color: #ffffff;
-  }
-  
-  .sidebar-container.collapsed .toggle-icon-close {
-    display: none !important;
-  }
-  
-  .sidebar-container.collapsed .toggle-icon-open {
-    display: block !important;
-  }
-  
-  /* Navigation */
-  .sidebar-nav {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px 0;
-  }
-  
-  .sidebar-nav::-webkit-scrollbar {
-    width: 0;
-  }
-  
-  /* Section Titles */
-  .sidebar-section-title {
+  .nav-section {
     padding: 8px 24px;
     font-size: 11px;
     font-weight: 600;
@@ -248,130 +112,87 @@
     letter-spacing: 0.05em;
     margin-top: 16px;
     white-space: nowrap;
-    overflow: hidden;
   }
+  .nav-section:first-child { margin-top: 0; }
   
-  .sidebar-section-title:first-child {
-    margin-top: 0;
-  }
-  
-  .sidebar-container.collapsed .sidebar-section-title {
-    opacity: 0;
-    height: 0;
-    padding: 0;
-    margin: 0;
-  }
-  
-  /* Links */
-  .sidebar-link {
+  .nav-link {
     display: flex;
     align-items: center;
     padding: 12px 24px;
     color: #cbd5e1;
     text-decoration: none;
-    transition: all 0.2s;
     border-left: 4px solid transparent;
     gap: 12px;
+    white-space: nowrap;
   }
-  
-  .sidebar-link:hover {
+  .nav-link:hover {
     background-color: #1e293b;
     color: #ffffff;
   }
-  
-  .sidebar-link.active {
+  .nav-link.active {
     background-color: #1e293b;
     color: #ffffff;
     border-left-color: #3b82f6;
   }
-  
-  .sidebar-link i,
-  .sidebar-link svg {
+  .nav-link i, .nav-link svg {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
   }
-  
-  .sidebar-link span {
-    white-space: nowrap;
+  .nav-text {
     overflow: hidden;
-    transition: opacity 0.2s, width 0.2s;
   }
   
-  /* Collapsed State */
-  .sidebar-container.collapsed .sidebar-link {
-    padding: 12px 0;
-    justify-content: center;
-  }
-  
-  .sidebar-container.collapsed .sidebar-link span {
-    opacity: 0;
-    width: 0;
-    position: absolute;
-  }
-  
-  /* Tooltip on collapsed */
-  .sidebar-container.collapsed .sidebar-link {
-    position: relative;
-  }
-  
-  .sidebar-container.collapsed .sidebar-link:hover::after {
-    content: attr(data-title);
-    position: absolute;
-    left: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #1e293b;
-    color: #ffffff;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    white-space: nowrap;
-    margin-left: 8px;
-    z-index: 100;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  }
-  
-  /* Main Content Adjustment */
   .main-content {
     margin-left: 256px;
     transition: margin-left 0.3s ease;
   }
   
-  .main-content.sidebar-collapsed {
-    margin-left: 72px;
-  }
+  /* Collapsed state classes */
+  .sidebar-collapsed-text { display: none !important; }
+  .sidebar-collapsed-section { display: none !important; }
 </style>
 
 <script>
-(function() {
-  const sidebar = document.getElementById('sidebar');
-  const toggle = document.getElementById('sidebarToggle');
-  const mainContent = document.querySelector('.main-content');
+// Limpar estado anterior que pode estar bugado
+localStorage.removeItem('sidebarCollapsed');
+
+var sidebarExpanded = true;
+
+document.getElementById('sidebarToggle').onclick = function() {
+  var sidebar = document.getElementById('sidebar');
+  var logoText = document.getElementById('logoText');
+  var iconClose = document.getElementById('iconClose');
+  var iconOpen = document.getElementById('iconOpen');
+  var mainContent = document.querySelector('.main-content');
+  var navTexts = document.querySelectorAll('.nav-text');
+  var navSections = document.querySelectorAll('.nav-section');
   
-  if (!sidebar || !toggle) return;
+  sidebarExpanded = !sidebarExpanded;
   
-  // Load saved state
-  const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-  
-  if (isCollapsed) {
-    sidebar.classList.add('collapsed');
-    if (mainContent) mainContent.classList.add('sidebar-collapsed');
+  if (sidebarExpanded) {
+    // EXPANDIR
+    sidebar.style.width = '256px';
+    logoText.style.display = 'block';
+    iconClose.style.display = 'block';
+    iconOpen.style.display = 'none';
+    if (mainContent) mainContent.style.marginLeft = '256px';
+    navTexts.forEach(function(el) { el.style.display = 'inline'; });
+    navSections.forEach(function(el) { el.style.display = 'block'; });
+  } else {
+    // COLAPSAR
+    sidebar.style.width = '72px';
+    logoText.style.display = 'none';
+    iconClose.style.display = 'none';
+    iconOpen.style.display = 'block';
+    if (mainContent) mainContent.style.marginLeft = '72px';
+    navTexts.forEach(function(el) { el.style.display = 'none'; });
+    navSections.forEach(function(el) { el.style.display = 'none'; });
   }
   
-  // Toggle handler
-  toggle.addEventListener('click', function(e) {
-    e.preventDefault();
-    sidebar.classList.toggle('collapsed');
-    if (mainContent) mainContent.classList.toggle('sidebar-collapsed');
-    
-    // Save state
-    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-    
-    // Re-render lucide icons
-    if (typeof lucide !== 'undefined') {
-      setTimeout(function() { lucide.createIcons(); }, 100);
-    }
-  });
-})();
+  // Re-render icons
+  setTimeout(function() {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }, 100);
+};
 </script>

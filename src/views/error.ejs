@@ -1,16 +1,47 @@
-<%- include('partials/header', {
-  titulo: locals.titulo || 'Ocorreu um Erro',
-  subtitulo: '',
-  user: locals.user
-}) %>
+<!-- views/erro.ejs -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= locals.titulo || 'Erro' %> | OF Distribuidora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="bg-secondary-50 min-h-screen flex items-center justify-center p-4">
 
-<div class="card text-center">
-    <h2>❌ <%= locals.titulo || 'Erro' %></h2>
-    <div class="alert alert-danger">
-        <p><%= locals.mensagem || 'Houve um problema ao processar sua solicitação.' %></p>
+  <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+    
+    <!-- Ícone de Erro -->
+    <div class="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-6">
+      <i data-lucide="alert-circle" class="w-10 h-10 text-red-600"></i>
     </div>
-    <br>
-    <a href="<%= locals.voltar_url || '/' %>" class="btn">Voltar</a>
-</div>
+    
+    <!-- Título -->
+    <h1 class="text-2xl font-bold text-secondary-900 mb-3">
+      <%= locals.titulo || 'Ocorreu um Erro' %>
+    </h1>
+    
+    <!-- Mensagem -->
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+      <p class="text-red-700">
+        <%= locals.mensagem || 'Houve um problema ao processar sua solicitação.' %>
+      </p>
+    </div>
+    
+    <!-- Botão Voltar -->
+    <a href="<%= locals.voltar_url || '/' %>" class="btn btn-primary inline-flex items-center gap-2">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      Voltar
+    </a>
+    
+  </div>
 
-<%- include('partials/footer') %>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
