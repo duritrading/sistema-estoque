@@ -1,4 +1,20 @@
-
+<!-- views/dashboard.ejs -->
+<%
+  // Fallbacks
+  var dashboardData = locals.dashboardData || {};
+  dashboardData.faturamento = dashboardData.faturamento || { atual: 0, anterior: 0, variacao: 0, totalVendas: 0 };
+  dashboardData.fluxoCaixa = dashboardData.fluxoCaixa || { creditos: 0, debitos: 0, saldo: 0 };
+  dashboardData.investimentos = dashboardData.investimentos || { saldo: 0 };
+  dashboardData.lucro = dashboardData.lucro || { valor: 0, margem: 0 };
+  dashboardData.contasVencidas = dashboardData.contasVencidas || { total: 0, valor_total: 0 };
+  dashboardData.inadimplencia = dashboardData.inadimplencia || { clientes_inadimplentes: 0, valor_total: 0 };
+  dashboardData.entregas = dashboardData.entregas || { total: 0, pendentes: 0, entregues: 0 };
+  dashboardData.topProdutos = dashboardData.topProdutos || [];
+  dashboardData.produtosBaixoEstoque = dashboardData.produtosBaixoEstoque || [];
+  dashboardData.rentabilidadeProdutos = dashboardData.rentabilidadeProdutos || [];
+  dashboardData.rentabilidadeCategorias = dashboardData.rentabilidadeCategorias || [];
+  var filtros = locals.filtros || { dataInicial: '', dataFinal: '' };
+%>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -10,11 +26,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    lucide.createIcons();
-  });
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-secondary-50">
 
@@ -25,122 +37,286 @@
 
     <main class="page-container">
       <!-- Page Header -->
-      <%- include('partials/page-header', { 
-        title: 'Dashboard', 
-        subtitle: 'Visão geral do seu negócio',
-        actions: `
+      <div class="mb-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-secondary-900">Dashboard</h1>
+            <p class="mt-1 text-secondary-500">Visão geral do seu negócio</p>
+          </div>
           <form method="GET" class="flex items-center gap-2">
-            <input type="date" name="dataInicial" value="${filtros.dataInicial}" class="form-input py-2">
+            <input type="date" name="dataInicial" value="<%= filtros.dataInicial %>" class="form-input py-2">
             <span class="text-secondary-400">até</span>
-            <input type="date" name="dataFinal" value="${filtros.dataFinal}" class="form-input py-2">
+            <input type="date" name="dataFinal" value="<%= filtros.dataFinal %>" class="form-input py-2">
             <button type="submit" class="btn btn-primary">
               <i data-lucide="filter" class="w-4 h-4 mr-2"></i>
               Filtrar
             </button>
           </form>
-        `
-      }) %>
+        </div>
+      </div>
 
-      <!-- Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <%- include('partials/stat-card', {
-          title: 'Faturamento',
-          value: dashboardData.faturamento.atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-          prefix: 'R$',
-          icon: 'dollar-sign',
-          iconColor: 'primary',
-          change: dashboardData.faturamento.variacao,
-          changeLabel: 'vs mês anterior'
-        }) %>
+      <!-- Stats Grid - 5 cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <!-- Faturamento -->
+        <div class="card">
+          <div class="card-body">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
+                <i data-lucide="dollar-sign" class="w-5 h-5 text-primary-600"></i>
+              </div>
+              <span class="text-xs font-semibold text-secondary-500 uppercase">Faturamento</span>
+            </div>
+            <p class="text-2xl font-bold text-secondary-900">
+              R$ <%= dashboardData.faturamento.atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+            </p>
+            <% if (dashboardData.faturamento.variacao != 0) { %>
+              <p class="text-xs mt-1 <%= parseFloat(dashboardData.faturamento.variacao) >= 0 ? 'text-green-600' : 'text-red-600' %>">
+                <%= parseFloat(dashboardData.faturamento.variacao) >= 0 ? '+' : '' %><%= dashboardData.faturamento.variacao %>% vs mês anterior
+              </p>
+            <% } %>
+          </div>
+        </div>
 
-        <%- include('partials/stat-card', {
-          title: 'Lucro',
-          value: dashboardData.lucro.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-          prefix: 'R$',
-          icon: 'trending-up',
-          iconColor: dashboardData.lucro.valor >= 0 ? 'green' : 'red',
-          change: parseFloat(dashboardData.lucro.margem),
-          changeLabel: 'margem'
-        }) %>
+        <!-- Lucro -->
+        <div class="card">
+          <div class="card-body">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg <%= dashboardData.lucro.valor >= 0 ? 'bg-green-100' : 'bg-red-100' %> flex items-center justify-center">
+                <i data-lucide="trending-up" class="w-5 h-5 <%= dashboardData.lucro.valor >= 0 ? 'text-green-600' : 'text-red-600' %>"></i>
+              </div>
+              <span class="text-xs font-semibold text-secondary-500 uppercase">Lucro</span>
+            </div>
+            <p class="text-2xl font-bold <%= dashboardData.lucro.valor >= 0 ? 'text-green-600' : 'text-red-600' %>">
+              R$ <%= dashboardData.lucro.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+            </p>
+            <p class="text-xs mt-1 text-secondary-500">Margem: <%= dashboardData.lucro.margem %>%</p>
+          </div>
+        </div>
 
-        <%- include('partials/stat-card', {
-          title: 'Vendas',
-          value: dashboardData.faturamento.totalVendas,
-          icon: 'shopping-cart',
-          iconColor: 'blue'
-        }) %>
+        <!-- Vendas -->
+        <div class="card">
+          <div class="card-body">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <i data-lucide="shopping-cart" class="w-5 h-5 text-blue-600"></i>
+              </div>
+              <span class="text-xs font-semibold text-secondary-500 uppercase">Vendas</span>
+            </div>
+            <p class="text-2xl font-bold text-secondary-900"><%= dashboardData.faturamento.totalVendas %></p>
+            <p class="text-xs mt-1 text-secondary-500">no período</p>
+          </div>
+        </div>
 
-        <%- include('partials/stat-card', {
-          title: 'Saldo Caixa',
-          value: dashboardData.fluxoCaixa.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-          prefix: 'R$',
-          icon: 'wallet',
-          iconColor: dashboardData.fluxoCaixa.saldo >= 0 ? 'green' : 'red'
-        }) %>
+        <!-- Saldo em Caixa -->
+        <div class="card">
+          <div class="card-body">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'bg-emerald-100' : 'bg-orange-100' %> flex items-center justify-center">
+                <i data-lucide="wallet" class="w-5 h-5 <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'text-emerald-600' : 'text-orange-600' %>"></i>
+              </div>
+              <span class="text-xs font-semibold text-secondary-500 uppercase">Saldo Caixa</span>
+            </div>
+            <p class="text-2xl font-bold <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'text-emerald-600' : 'text-orange-600' %>">
+              R$ <%= dashboardData.fluxoCaixa.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+            </p>
+            <p class="text-xs mt-1 text-secondary-500">operacional</p>
+          </div>
+        </div>
+
+        <!-- Saldo em Investimentos -->
+        <div class="card">
+          <div class="card-body">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
+                <i data-lucide="piggy-bank" class="w-5 h-5 text-violet-600"></i>
+              </div>
+              <span class="text-xs font-semibold text-secondary-500 uppercase">Investimentos</span>
+            </div>
+            <p class="text-2xl font-bold text-violet-600">
+              R$ <%= dashboardData.investimentos.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+            </p>
+            <p class="text-xs mt-1 text-secondary-500">reserva</p>
+          </div>
+        </div>
       </div>
 
       <!-- Alerts Row -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <!-- Contas Vencidas -->
-        <% if (dashboardData.contasVencidas.total > 0) { %>
-          <div class="card border-l-4 border-l-danger-500">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <% if (parseInt(dashboardData.contasVencidas.total) > 0) { %>
+          <div class="card border-l-4 border-l-red-500">
             <div class="card-body flex items-center gap-4">
-              <div class="w-12 h-12 rounded-full bg-danger-100 flex items-center justify-center">
-                <i data-lucide="alert-circle" class="w-6 h-6 text-danger-600"></i>
+              <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <i data-lucide="alert-circle" class="w-6 h-6 text-red-600"></i>
               </div>
-              <div>
+              <div class="flex-1">
                 <p class="text-sm font-medium text-secondary-900">Contas Vencidas</p>
-                <p class="text-2xl font-bold text-danger-600"><%= dashboardData.contasVencidas.total %></p>
-                <p class="text-xs text-secondary-500">
-                  R$ <%= parseFloat(dashboardData.contasVencidas.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
-                </p>
+                <p class="text-2xl font-bold text-red-600"><%= dashboardData.contasVencidas.total %></p>
+                <p class="text-xs text-secondary-500">R$ <%= parseFloat(dashboardData.contasVencidas.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></p>
               </div>
-              <a href="/contas-a-pagar" class="ml-auto btn btn-sm btn-danger">Ver</a>
+              <a href="/contas-a-pagar" class="btn btn-sm btn-danger">Ver</a>
             </div>
           </div>
         <% } %>
 
-        <!-- Inadimplência -->
-        <% if (dashboardData.inadimplencia.clientes_inadimplentes > 0) { %>
-          <div class="card border-l-4 border-l-warning-500">
+        <% if (parseInt(dashboardData.inadimplencia.clientes_inadimplentes) > 0) { %>
+          <div class="card border-l-4 border-l-yellow-500">
             <div class="card-body flex items-center gap-4">
-              <div class="w-12 h-12 rounded-full bg-warning-100 flex items-center justify-center">
-                <i data-lucide="users" class="w-6 h-6 text-warning-600"></i>
+              <div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                <i data-lucide="users" class="w-6 h-6 text-yellow-600"></i>
               </div>
-              <div>
+              <div class="flex-1">
                 <p class="text-sm font-medium text-secondary-900">Inadimplência</p>
-                <p class="text-2xl font-bold text-warning-600"><%= dashboardData.inadimplencia.clientes_inadimplentes %></p>
-                <p class="text-xs text-secondary-500">
-                  R$ <%= parseFloat(dashboardData.inadimplencia.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
-                </p>
+                <p class="text-2xl font-bold text-yellow-600"><%= dashboardData.inadimplencia.clientes_inadimplentes %></p>
+                <p class="text-xs text-secondary-500">R$ <%= parseFloat(dashboardData.inadimplencia.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></p>
               </div>
-              <a href="/inadimplencia" class="ml-auto btn btn-sm btn-warning">Ver</a>
+              <a href="/inadimplencia" class="btn btn-sm btn-warning">Ver</a>
             </div>
           </div>
         <% } %>
 
-        <!-- Entregas Pendentes -->
-        <% if (dashboardData.entregas && dashboardData.entregas.pendentes > 0) { %>
+        <% if (parseInt(dashboardData.entregas.pendentes) > 0) { %>
           <div class="card border-l-4 border-l-primary-500">
             <div class="card-body flex items-center gap-4">
               <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
                 <i data-lucide="truck" class="w-6 h-6 text-primary-600"></i>
               </div>
-              <div>
+              <div class="flex-1">
                 <p class="text-sm font-medium text-secondary-900">Entregas Pendentes</p>
                 <p class="text-2xl font-bold text-primary-600"><%= dashboardData.entregas.pendentes %></p>
-                <p class="text-xs text-secondary-500">
-                  de <%= dashboardData.entregas.total %> total
-                </p>
+                <p class="text-xs text-secondary-500">de <%= dashboardData.entregas.total %> total</p>
               </div>
-              <a href="/entregas" class="ml-auto btn btn-sm btn-primary">Ver</a>
+              <a href="/entregas" class="btn btn-sm btn-primary">Ver</a>
             </div>
           </div>
         <% } %>
       </div>
 
-      <!-- Two Column Layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Gráficos de Rentabilidade -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Rentabilidade por Produto -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="text-lg font-semibold text-secondary-900">Rentabilidade por Produto</h2>
+            <p class="text-sm text-secondary-500">Top 10 produtos mais lucrativos</p>
+          </div>
+          <div class="card-body">
+            <% if (dashboardData.rentabilidadeProdutos.length > 0) { %>
+              <canvas id="chartProdutos" height="300"></canvas>
+            <% } else { %>
+              <div class="text-center py-8 text-secondary-500">
+                <i data-lucide="bar-chart-2" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                <p>Sem dados de vendas no período</p>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Rentabilidade por Categoria -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="text-lg font-semibold text-secondary-900">Rentabilidade por Categoria</h2>
+            <p class="text-sm text-secondary-500">Lucro e margem por categoria de produto</p>
+          </div>
+          <div class="card-body">
+            <% if (dashboardData.rentabilidadeCategorias.length > 0) { %>
+              <canvas id="chartCategorias" height="300"></canvas>
+            <% } else { %>
+              <div class="text-center py-8 text-secondary-500">
+                <i data-lucide="pie-chart" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                <p>Sem dados de vendas no período</p>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabelas de Rentabilidade Detalhadas -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Tabela Rentabilidade Produtos -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="text-lg font-semibold text-secondary-900">Detalhes por Produto</h2>
+          </div>
+          <div class="card-body p-0">
+            <% if (dashboardData.rentabilidadeProdutos.length > 0) { %>
+              <div class="overflow-x-auto">
+                <table class="table text-sm">
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th class="text-right">Receita</th>
+                      <th class="text-right">Lucro</th>
+                      <th class="text-right">Margem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% dashboardData.rentabilidadeProdutos.forEach(function(p) { %>
+                      <tr>
+                        <td class="font-medium text-secondary-900 max-w-[150px] truncate" title="<%= p.descricao %>"><%= p.descricao %></td>
+                        <td class="text-right text-secondary-600">R$ <%= p.receita.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+                        <td class="text-right font-semibold <%= p.lucro >= 0 ? 'text-green-600' : 'text-red-600' %>">
+                          R$ <%= p.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+                        </td>
+                        <td class="text-right">
+                          <span class="badge <%= p.margem_percentual >= 20 ? 'badge-success' : p.margem_percentual >= 10 ? 'badge-warning' : 'badge-danger' %>">
+                            <%= p.margem_percentual.toFixed(1) %>%
+                          </span>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            <% } else { %>
+              <div class="p-6 text-center text-secondary-500">Sem dados</div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Tabela Rentabilidade Categorias -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="text-lg font-semibold text-secondary-900">Detalhes por Categoria</h2>
+          </div>
+          <div class="card-body p-0">
+            <% if (dashboardData.rentabilidadeCategorias.length > 0) { %>
+              <div class="overflow-x-auto">
+                <table class="table text-sm">
+                  <thead>
+                    <tr>
+                      <th>Categoria</th>
+                      <th class="text-right">Receita</th>
+                      <th class="text-right">Lucro</th>
+                      <th class="text-right">Margem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% dashboardData.rentabilidadeCategorias.forEach(function(c) { %>
+                      <tr>
+                        <td class="font-medium text-secondary-900"><%= c.categoria %></td>
+                        <td class="text-right text-secondary-600">R$ <%= c.receita.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+                        <td class="text-right font-semibold <%= c.lucro >= 0 ? 'text-green-600' : 'text-red-600' %>">
+                          R$ <%= c.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+                        </td>
+                        <td class="text-right">
+                          <span class="badge <%= c.margem_percentual >= 20 ? 'badge-success' : c.margem_percentual >= 10 ? 'badge-warning' : 'badge-danger' %>">
+                            <%= c.margem_percentual.toFixed(1) %>%
+                          </span>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            <% } else { %>
+              <div class="p-6 text-center text-secondary-500">Sem dados</div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Produtos e Estoque Baixo -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <!-- Top Produtos -->
         <div class="card">
           <div class="card-header flex items-center justify-between">
@@ -148,9 +324,9 @@
             <a href="/produtos" class="text-sm text-primary-600 hover:text-primary-700">Ver todos</a>
           </div>
           <div class="card-body p-0">
-            <% if (dashboardData.topProdutos && dashboardData.topProdutos.length > 0) { %>
+            <% if (dashboardData.topProdutos.length > 0) { %>
               <div class="divide-y divide-secondary-100">
-                <% dashboardData.topProdutos.forEach((produto, index) => { %>
+                <% dashboardData.topProdutos.forEach(function(produto, index) { %>
                   <div class="flex items-center gap-4 px-6 py-4">
                     <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">
                       <%= index + 1 %>
@@ -168,9 +344,7 @@
                 <% }); %>
               </div>
             <% } else { %>
-              <div class="p-6 text-center text-secondary-500">
-                Nenhuma venda no período
-              </div>
+              <div class="p-6 text-center text-secondary-500">Nenhuma venda no período</div>
             <% } %>
           </div>
         </div>
@@ -182,29 +356,27 @@
             <a href="/produtos" class="text-sm text-primary-600 hover:text-primary-700">Ver todos</a>
           </div>
           <div class="card-body p-0">
-            <% if (dashboardData.produtosBaixoEstoque && dashboardData.produtosBaixoEstoque.length > 0) { %>
+            <% if (dashboardData.produtosBaixoEstoque.length > 0) { %>
               <div class="divide-y divide-secondary-100">
-                <% dashboardData.produtosBaixoEstoque.forEach(produto => { %>
+                <% dashboardData.produtosBaixoEstoque.forEach(function(produto) { %>
                   <div class="flex items-center gap-4 px-6 py-4">
-                    <div class="w-8 h-8 rounded-full bg-danger-100 flex items-center justify-center">
-                      <i data-lucide="alert-triangle" class="w-4 h-4 text-danger-600"></i>
+                    <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                      <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600"></i>
                     </div>
                     <div class="flex-1 min-w-0">
                       <p class="text-sm font-medium text-secondary-900 truncate"><%= produto.descricao %></p>
                       <p class="text-xs text-secondary-500"><%= produto.codigo %></p>
                     </div>
                     <div class="text-right">
-                      <span class="badge badge-danger">
-                        <%= produto.saldo_atual %> / <%= produto.estoque_minimo %>
-                      </span>
+                      <span class="badge badge-danger"><%= produto.saldo_atual %> / <%= produto.estoque_minimo %></span>
                     </div>
                   </div>
                 <% }); %>
               </div>
             <% } else { %>
               <div class="p-6 text-center">
-                <div class="w-12 h-12 rounded-full bg-success-100 flex items-center justify-center mx-auto mb-3">
-                  <i data-lucide="check" class="w-6 h-6 text-success-600"></i>
+                <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+                  <i data-lucide="check" class="w-6 h-6 text-green-600"></i>
                 </div>
                 <p class="text-secondary-500">Todos os produtos com estoque adequado</p>
               </div>
@@ -213,33 +385,37 @@
         </div>
       </div>
 
-      <!-- Fluxo de Caixa Resumo -->
-      <div class="mt-6">
-        <div class="card">
-          <div class="card-header flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-secondary-900">Resumo Financeiro</h2>
-            <a href="/fluxo-caixa" class="text-sm text-primary-600 hover:text-primary-700">Ver detalhes</a>
-          </div>
-          <div class="card-body">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div class="text-center p-4 rounded-lg bg-green-50">
-                <p class="text-sm text-green-600 font-medium mb-1">Entradas</p>
-                <p class="text-2xl font-bold text-green-700">
-                  R$ <%= dashboardData.fluxoCaixa.creditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
-                </p>
-              </div>
-              <div class="text-center p-4 rounded-lg bg-red-50">
-                <p class="text-sm text-red-600 font-medium mb-1">Saídas</p>
-                <p class="text-2xl font-bold text-red-700">
-                  R$ <%= dashboardData.fluxoCaixa.debitos.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
-                </p>
-              </div>
-              <div class="text-center p-4 rounded-lg <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'bg-blue-50' : 'bg-orange-50' %>">
-                <p class="text-sm <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'text-blue-600' : 'text-orange-600' %> font-medium mb-1">Saldo</p>
-                <p class="text-2xl font-bold <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'text-blue-700' : 'text-orange-700' %>">
-                  R$ <%= dashboardData.fluxoCaixa.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
-                </p>
-              </div>
+      <!-- Resumo Financeiro -->
+      <div class="card">
+        <div class="card-header flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-secondary-900">Resumo Financeiro</h2>
+          <a href="/fluxo-caixa" class="text-sm text-primary-600 hover:text-primary-700">Ver detalhes</a>
+        </div>
+        <div class="card-body">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="text-center p-4 rounded-lg bg-green-50">
+              <p class="text-sm text-green-600 font-medium mb-1">Entradas</p>
+              <p class="text-2xl font-bold text-green-700">
+                R$ <%= dashboardData.fluxoCaixa.creditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+              </p>
+            </div>
+            <div class="text-center p-4 rounded-lg bg-red-50">
+              <p class="text-sm text-red-600 font-medium mb-1">Saídas</p>
+              <p class="text-2xl font-bold text-red-700">
+                R$ <%= dashboardData.fluxoCaixa.debitos.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+              </p>
+            </div>
+            <div class="text-center p-4 rounded-lg <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'bg-emerald-50' : 'bg-orange-50' %>">
+              <p class="text-sm <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'text-emerald-600' : 'text-orange-600' %> font-medium mb-1">Saldo Caixa</p>
+              <p class="text-2xl font-bold <%= dashboardData.fluxoCaixa.saldo >= 0 ? 'text-emerald-700' : 'text-orange-700' %>">
+                R$ <%= dashboardData.fluxoCaixa.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+              </p>
+            </div>
+            <div class="text-center p-4 rounded-lg bg-violet-50">
+              <p class="text-sm text-violet-600 font-medium mb-1">Investimentos</p>
+              <p class="text-2xl font-bold text-violet-700">
+                R$ <%= dashboardData.investimentos.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %>
+              </p>
             </div>
           </div>
         </div>
@@ -249,7 +425,85 @@
   </div>
 
   <script>
+    // Inicializar Lucide
     lucide.createIcons();
+
+    <% if (dashboardData.rentabilidadeProdutos.length > 0) { %>
+    // Gráfico de Rentabilidade por Produto
+    var ctxProdutos = document.getElementById('chartProdutos').getContext('2d');
+    new Chart(ctxProdutos, {
+      type: 'bar',
+      data: {
+        labels: <%- JSON.stringify(dashboardData.rentabilidadeProdutos.map(function(p) { return p.descricao.substring(0,20) + (p.descricao.length > 20 ? '...' : ''); })) %>,
+        datasets: [
+          {
+            label: 'Lucro (R$)',
+            data: <%- JSON.stringify(dashboardData.rentabilidadeProdutos.map(function(p) { return p.lucro; })) %>,
+            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+            borderColor: 'rgb(16, 185, 129)',
+            borderWidth: 1,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Margem (%)',
+            data: <%- JSON.stringify(dashboardData.rentabilidadeProdutos.map(function(p) { return p.margem_percentual; })) %>,
+            type: 'line',
+            borderColor: 'rgb(139, 92, 246)',
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            borderWidth: 2,
+            pointRadius: 4,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Lucro (R$)' } },
+          y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Margem (%)' }, grid: { drawOnChartArea: false } }
+        }
+      }
+    });
+    <% } %>
+
+    <% if (dashboardData.rentabilidadeCategorias.length > 0) { %>
+    // Gráfico de Rentabilidade por Categoria
+    var ctxCategorias = document.getElementById('chartCategorias').getContext('2d');
+    var cores = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+    new Chart(ctxCategorias, {
+      type: 'doughnut',
+      data: {
+        labels: <%- JSON.stringify(dashboardData.rentabilidadeCategorias.map(function(c) { return c.categoria; })) %>,
+        datasets: [{
+          data: <%- JSON.stringify(dashboardData.rentabilidadeCategorias.map(function(c) { return c.lucro; })) %>,
+          backgroundColor: cores.slice(0, <%= dashboardData.rentabilidadeCategorias.length %>),
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right' },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                var label = context.label || '';
+                var value = context.raw || 0;
+                var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                var pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                return label + ': R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' (' + pct + '%)';
+              }
+            }
+          }
+        }
+      }
+    });
+    <% } %>
   </script>
 </body>
 </html>

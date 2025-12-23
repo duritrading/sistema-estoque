@@ -16,6 +16,14 @@ const bulkDeleteSchema = Joi.object({
   ids: Joi.array().items(Joi.number().integer().positive()).min(1).max(100).required()
 });
 
+// Helper: Garantir categoria Investimentos existe
+async function garantirCategoriaInvestimentos() {
+  const existe = await pool.query(`SELECT id FROM categorias_financeiras WHERE nome = 'Investimentos'`);
+  if (existe.rows.length === 0) {
+    await pool.query(`INSERT INTO categorias_financeiras (nome, tipo) VALUES ('Investimentos', 'RECEITA')`);
+  }
+}
+
 // Helper: Calcular período
 function calcularPeriodo(query) {
   const hoje = new Date();
@@ -32,14 +40,26 @@ function calcularPeriodo(query) {
       dataInicio = inicioSemana.toISOString().split('T')[0];
       dataFim = hoje.toISOString().split('T')[0];
       break;
+    case 'mes-passado':
+      const mesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+      dataInicio = mesPassado.toISOString().split('T')[0];
+      dataFim = new Date(hoje.getFullYear(), hoje.getMonth(), 0).toISOString().split('T')[0];
+      break;
+    case 'ultimos-30':
+      const trintaDiasAtras = new Date(hoje);
+      trintaDiasAtras.setDate(hoje.getDate() - 30);
+      dataInicio = trintaDiasAtras.toISOString().split('T')[0];
+      dataFim = hoje.toISOString().split('T')[0];
+      break;
+    case 'custom':
+    case 'personalizado':
+      dataInicio = query.data_inicio || new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+      dataFim = query.data_fim || hoje.toISOString().split('T')[0];
+      break;
     case 'mes-atual':
     default:
       dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
       dataFim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
-      break;
-    case 'personalizado':
-      dataInicio = query.data_inicio || new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-      dataFim = query.data_fim || hoje.toISOString().split('T')[0];
       break;
   }
   
@@ -48,6 +68,9 @@ function calcularPeriodo(query) {
 
 // GET / - Listar fluxo de caixa
 router.get('/', asyncHandler(async (req, res) => {
+  // Garantir categoria Investimentos
+  await garantirCategoriaInvestimentos();
+  
   const { dataInicio, dataFim, periodo } = calcularPeriodo(req.query);
   const { pesquisar, tipo } = req.query;
   const hoje = new Date().toISOString().split('T')[0];
@@ -63,33 +86,49 @@ router.get('/', asyncHandler(async (req, res) => {
   let idx = 3;
 
   if (tipo) { queryLancamentos += ` AND fc.tipo = $${idx++}`; params.push(tipo); }
-  if (pesquisar) { queryLancamentos += ` AND fc.descricao ILIKE $${idx++}`; params.push(`%${pesquisar}%`); }
+  if (pesquisar) { queryLancamentos += ` AND (fc.descricao ILIKE $${idx} OR cf.nome ILIKE $${idx++})`; params.push(`%${pesquisar}%`); }
   queryLancamentos += ' ORDER BY fc.data_operacao DESC, fc.id DESC';
 
-  const [lancamentos, categorias, totais] = await Promise.all([
+  const [lancamentos, categorias, metricsResult] = await Promise.all([
     pool.query(queryLancamentos, params),
-    pool.query('SELECT * FROM categorias_financeiras ORDER BY nome'),
+    pool.query('SELECT * FROM categorias_financeiras ORDER BY tipo DESC, nome'),
     pool.query(`
       SELECT 
-        COALESCE(SUM(CASE WHEN tipo = 'CREDITO' THEN valor ELSE 0 END), 0) as creditos,
-        COALESCE(SUM(CASE WHEN tipo = 'DEBITO' THEN valor ELSE 0 END), 0) as debitos
+        COALESCE(SUM(CASE WHEN tipo = 'CREDITO' AND status = 'PENDENTE' THEN valor ELSE 0 END), 0) as receitas_abertas,
+        COALESCE(SUM(CASE WHEN tipo = 'CREDITO' AND status = 'PAGO' THEN valor ELSE 0 END), 0) as receitas_realizadas,
+        COALESCE(SUM(CASE WHEN tipo = 'DEBITO' AND status = 'PENDENTE' THEN valor ELSE 0 END), 0) as despesas_abertas,
+        COALESCE(SUM(CASE WHEN tipo = 'DEBITO' AND status = 'PAGO' THEN valor ELSE 0 END), 0) as despesas_realizadas
       FROM fluxo_caixa
       WHERE data_operacao BETWEEN $1 AND $2
     `, [dataInicio, dataFim])
   ]);
 
-  const t = totais.rows[0];
-  const saldoTotal = parseFloat(t.creditos) - parseFloat(t.debitos);
+  const m = metricsResult.rows[0];
+  const receitasAbertas = parseFloat(m.receitas_abertas) || 0;
+  const receitasRealizadas = parseFloat(m.receitas_realizadas) || 0;
+  const despesasAbertas = parseFloat(m.despesas_abertas) || 0;
+  const despesasRealizadas = parseFloat(m.despesas_realizadas) || 0;
+  const saldoTotal = (receitasRealizadas - despesasRealizadas);
 
   res.render('fluxo-caixa', {
     user: res.locals.user,
     lancamentos: lancamentos.rows,
     categorias: categorias.rows,
-    totais: { creditos: t.creditos, debitos: t.debitos },
-    saldoAtual: saldoTotal,
-    metricas: { receitasRealizadas: t.creditos, despesasRealizadas: t.debitos, saldoTotal },
+    metricas: { 
+      receitasAbertas, 
+      receitasRealizadas, 
+      despesasAbertas, 
+      despesasRealizadas, 
+      saldoTotal 
+    },
     hoje,
-    filtros: { periodo, pesquisar: pesquisar || '', tipo: tipo || '', data_inicio: dataInicio, data_fim: dataFim }
+    filtros: { 
+      periodo, 
+      pesquisar: pesquisar || '', 
+      tipo: tipo || '', 
+      data_inicio: dataInicio, 
+      data_fim: dataFim 
+    }
   });
 }, ROUTE));
 

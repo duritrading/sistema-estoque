@@ -169,7 +169,7 @@
                         <p class="text-xs text-secondary-500"><%= mov.produto_descricao %></p>
                       </div>
                     </td>
-                    <td class="text-right font-medium"><%= parseFloat(mov.quantidade).toFixed(3) %></td>
+                    <td class="text-right font-medium"><%= parseFloat(mov.quantidade) % 1 === 0 ? parseFloat(mov.quantidade) : parseFloat(mov.quantidade).toFixed(1) %></td>
                     <td class="text-right text-secondary-600">
                       <%= mov.preco_unitario ? 'R$ ' + parseFloat(mov.preco_unitario).toFixed(2) : '-' %>
                     </td>
@@ -491,7 +491,7 @@
           '<div class="form-group"><label class="text-xs font-semibold text-secondary-500 uppercase">Data</label><p class="font-medium">' + new Date(data.created_at).toLocaleDateString('pt-BR') + '</p></div>' +
           '<div class="form-group"><label class="text-xs font-semibold text-secondary-500 uppercase">Tipo</label><p><span class="badge ' + (data.tipo === 'ENTRADA' ? 'badge-success' : 'badge-warning') + '">' + data.tipo + '</span></p></div>' +
           '<div class="form-group col-span-2"><label class="text-xs font-semibold text-secondary-500 uppercase">Produto</label><p class="font-medium">' + data.produto_codigo + ' - ' + data.produto_descricao + '</p></div>' +
-          '<div class="form-group"><label class="text-xs font-semibold text-secondary-500 uppercase">Quantidade</label><p class="font-medium">' + parseFloat(data.quantidade).toFixed(3) + '</p></div>' +
+          '<div class="form-group"><label class="text-xs font-semibold text-secondary-500 uppercase">Quantidade</label><p class="font-medium">' + (parseFloat(data.quantidade) % 1 === 0 ? parseFloat(data.quantidade) : parseFloat(data.quantidade).toFixed(1)) + '</p></div>' +
           '<div class="form-group"><label class="text-xs font-semibold text-secondary-500 uppercase">Preço Unitário</label><p class="font-medium">' + (data.preco_unitario ? 'R$ ' + parseFloat(data.preco_unitario).toFixed(2) : '-') + '</p></div>' +
           '<div class="form-group"><label class="text-xs font-semibold text-secondary-500 uppercase">Valor Total</label><p class="font-semibold text-green-600 text-lg">R$ ' + parseFloat(data.valor_total_calc || 0).toFixed(2) + '</p></div>' +
           '<div class="form-group"><label class="text-xs font-semibold text-secondary-500 uppercase">' + (data.tipo === 'ENTRADA' ? 'Fornecedor' : 'Cliente') + '</label><p class="font-medium">' + (data.fornecedor_nome || data.cliente_nome || '-') + '</p></div>' +
