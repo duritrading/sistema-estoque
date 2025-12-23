@@ -25,7 +25,7 @@
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-secondary-900">Comissões de RCAs</h1>
-            <p class="mt-1 text-secondary-500">Gestão de comissões por produto</p>
+            <p class="mt-1 text-secondary-500">Gestão de comissões por produto (RCA + Rian)</p>
           </div>
           
           <!-- Filtros -->
@@ -46,7 +46,7 @@
             
             <select name="rca_id" class="form-select w-48">
               <option value="">Todos os RCAs</option>
-              <% rcasList.forEach(rca => { %>
+              <% rcasList.forEach(function(rca) { %>
                 <option value="<%= rca.id %>" <%= filtros.rca_id == rca.id ? 'selected' : '' %>><%= rca.nome %></option>
               <% }) %>
             </select>
@@ -64,14 +64,14 @@
         <div class="flex items-start gap-3">
           <i data-lucide="info" class="w-5 h-5 text-blue-600 mt-0.5"></i>
           <p class="text-sm text-blue-800">
-            <strong>Comissão por Produto:</strong> Cada produto tem seu próprio percentual de comissão. 
-            O RCA recebe a soma das comissões dos produtos que vendeu.
+            <strong>Comissão por Produto:</strong> Cada produto tem % de comissão para RCA e % para Rian. 
+            Produtos com comissão fixa (R$) usam valor por unidade vendida em vez de percentual.
           </p>
         </div>
       </div>
 
       <!-- KPIs -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div class="card">
           <div class="card-body text-center">
             <p class="text-xs font-semibold text-secondary-500 uppercase mb-1">Total Vendas</p>
@@ -83,9 +83,18 @@
         
         <div class="card">
           <div class="card-body text-center">
-            <p class="text-xs font-semibold text-secondary-500 uppercase mb-1">Total Comissões</p>
-            <p class="text-2xl font-bold text-warning-600">
+            <p class="text-xs font-semibold text-secondary-500 uppercase mb-1">Comissões RCA</p>
+            <p class="text-2xl font-bold text-green-600">
               R$ <%= totais.total_comissoes.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body text-center">
+            <p class="text-xs font-semibold text-secondary-500 uppercase mb-1">Comissão Rian</p>
+            <p class="text-2xl font-bold text-violet-600">
+              R$ <%= (totais.total_comissoes_rian || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
             </p>
           </div>
         </div>
@@ -136,17 +145,18 @@
                   <th>Praça</th>
                   <th class="text-center">Vendas</th>
                   <th class="text-right">Valor Vendas</th>
-                  <th class="text-right">Valor Comissão</th>
+                  <th class="text-right">Comissão RCA</th>
+                  <th class="text-right">Comissão Rian</th>
                   <th class="text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 <% if (rcas.length === 0) { %>
                   <tr>
-                    <td colspan="6" class="text-center py-8 text-secondary-500">Nenhum RCA encontrado</td>
+                    <td colspan="7" class="text-center py-8 text-secondary-500">Nenhum RCA encontrado</td>
                   </tr>
                 <% } else { %>
-                  <% rcas.forEach(rca => { %>
+                  <% rcas.forEach(function(rca) { %>
                     <tr>
                       <td class="font-medium text-secondary-900"><%= rca.nome %></td>
                       <td class="text-secondary-600"><%= rca.praca || '-' %></td>
@@ -154,6 +164,9 @@
                       <td class="text-right">R$ <%= rca.vendas_periodo.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
                       <td class="text-right font-semibold text-green-600">
                         R$ <%= rca.valor_comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+                      </td>
+                      <td class="text-right font-semibold text-violet-600">
+                        R$ <%= (rca.valor_comissao_rian || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
                       </td>
                       <td class="text-right">
                         <% if (rca.vendas_periodo > 0) { %>
@@ -179,6 +192,7 @@
                     <td colspan="3" class="font-semibold">TOTAL</td>
                     <td class="text-right font-semibold">R$ <%= totais.total_vendas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
                     <td class="text-right font-semibold text-green-600">R$ <%= totais.total_comissoes.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+                    <td class="text-right font-semibold text-violet-600">R$ <%= (totais.total_comissoes_rian || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -197,32 +211,54 @@
                 <input type="text" id="searchProduto" placeholder="Buscar produto..." class="form-input pl-10" onkeyup="filtrarProdutos()">
                 <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400"></i>
               </div>
+              <p class="text-sm text-secondary-500">Deixe comissão fixa vazia para usar percentual</p>
             </div>
           </div>
           
-          <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+          <div class="table-container" style="max-height: 600px; overflow-y: auto;">
             <table class="table" id="tabelaProdutos">
               <thead class="sticky top-0 bg-secondary-50">
                 <tr>
                   <th>Código</th>
                   <th>Produto</th>
-                  <th class="text-center">% Comissão</th>
+                  <th class="text-center">% RCA</th>
+                  <th class="text-center">% Rian</th>
+                  <th class="text-center">R$ RCA (fixo)</th>
+                  <th class="text-center">R$ Rian (fixo)</th>
                   <th class="text-center">Ação</th>
                 </tr>
               </thead>
               <tbody>
-                <% produtos.forEach(prod => { %>
+                <% produtos.forEach(function(prod) { %>
                   <tr>
                     <td class="font-mono font-medium text-secondary-600"><%= prod.codigo %></td>
                     <td class="text-secondary-900"><%= prod.descricao %></td>
                     <td class="text-center">
                       <div class="flex items-center justify-center gap-1">
-                        <input type="number" 
-                               class="w-20 px-2 py-1 text-center border border-secondary-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                               id="comissao-<%= prod.id %>"
-                               value="<%= prod.percentual_comissao || 0 %>" 
-                               step="0.5" min="0" max="100">
+                        <input type="number" class="w-16 px-2 py-1 text-center border border-secondary-300 rounded-md focus:ring-2 focus:ring-primary-500"
+                               id="comissao-<%= prod.id %>" value="<%= prod.percentual_comissao || 0 %>" step="0.5" min="0" max="100">
                         <span class="text-secondary-500">%</span>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <div class="flex items-center justify-center gap-1">
+                        <input type="number" class="w-16 px-2 py-1 text-center border border-secondary-300 rounded-md focus:ring-2 focus:ring-violet-500"
+                               id="comissao-rian-<%= prod.id %>" value="<%= prod.percentual_comissao_rian || 0 %>" step="0.5" min="0" max="100">
+                        <span class="text-secondary-500">%</span>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <div class="flex items-center justify-center gap-1">
+                        <span class="text-secondary-400">R$</span>
+                        <input type="number" class="w-20 px-2 py-1 text-center border border-secondary-300 rounded-md focus:ring-2 focus:ring-green-500"
+                               id="fixa-rca-<%= prod.id %>" value="<%= prod.comissao_fixa_rca || '' %>" step="0.01" min="0" placeholder="-">
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <div class="flex items-center justify-center gap-1">
+                        <span class="text-secondary-400">R$</span>
+                        <input type="number" class="w-20 px-2 py-1 text-center border border-secondary-300 rounded-md focus:ring-2 focus:ring-violet-500"
+                               id="fixa-rian-<%= prod.id %>" value="<%= prod.comissao_fixa_rian || '' %>" step="0.01" min="0" placeholder="-">
                       </div>
                     </td>
                     <td class="text-center">
@@ -248,26 +284,28 @@
                   <th>RCA</th>
                   <th>Período</th>
                   <th class="text-right">Valor Vendas</th>
-                  <th class="text-right">Valor Comissão</th>
+                  <th class="text-right">Comissão RCA</th>
+                  <th class="text-right">Comissão Rian</th>
                   <th class="text-center">Status</th>
-                  <th class="text-center">Data Pagamento</th>
+                  <th class="text-center">Data Pgto</th>
                   <th class="text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 <% if (comissoes.length === 0) { %>
                   <tr>
-                    <td colspan="7" class="text-center py-8 text-secondary-500">Nenhuma comissão registrada neste período</td>
+                    <td colspan="8" class="text-center py-8 text-secondary-500">Nenhuma comissão registrada neste período</td>
                   </tr>
                 <% } else { %>
-                  <% comissoes.forEach(c => { %>
+                  <% comissoes.forEach(function(c) { %>
                     <tr>
                       <td class="font-medium text-secondary-900"><%= c.rca_nome %></td>
                       <td class="text-secondary-600 text-sm">
                         <%= new Date(c.periodo_inicio).toLocaleDateString('pt-BR') %> - <%= new Date(c.periodo_fim).toLocaleDateString('pt-BR') %>
                       </td>
                       <td class="text-right">R$ <%= parseFloat(c.valor_vendas).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
-                      <td class="text-right font-semibold">R$ <%= parseFloat(c.valor_comissao).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+                      <td class="text-right font-semibold text-green-600">R$ <%= parseFloat(c.valor_comissao).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+                      <td class="text-right font-semibold text-violet-600">R$ <%= parseFloat(c.valor_comissao_rian || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
                       <td class="text-center">
                         <span class="badge <%= c.status === 'PAGO' ? 'badge-success' : c.status === 'PENDENTE' ? 'badge-warning' : 'badge-danger' %>">
                           <%= c.status %>
@@ -340,14 +378,14 @@
               <span class="font-medium" id="previewProdutos">-</span>
             </div>
             <div class="flex justify-between pt-3 border-t border-secondary-200">
-              <span class="text-secondary-900 font-semibold">Valor Comissão:</span>
+              <span class="text-green-700 font-semibold">Comissão RCA:</span>
               <span class="text-xl font-bold text-green-600" id="previewValor">-</span>
             </div>
+            <div class="flex justify-between">
+              <span class="text-violet-700 font-semibold">Comissão Rian:</span>
+              <span class="text-xl font-bold text-violet-600" id="previewValorRian">-</span>
+            </div>
           </div>
-          
-          <p class="text-sm text-secondary-500 mt-4">
-            A comissão é calculada com base no % de cada produto vendido pelo RCA.
-          </p>
         </div>
         
         <div class="px-6 py-4 border-t border-secondary-200 flex justify-end gap-3">
@@ -405,7 +443,7 @@
 
   <!-- Modal Detalhes -->
   <div id="modalDetalhes" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
       <div class="px-6 py-4 border-b border-secondary-200 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-secondary-900" id="detalhesTitle">Detalhes</h2>
         <button type="button" onclick="fecharModal('modalDetalhes')" class="text-secondary-400 hover:text-secondary-600">
@@ -419,71 +457,58 @@
   </div>
 
   <script>
-    // Inicializa ícones
-    document.addEventListener('DOMContentLoaded', function() {
-      lucide.createIcons();
-    });
+    lucide.createIcons();
 
     // Tabs
     function showTab(tabName, btn) {
-      // Oculta todas as tabs
-      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
-      // Remove active de todos os botões
-      document.querySelectorAll('.tab-btn').forEach(b => {
+      document.querySelectorAll('.tab-content').forEach(function(tab) { tab.classList.add('hidden'); });
+      document.querySelectorAll('.tab-btn').forEach(function(b) {
         b.classList.remove('border-primary-600', 'text-primary-600');
         b.classList.add('border-transparent', 'text-secondary-500');
       });
-      // Mostra tab selecionada
       document.getElementById('tab-' + tabName).classList.remove('hidden');
-      // Ativa botão
       btn.classList.remove('border-transparent', 'text-secondary-500');
       btn.classList.add('border-primary-600', 'text-primary-600');
     }
     
-    // Filtrar produtos
     function filtrarProdutos() {
       var termo = document.getElementById('searchProduto').value.toLowerCase();
       var linhas = document.querySelectorAll('#tabelaProdutos tbody tr');
       linhas.forEach(function(linha) {
-        var texto = linha.textContent.toLowerCase();
-        linha.style.display = texto.includes(termo) ? '' : 'none';
+        linha.style.display = linha.textContent.toLowerCase().includes(termo) ? '' : 'none';
       });
     }
     
-    // Salvar comissão do produto
     function salvarComissaoProduto(produtoId) {
-      var input = document.getElementById('comissao-' + produtoId);
-      var percentual = parseFloat(input.value);
+      var percentual = parseFloat(document.getElementById('comissao-' + produtoId).value) || 0;
+      var percentualRian = parseFloat(document.getElementById('comissao-rian-' + produtoId).value) || 0;
+      var fixaRca = document.getElementById('fixa-rca-' + produtoId).value;
+      var fixaRian = document.getElementById('fixa-rian-' + produtoId).value;
       
-      if (isNaN(percentual) || percentual < 0 || percentual > 100) {
-        alert('Percentual inválido. Use valores entre 0 e 100.');
-        return;
-      }
+      var data = { 
+        percentual_comissao: percentual, 
+        percentual_comissao_rian: percentualRian,
+        comissao_fixa_rca: fixaRca ? parseFloat(fixaRca) : null,
+        comissao_fixa_rian: fixaRian ? parseFloat(fixaRian) : null
+      };
       
       fetch('/comissoes/produto/' + produtoId + '/comissao', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': '<%= csrfToken %>'
-        },
-        body: JSON.stringify({ percentual_comissao: percentual })
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
+        body: JSON.stringify(data)
       })
       .then(function(response) {
         if (response.ok) {
-          input.classList.add('border-green-500', 'ring-2', 'ring-green-200');
-          setTimeout(function() {
-            input.classList.remove('border-green-500', 'ring-2', 'ring-green-200');
-          }, 2000);
-        } else {
-          throw new Error('Erro ao salvar');
-        }
+          var inputs = document.querySelectorAll('[id^="comissao-' + produtoId + '"], [id^="comissao-rian-' + produtoId + '"], [id^="fixa-rca-' + produtoId + '"], [id^="fixa-rian-' + produtoId + '"]');
+          inputs.forEach(function(input) {
+            input.classList.add('border-green-500', 'ring-2', 'ring-green-200');
+            setTimeout(function() { input.classList.remove('border-green-500', 'ring-2', 'ring-green-200'); }, 2000);
+          });
+        } else { throw new Error('Erro ao salvar'); }
       })
-      .catch(function() {
-        alert('Erro ao salvar comissão');
-      });
+      .catch(function() { alert('Erro ao salvar comissão'); });
     }
     
-    // Modal Gerar
     function abrirModalGerar(btn) {
       var rcaId = btn.dataset.rcaId;
       var rcaNome = btn.dataset.rcaNome;
@@ -493,39 +518,28 @@
       document.getElementById('modalGerar').classList.remove('hidden');
       document.getElementById('modalGerar').classList.add('flex');
       
-      // Buscar dados via API
       fetch('/comissoes/api/calcular?rca_id=' + rcaId + '&periodo_inicio=<%= filtros.periodo_inicio %>&periodo_fim=<%= filtros.periodo_fim %>')
         .then(function(r) { return r.json(); })
         .then(function(data) {
-          document.getElementById('previewVendas').textContent = 
-            'R$ ' + data.valor_vendas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' (' + data.qtd_vendas + ' vendas)';
+          document.getElementById('previewVendas').textContent = 'R$ ' + data.valor_vendas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' (' + data.qtd_vendas + ' vendas)';
           document.getElementById('previewProdutos').textContent = data.qtd_produtos + ' produtos diferentes';
-          document.getElementById('previewValor').textContent = 
-            'R$ ' + data.valor_comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+          document.getElementById('previewValor').textContent = 'R$ ' + data.valor_comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+          document.getElementById('previewValorRian').textContent = 'R$ ' + (data.valor_comissao_rian || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
         })
-        .catch(function() {
-          document.getElementById('previewVendas').textContent = 'Erro ao carregar';
-        });
+        .catch(function() { document.getElementById('previewVendas').textContent = 'Erro ao carregar'; });
         
       lucide.createIcons();
     }
     
-    // Modal Pagar
     function abrirModalPagar(btn) {
-      var comissaoId = btn.dataset.id;
-      var rcaNome = btn.dataset.nome;
-      var valor = parseFloat(btn.dataset.valor);
-      
-      document.getElementById('formPagar').action = '/comissoes/pagar/' + comissaoId;
-      document.getElementById('pagarRcaNome').value = rcaNome;
-      document.getElementById('pagarValor').value = 'R$ ' + valor.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+      document.getElementById('formPagar').action = '/comissoes/pagar/' + btn.dataset.id;
+      document.getElementById('pagarRcaNome').value = btn.dataset.nome;
+      document.getElementById('pagarValor').value = 'R$ ' + parseFloat(btn.dataset.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
       document.getElementById('modalPagar').classList.remove('hidden');
       document.getElementById('modalPagar').classList.add('flex');
-      
       lucide.createIcons();
     }
     
-    // Ver detalhes de vendas do RCA
     function verDetalhes(rcaId, rcaNome) {
       document.getElementById('detalhesTitle').textContent = 'Detalhes: ' + rcaNome;
       document.getElementById('detalhesContent').innerHTML = '<p class="text-secondary-500">Carregando...</p>';
@@ -537,31 +551,31 @@
         .then(function(data) {
           var html = '<div class="bg-secondary-50 rounded-lg p-4 mb-4">' +
             '<div class="flex justify-between mb-2"><span class="text-secondary-600">Total Vendido:</span><span class="font-semibold">R$ ' + data.totais.valor_vendido.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</span></div>' +
-            '<div class="flex justify-between"><span class="text-secondary-600">Total Comissão:</span><span class="font-bold text-green-600">R$ ' + data.totais.valor_comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</span></div>' +
+            '<div class="flex justify-between mb-2"><span class="text-green-600">Comissão RCA:</span><span class="font-bold text-green-600">R$ ' + data.totais.valor_comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</span></div>' +
+            '<div class="flex justify-between"><span class="text-violet-600">Comissão Rian:</span><span class="font-bold text-violet-600">R$ ' + (data.totais.valor_comissao_rian || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</span></div>' +
           '</div>' +
-          '<div class="table-container"><table class="table"><thead><tr>' +
-            '<th>Produto</th><th class="text-center">Qtd</th><th class="text-right">Valor</th><th class="text-center">%</th><th class="text-right">Comissão</th>' +
+          '<div class="table-container"><table class="table text-sm"><thead><tr>' +
+            '<th>Produto</th><th class="text-center">Qtd</th><th class="text-right">Valor</th><th class="text-center">% RCA</th><th class="text-right">Com. RCA</th><th class="text-right">Com. Rian</th>' +
           '</tr></thead><tbody>';
           
           data.vendas.forEach(function(v) {
+            var tipoRca = v.comissao_fixa_rca ? 'R$ ' + v.comissao_fixa_rca.toFixed(2) + '/un' : v.percentual_comissao + '%';
             html += '<tr>' +
               '<td><span class="font-medium">' + v.codigo + '</span> - ' + v.descricao + '</td>' +
               '<td class="text-center">' + v.quantidade_vendida + '</td>' +
               '<td class="text-right">R$ ' + v.valor_vendido.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</td>' +
-              '<td class="text-center">' + v.percentual_comissao + '%</td>' +
+              '<td class="text-center">' + tipoRca + '</td>' +
               '<td class="text-right font-semibold text-green-600">R$ ' + v.valor_comissao.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</td>' +
+              '<td class="text-right font-semibold text-violet-600">R$ ' + (v.valor_comissao_rian || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</td>' +
             '</tr>';
           });
           
           html += '</tbody></table></div>';
           document.getElementById('detalhesContent').innerHTML = html;
         })
-        .catch(function() {
-          document.getElementById('detalhesContent').innerHTML = '<p class="text-red-600">Erro ao carregar detalhes</p>';
-        });
+        .catch(function() { document.getElementById('detalhesContent').innerHTML = '<p class="text-red-600">Erro ao carregar detalhes</p>'; });
     }
     
-    // Ver itens de uma comissão
     function verItensComissao(comissaoId) {
       document.getElementById('detalhesTitle').textContent = 'Itens da Comissão';
       document.getElementById('detalhesContent').innerHTML = '<p class="text-secondary-500">Carregando...</p>';
@@ -571,8 +585,8 @@
       fetch('/comissoes/itens/' + comissaoId)
         .then(function(r) { return r.json(); })
         .then(function(itens) {
-          var html = '<div class="table-container"><table class="table"><thead><tr>' +
-            '<th>Produto</th><th class="text-center">Qtd</th><th class="text-right">Valor</th><th class="text-center">%</th><th class="text-right">Comissão</th>' +
+          var html = '<div class="table-container"><table class="table text-sm"><thead><tr>' +
+            '<th>Produto</th><th class="text-center">Qtd</th><th class="text-right">Valor</th><th class="text-center">%</th><th class="text-right">Com. RCA</th><th class="text-right">Com. Rian</th>' +
           '</tr></thead><tbody>';
           
           itens.forEach(function(item) {
@@ -582,28 +596,23 @@
               '<td class="text-right">R$ ' + parseFloat(item.valor_vendido).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</td>' +
               '<td class="text-center">' + item.percentual_aplicado + '%</td>' +
               '<td class="text-right font-semibold text-green-600">R$ ' + parseFloat(item.valor_comissao_item).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</td>' +
+              '<td class="text-right font-semibold text-violet-600">R$ ' + parseFloat(item.valor_comissao_rian_item || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</td>' +
             '</tr>';
           });
           
           html += '</tbody></table></div>';
           document.getElementById('detalhesContent').innerHTML = html;
         })
-        .catch(function() {
-          document.getElementById('detalhesContent').innerHTML = '<p class="text-red-600">Erro ao carregar itens</p>';
-        });
+        .catch(function() { document.getElementById('detalhesContent').innerHTML = '<p class="text-red-600">Erro ao carregar itens</p>'; });
     }
     
-    // Fechar modal
     function fecharModal(modalId) {
       document.getElementById(modalId).classList.add('hidden');
       document.getElementById(modalId).classList.remove('flex');
     }
     
-    // Fechar modal ao clicar fora
     document.querySelectorAll('#modalGerar, #modalPagar, #modalDetalhes').forEach(function(modal) {
-      modal.addEventListener('click', function(e) {
-        if (e.target === modal) fecharModal(modal.id);
-      });
+      modal.addEventListener('click', function(e) { if (e.target === modal) fecharModal(modal.id); });
     });
   </script>
 </body>

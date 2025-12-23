@@ -2,33 +2,30 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
-const { validateQuery } = require('../middleware/validation');
-const Joi = require('joi');
-
-// Schema de validação
-const filtrosDashboardSchema = Joi.object({
-  dataInicial: Joi.date().iso().optional(),
-  dataFinal: Joi.date().iso().optional().min(Joi.ref('dataInicial'))
-});
+const asyncHandler = require('../middleware/asyncHandler');
 
 // GET / - Dashboard principal
-router.get('/', validateQuery(filtrosDashboardSchema), async (req, res) => {
-  try {
-    let { dataInicial, dataFinal } = req.query;
+router.get('/', asyncHandler(async (req, res) => {
+  let { dataInicial, dataFinal } = req.query;
 
-    // Definir período padrão (mês atual)
-    const hoje = new Date();
-    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+  // Definir período padrão (mês atual)
+  const hoje = new Date();
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
 
-    if (!dataInicial) dataInicial = inicioMes.toISOString().split('T')[0];
-    if (!dataFinal) dataFinal = fimMes.toISOString().split('T')[0];
+  // Validar e sanitizar datas
+  if (!dataInicial || !/^\d{4}-\d{2}-\d{2}$/.test(dataInicial)) {
+    dataInicial = inicioMes.toISOString().split('T')[0];
+  }
+  if (!dataFinal || !/^\d{4}-\d{2}-\d{2}$/.test(dataFinal)) {
+    dataFinal = fimMes.toISOString().split('T')[0];
+  }
 
-    // Período anterior (para comparação)
-    const inicioMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
-    const fimMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+  // Período anterior (para comparação)
+  const inicioMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+  const fimMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
 
-    const dashboardData = {};
+  const dashboardData = {};
 
     // Executar todas as queries em paralelo
     const [
@@ -265,15 +262,6 @@ router.get('/', validateQuery(filtrosDashboardSchema), async (req, res) => {
         dataFinal
       }
     });
-
-  } catch (error) {
-    console.error('Erro ao carregar dashboard:', error);
-    res.status(500).render('erro', {
-      titulo: 'Erro',
-      mensagem: 'Erro ao carregar dashboard: ' + error.message,
-      voltar_url: '/'
-    });
-  }
-});
+}, '/'));
 
 module.exports = router;

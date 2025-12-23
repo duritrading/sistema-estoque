@@ -424,86 +424,96 @@
     </main>
   </div>
 
+  <!-- Dados para gráficos -->
+  <script id="dadosRentabilidadeProdutos" type="application/json"><%- JSON.stringify(dashboardData.rentabilidadeProdutos || []) %></script>
+  <script id="dadosRentabilidadeCategorias" type="application/json"><%- JSON.stringify(dashboardData.rentabilidadeCategorias || []) %></script>
+
   <script>
     // Inicializar Lucide
     lucide.createIcons();
 
-    <% if (dashboardData.rentabilidadeProdutos.length > 0) { %>
-    // Gráfico de Rentabilidade por Produto
-    var ctxProdutos = document.getElementById('chartProdutos').getContext('2d');
-    new Chart(ctxProdutos, {
-      type: 'bar',
-      data: {
-        labels: <%- JSON.stringify(dashboardData.rentabilidadeProdutos.map(function(p) { return p.descricao.substring(0,20) + (p.descricao.length > 20 ? '...' : ''); })) %>,
-        datasets: [
-          {
-            label: 'Lucro (R$)',
-            data: <%- JSON.stringify(dashboardData.rentabilidadeProdutos.map(function(p) { return p.lucro; })) %>,
-            backgroundColor: 'rgba(16, 185, 129, 0.8)',
-            borderColor: 'rgb(16, 185, 129)',
-            borderWidth: 1,
-            yAxisID: 'y'
-          },
-          {
-            label: 'Margem (%)',
-            data: <%- JSON.stringify(dashboardData.rentabilidadeProdutos.map(function(p) { return p.margem_percentual; })) %>,
-            type: 'line',
-            borderColor: 'rgb(139, 92, 246)',
-            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-            borderWidth: 2,
-            pointRadius: 4,
-            yAxisID: 'y1'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { position: 'top' } },
-        scales: {
-          y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Lucro (R$)' } },
-          y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Margem (%)' }, grid: { drawOnChartArea: false } }
-        }
-      }
-    });
-    <% } %>
+    // Carregar dados dos elementos JSON
+    var rentabilidadeProdutos = JSON.parse(document.getElementById('dadosRentabilidadeProdutos').textContent || '[]');
+    var rentabilidadeCategorias = JSON.parse(document.getElementById('dadosRentabilidadeCategorias').textContent || '[]');
 
-    <% if (dashboardData.rentabilidadeCategorias.length > 0) { %>
+    // Gráfico de Rentabilidade por Produto
+    if (rentabilidadeProdutos.length > 0 && document.getElementById('chartProdutos')) {
+      var ctxProdutos = document.getElementById('chartProdutos').getContext('2d');
+      new Chart(ctxProdutos, {
+        type: 'bar',
+        data: {
+          labels: rentabilidadeProdutos.map(function(p) { 
+            return p.descricao.substring(0, 20) + (p.descricao.length > 20 ? '...' : ''); 
+          }),
+          datasets: [
+            {
+              label: 'Lucro (R$)',
+              data: rentabilidadeProdutos.map(function(p) { return p.lucro; }),
+              backgroundColor: 'rgba(16, 185, 129, 0.8)',
+              borderColor: 'rgb(16, 185, 129)',
+              borderWidth: 1,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Margem (%)',
+              data: rentabilidadeProdutos.map(function(p) { return p.margem_percentual; }),
+              type: 'line',
+              borderColor: 'rgb(139, 92, 246)',
+              backgroundColor: 'rgba(139, 92, 246, 0.1)',
+              borderWidth: 2,
+              pointRadius: 4,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Lucro (R$)' } },
+            y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Margem (%)' }, grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+    }
+
     // Gráfico de Rentabilidade por Categoria
-    var ctxCategorias = document.getElementById('chartCategorias').getContext('2d');
-    var cores = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
-    new Chart(ctxCategorias, {
-      type: 'doughnut',
-      data: {
-        labels: <%- JSON.stringify(dashboardData.rentabilidadeCategorias.map(function(c) { return c.categoria; })) %>,
-        datasets: [{
-          data: <%- JSON.stringify(dashboardData.rentabilidadeCategorias.map(function(c) { return c.lucro; })) %>,
-          backgroundColor: cores.slice(0, <%= dashboardData.rentabilidadeCategorias.length %>),
-          borderWidth: 2,
-          borderColor: '#fff'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right' },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                var label = context.label || '';
-                var value = context.raw || 0;
-                var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
-                var pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                return label + ': R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' (' + pct + '%)';
+    if (rentabilidadeCategorias.length > 0 && document.getElementById('chartCategorias')) {
+      var ctxCategorias = document.getElementById('chartCategorias').getContext('2d');
+      var cores = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+      new Chart(ctxCategorias, {
+        type: 'doughnut',
+        data: {
+          labels: rentabilidadeCategorias.map(function(c) { return c.categoria; }),
+          datasets: [{
+            data: rentabilidadeCategorias.map(function(c) { return c.lucro; }),
+            backgroundColor: cores.slice(0, rentabilidadeCategorias.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right' },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  var label = context.label || '';
+                  var value = context.raw || 0;
+                  var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                  var pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return label + ': R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' (' + pct + '%)';
+                }
               }
             }
           }
         }
-      }
-    });
-    <% } %>
+      });
+    }
   </script>
 </body>
 </html>
