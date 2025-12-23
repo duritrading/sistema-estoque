@@ -1,4 +1,12 @@
 <!-- views/fluxo-caixa.ejs -->
+<%
+  // Fallbacks para variáveis não definidas
+  var filtros = locals.filtros || { periodo: 'mes-atual', tipo: '', pesquisar: '', data_inicio: '', data_fim: '' };
+  var metricas = locals.metricas || { receitasAbertas: 0, receitasRealizadas: 0, despesasAbertas: 0, despesasRealizadas: 0, saldoTotal: 0 };
+  var lancamentos = locals.lancamentos || [];
+  var categorias = locals.categorias || [];
+  var hoje = locals.hoje || new Date().toISOString().split('T')[0];
+%>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -124,7 +132,7 @@
             <span class="text-xs font-medium text-secondary-500 uppercase">Receitas em Aberto</span>
           </div>
           <p class="text-2xl font-bold text-cyan-600">
-            R$ <%= metricas.receitasAbertas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+            R$ <%= (metricas && metricas.receitasAbertas || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
           </p>
         </div>
 
@@ -137,7 +145,7 @@
             <span class="text-xs font-medium text-secondary-500 uppercase">Receitas Realizadas</span>
           </div>
           <p class="text-2xl font-bold text-green-600">
-            R$ <%= metricas.receitasRealizadas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+            R$ <%= (metricas && metricas.receitasRealizadas || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
           </p>
         </div>
 
@@ -150,7 +158,7 @@
             <span class="text-xs font-medium text-secondary-500 uppercase">Despesas em Aberto</span>
           </div>
           <p class="text-2xl font-bold text-orange-600">
-            R$ <%= metricas.despesasAbertas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+            R$ <%= (metricas && metricas.despesasAbertas || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
           </p>
         </div>
 
@@ -163,20 +171,20 @@
             <span class="text-xs font-medium text-secondary-500 uppercase">Despesas Realizadas</span>
           </div>
           <p class="text-2xl font-bold text-red-600">
-            R$ <%= metricas.despesasRealizadas.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+            R$ <%= (metricas && metricas.despesasRealizadas || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
           </p>
         </div>
 
         <!-- Saldo Total -->
-        <div class="bg-white rounded-xl p-5 shadow-sm border-l-4 <%= metricas.saldoTotal >= 0 ? 'border-violet-500' : 'border-red-500' %> hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl p-5 shadow-sm border-l-4 <%= (metricas && metricas.saldoTotal || 0) >= 0 ? 'border-violet-500' : 'border-red-500' %> hover:shadow-md transition-shadow">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-lg <%= metricas.saldoTotal >= 0 ? 'bg-violet-100' : 'bg-red-100' %> flex items-center justify-center">
-              <i data-lucide="wallet" class="w-5 h-5 <%= metricas.saldoTotal >= 0 ? 'text-violet-600' : 'text-red-600' %>"></i>
+            <div class="w-10 h-10 rounded-lg <%= (metricas && metricas.saldoTotal || 0) >= 0 ? 'bg-violet-100' : 'bg-red-100' %> flex items-center justify-center">
+              <i data-lucide="wallet" class="w-5 h-5 <%= (metricas && metricas.saldoTotal || 0) >= 0 ? 'text-violet-600' : 'text-red-600' %>"></i>
             </div>
             <span class="text-xs font-medium text-secondary-500 uppercase">Saldo Total</span>
           </div>
-          <p class="text-2xl font-bold <%= metricas.saldoTotal >= 0 ? 'text-violet-600' : 'text-red-600' %>">
-            R$ <%= metricas.saldoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
+          <p class="text-2xl font-bold <%= (metricas && metricas.saldoTotal || 0) >= 0 ? 'text-violet-600' : 'text-red-600' %>">
+            R$ <%= (metricas && metricas.saldoTotal || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %>
           </p>
         </div>
       </div>
