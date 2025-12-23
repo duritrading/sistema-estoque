@@ -1,225 +1,159 @@
-// ========================================
-// DRE - COM VALIDAÇÃO JOI
-// ========================================
-
+// src/routes/dre.js - DRE CONFORME ESTRUTURA CONTÁBIL
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
-const { validateQuery } = require('../middleware/validation');
-const Joi = require('joi');
+const asyncHandler = require('../middleware/asyncHandler');
 
 // ========================================
-// SCHEMA DE VALIDAÇÃO
+// ESTRUTURA DO DRE (conforme imagem)
 // ========================================
-
-const filtroAnoSchema = Joi.object({
-  ano: Joi.number()
-    .integer()
-    .min(2000)
-    .max(2100)
-    .default(new Date().getFullYear())
-    .messages({
-      'number.base': 'Ano deve ser um número',
-      'number.min': 'Ano mínimo: 2000',
-      'number.max': 'Ano máximo: 2100'
-    })
-});
-
-// ========================================
-// ESTRUTURA DO DRE
-// ========================================
+// tipo: 'grupo' = negrito sem fundo (título, sem valores)
+// tipo: 'item' = normal (com valores)
+// tipo: 'subtotal' = negrito + fundo cinza (soma do grupo)
+// tipo: 'total' = negrito + fundo cinza escuro (soma acumulada)
 
 const ESTRUTURA_DRE = [
-  { label: 'Receitas Operacionais', tipo: 'header', css: 'dre-header' },
-  { label: 'Receita de Vendas de Produtos e Serviços', tipo: 'item' },
-  { label: 'Receita de Fretes e Entregas', tipo: 'item' },
-  { label: 'Receita Bruta de Vendas', tipo: 'total', css: 'dre-total-l1' },
+  // RECEITAS OPERACIONAIS
+  { id: 'grupo_receitas', label: 'Receitas Operacionais', tipo: 'grupo' },
+  { id: 'receita_vendas', label: 'Receita de Vendas de Produtos e Serviços', tipo: 'item', categoria: 'Receita de Vendas de Produtos e Serviços' },
+  { id: 'receita_fretes', label: 'Receita de Fretes e Entregas', tipo: 'item', categoria: 'Receita de Fretes e Entregas' },
+  { id: 'receita_bruta', label: 'Receita Bruta de Vendas', tipo: 'subtotal', soma: ['receita_vendas', 'receita_fretes'] },
 
-  { label: 'Deduções da Receita Bruta', tipo: 'header', css: 'dre-header' },
-  { label: 'Impostos Sobre Vendas', tipo: 'item' },
-  { label: 'Comissões Sobre Vendas', tipo: 'item' },
-  { label: 'Descontos Incondicionais', tipo: 'item' },
-  { label: 'Deduções da Receita Bruta', tipo: 'total', css: 'dre-total-l1' },
+  // DEDUÇÕES DA RECEITA BRUTA
+  { id: 'grupo_deducoes', label: 'Deduções da Receita Bruta', tipo: 'grupo' },
+  { id: 'impostos', label: 'Impostos Sobre Vendas', tipo: 'item', categoria: 'Impostos Sobre Vendas', negativo: true },
+  { id: 'comissoes', label: 'Comissões Sobre Vendas', tipo: 'item', categoria: 'Comissões Sobre Vendas', negativo: true },
+  { id: 'descontos', label: 'Descontos Incondicionais', tipo: 'item', categoria: 'Descontos Incondicionais', negativo: true },
+  { id: 'devolucoes', label: 'Devoluções de Vendas', tipo: 'item', categoria: 'Devoluções de Vendas', negativo: true },
 
-  { label: 'Receita Líquida de Vendas', tipo: 'total', css: 'dre-total-l2' },
+  // RECEITA LÍQUIDA (Receita Bruta - Deduções)
+  { id: 'receita_liquida', label: 'Receita Líquida de Vendas', tipo: 'total', calculo: 'receita_bruta + impostos + comissoes + descontos + devolucoes' },
 
-  { label: 'Custo das Mercadorias Vendidas (CMV)', tipo: 'header', css: 'dre-header' },
-  { label: 'Custo de Produtos Vendidos', tipo: 'item' },
-  { label: 'Custo de Fretes e Transportes', tipo: 'item' },
-  { label: 'Custo das Mercadorias Vendidas (CMV)', tipo: 'total', css: 'dre-total-l1' },
+  // CUSTOS OPERACIONAIS
+  { id: 'grupo_custos', label: 'Custos Operacionais', tipo: 'grupo' },
+  { id: 'custo_produtos', label: 'Custo dos Produtos Vendidos', tipo: 'item', categoria: 'Custo dos Produtos Vendidos', negativo: true },
+  { id: 'custo_vendas', label: 'Custo das Vendas de Produtos', tipo: 'item', categoria: 'Custo das Vendas de Produtos', negativo: true },
+  { id: 'custo_servicos', label: 'Custo dos Serviços Prestados', tipo: 'item', categoria: 'Custo dos Serviços Prestados', negativo: true },
 
-  { label: 'Lucro Bruto', tipo: 'total', css: 'dre-total-l2' },
+  // LUCRO BRUTO (Receita Líquida - Custos)
+  { id: 'lucro_bruto', label: 'Lucro Bruto', tipo: 'total', calculo: 'receita_liquida + custo_produtos + custo_vendas + custo_servicos' },
 
-  { label: 'Despesas Operacionais', tipo: 'header', css: 'dre-header' },
-  { label: 'Despesas Administrativas', tipo: 'item' },
-  { label: 'Despesas com Pessoal', tipo: 'item' },
-  { label: 'Despesas com Marketing', tipo: 'item' },
-  { label: 'Despesas Operacionais', tipo: 'total', css: 'dre-total-l1' },
+  // DESPESAS OPERACIONAIS
+  { id: 'grupo_despesas_op', label: 'Despesas Operacionais', tipo: 'grupo' },
+  { id: 'desp_comerciais', label: 'Despesas Comerciais', tipo: 'item', categoria: 'Despesas Comerciais', negativo: true },
+  { id: 'desp_administrativas', label: 'Despesas Administrativas', tipo: 'item', categoria: 'Despesas Administrativas', negativo: true },
+  { id: 'desp_operacionais', label: 'Despesas Operacionais', tipo: 'item', categoria: 'Despesas Operacionais', negativo: true },
 
-  { label: 'Lucro / Prejuízo Operacional', tipo: 'total', css: 'dre-total-l2' },
+  // LUCRO OPERACIONAL (Lucro Bruto - Despesas Operacionais)
+  { id: 'lucro_operacional', label: 'Lucro / Prejuízo Operacional', tipo: 'total', calculo: 'lucro_bruto + desp_comerciais + desp_administrativas + desp_operacionais' },
 
-  { label: 'Receitas e Despesas Financeiras', tipo: 'header', css: 'dre-header' },
-  { label: 'Receitas Financeiras', tipo: 'item' },
-  { label: 'Despesas Financeiras', tipo: 'item' },
-  { label: 'Receitas e Despesas Financeiras', tipo: 'total', css: 'dre-total-l1' },
+  // RECEITAS E DESPESAS FINANCEIRAS
+  { id: 'grupo_financeiras', label: 'Receitas e Despesas Financeiras', tipo: 'grupo' },
+  { id: 'receitas_financeiras', label: 'Receitas e Rendimentos Financeiros', tipo: 'item', categoria: 'Receitas Financeiras' },
+  { id: 'despesas_financeiras', label: 'Despesas Financeiras', tipo: 'item', categoria: 'Despesas Financeiras', negativo: true },
 
-  { label: 'Outras Receitas e Despesas Não Operacionais', tipo: 'header', css: 'dre-header' },
-  { label: 'Outras Receitas Não Operacionais', tipo: 'item' },
-  { label: 'Outras Despesas Não Operacionais', tipo: 'item' },
-  { label: 'Outras Receitas e Despesas Não Operacionais', tipo: 'total', css: 'dre-total-l1' },
+  // OUTRAS RECEITAS E DESPESAS NÃO OPERACIONAIS
+  { id: 'grupo_nao_operacionais', label: 'Outras Receitas e Despesas Não Operacionais', tipo: 'grupo' },
+  { id: 'outras_receitas', label: 'Outras Receitas Não Operacionais', tipo: 'item', categoria: 'Outras Receitas Não Operacionais' },
+  { id: 'outras_despesas', label: 'Outras Despesas Não Operacionais', tipo: 'item', categoria: 'Outras Despesas Não Operacionais', negativo: true },
 
-  { label: 'Lucro / Prejuízo Líquido', tipo: 'total', css: 'dre-total-l2' },
+  // LUCRO LÍQUIDO (Lucro Operacional + Financeiras + Não Operacionais)
+  { id: 'lucro_liquido', label: 'Lucro / Prejuízo Líquido', tipo: 'total', calculo: 'lucro_operacional + receitas_financeiras + despesas_financeiras + outras_receitas + outras_despesas' },
 
-  { label: 'Despesas com Investimentos e Empréstimos', tipo: 'header', css: 'dre-header' },
-  { label: 'Investimentos em Imobilizado', tipo: 'item' },
-  { label: 'Empréstimos e Dívidas', tipo: 'item' },
-  { label: 'Despesas com Investimentos e Empréstimos', tipo: 'total', css: 'dre-total-l1' },
+  // DESPESAS COM INVESTIMENTOS E EMPRÉSTIMOS
+  { id: 'grupo_investimentos', label: 'Despesas com Investimentos e Empréstimos', tipo: 'grupo' },
+  { id: 'investimentos', label: 'Investimentos em Imobilizado', tipo: 'item', categoria: 'Investimentos em Imobilizado', negativo: true },
+  { id: 'emprestimos', label: 'Empréstimos e Dívidas', tipo: 'item', categoria: 'Empréstimos e Dívidas', negativo: true },
 
-  { label: 'Lucro / Prejuízo Final', tipo: 'total', css: 'dre-total-final' }
+  // LUCRO FINAL
+  { id: 'lucro_final', label: 'Lucro / Prejuízo Final', tipo: 'total-final', calculo: 'lucro_liquido + investimentos + emprestimos' }
 ];
 
 // ========================================
 // GET / - Relatório DRE
 // ========================================
 
-router.get('/', validateQuery(filtroAnoSchema), async (req, res) => {
-  const ano = req.query.ano;
+router.get('/', asyncHandler(async (req, res) => {
+  const ano = parseInt(req.query.ano) || new Date().getFullYear();
 
-  try {
-    const query = `
-      SELECT 
-        TO_CHAR(data_operacao, 'MM') as mes_index,
-        cf.nome as categoria,
-        SUM(fc.valor) as total
-      FROM fluxo_caixa fc
-      JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
-      WHERE EXTRACT(YEAR FROM data_operacao) = $1 AND fc.status = 'PAGO'
-      GROUP BY mes_index, cf.nome
-    `;
+  // Buscar dados do fluxo de caixa agrupados por categoria e mês
+  const query = `
+    SELECT 
+      TO_CHAR(data_operacao, 'MM') as mes_index,
+      cf.nome as categoria,
+      SUM(fc.valor) as total
+    FROM fluxo_caixa fc
+    JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
+    WHERE EXTRACT(YEAR FROM data_operacao) = $1 AND fc.status = 'PAGO'
+    GROUP BY mes_index, cf.nome
+  `;
 
-    const result = await pool.query(query, [ano]);
-    const dadosBrutos = result.rows;
+  const result = await pool.query(query, [ano]);
+  const dadosBrutos = result.rows;
 
-    // Mapeia dados por categoria e mês
-    const dadosPorCategoria = {};
-    dadosBrutos.forEach(dado => {
-      const mesIndex = parseInt(dado.mes_index) - 1;
-      if (!dadosPorCategoria[dado.categoria]) {
-        dadosPorCategoria[dado.categoria] = Array(12).fill(0);
-      }
-      dadosPorCategoria[dado.categoria][mesIndex] = parseFloat(dado.total);
-    });
-
-    const getValores = (nome) => dadosPorCategoria[nome] || Array(12).fill(0);
-
-    // Calcular resultados
-    const resultados = {};
-    ESTRUTURA_DRE.forEach(item => {
-      resultados[item.label] = Array(12).fill(0);
-    });
-
-    for (let i = 0; i < 12; i++) {
-      // RECEITAS
-      const vendas = getValores('Receita de Vendas de Produtos e Serviços')[i];
-      const fretes = getValores('Receita de Fretes e Entregas')[i];
-      
-      resultados['Receita de Vendas de Produtos e Serviços'][i] = vendas;
-      resultados['Receita de Fretes e Entregas'][i] = fretes;
-      resultados['Receita Bruta de Vendas'][i] = vendas + fretes;
-
-      // DEDUÇÕES
-      const impostos = getValores('Impostos Sobre Vendas')[i];
-      const comissoes = getValores('Comissões Sobre Vendas')[i];
-      const descontos = getValores('Descontos Incondicionais')[i];
-      
-      resultados['Impostos Sobre Vendas'][i] = -impostos;
-      resultados['Comissões Sobre Vendas'][i] = -comissoes;
-      resultados['Descontos Incondicionais'][i] = -descontos;
-      resultados['Deduções da Receita Bruta'][i] = (-impostos) + (-comissoes) + (-descontos);
-
-      // RECEITA LÍQUIDA
-      resultados['Receita Líquida de Vendas'][i] = resultados['Receita Bruta de Vendas'][i] + 
-                                                  resultados['Deduções da Receita Bruta'][i];
-
-      // CMV
-      const custoProdutos = getValores('Custo de Produtos Vendidos')[i];
-      const custoFretes = getValores('Custo de Fretes e Transportes')[i];
-      
-      resultados['Custo de Produtos Vendidos'][i] = -custoProdutos;
-      resultados['Custo de Fretes e Transportes'][i] = -custoFretes;
-      resultados['Custo das Mercadorias Vendidas (CMV)'][i] = (-custoProdutos) + (-custoFretes);
-
-      // LUCRO BRUTO
-      resultados['Lucro Bruto'][i] = resultados['Receita Líquida de Vendas'][i] + 
-                                    resultados['Custo das Mercadorias Vendidas (CMV)'][i];
-
-      // DESPESAS OPERACIONAIS
-      const despAdmin = getValores('Despesas Administrativas')[i];
-      const despPessoal = getValores('Despesas com Pessoal')[i];
-      const despMkt = getValores('Despesas com Marketing')[i];
-      
-      resultados['Despesas Administrativas'][i] = -despAdmin;
-      resultados['Despesas com Pessoal'][i] = -despPessoal;
-      resultados['Despesas com Marketing'][i] = -despMkt;
-      resultados['Despesas Operacionais'][i] = (-despAdmin) + (-despPessoal) + (-despMkt);
-
-      // LUCRO OPERACIONAL
-      resultados['Lucro / Prejuízo Operacional'][i] = resultados['Lucro Bruto'][i] + 
-                                                    resultados['Despesas Operacionais'][i];
-
-      // FINANCEIRAS
-      const recFin = getValores('Receitas Financeiras')[i];
-      const despFin = getValores('Despesas Financeiras')[i];
-      
-      resultados['Receitas Financeiras'][i] = recFin;
-      resultados['Despesas Financeiras'][i] = -despFin;
-      resultados['Receitas e Despesas Financeiras'][i] = recFin + (-despFin);
-
-      // NÃO OPERACIONAIS
-      const outrasRec = getValores('Outras Receitas Não Operacionais')[i];
-      const outrasDesp = getValores('Outras Despesas Não Operacionais')[i];
-      
-      resultados['Outras Receitas Não Operacionais'][i] = outrasRec;
-      resultados['Outras Despesas Não Operacionais'][i] = -outrasDesp;
-      resultados['Outras Receitas e Despesas Não Operacionais'][i] = outrasRec + (-outrasDesp);
-
-      // LUCRO LÍQUIDO
-      resultados['Lucro / Prejuízo Líquido'][i] = resultados['Lucro / Prejuízo Operacional'][i] + 
-                                                resultados['Receitas e Despesas Financeiras'][i] + 
-                                                resultados['Outras Receitas e Despesas Não Operacionais'][i];
-
-      // INVESTIMENTOS/EMPRÉSTIMOS
-      const invest = getValores('Investimentos em Imobilizado')[i];
-      const emprestimos = getValores('Empréstimos e Dívidas')[i];
-      
-      resultados['Investimentos em Imobilizado'][i] = -invest;
-      resultados['Empréstimos e Dívidas'][i] = -emprestimos;
-      resultados['Despesas com Investimentos e Empréstimos'][i] = (-invest) + (-emprestimos);
-
-      // LUCRO FINAL
-      resultados['Lucro / Prejuízo Final'][i] = resultados['Lucro / Prejuízo Líquido'][i] + 
-                                              resultados['Despesas com Investimentos e Empréstimos'][i];
+  // Mapeia dados por categoria e mês
+  const dadosPorCategoria = {};
+  dadosBrutos.forEach(dado => {
+    const mesIndex = parseInt(dado.mes_index) - 1;
+    if (!dadosPorCategoria[dado.categoria]) {
+      dadosPorCategoria[dado.categoria] = Array(12).fill(0);
     }
+    dadosPorCategoria[dado.categoria][mesIndex] = parseFloat(dado.total) || 0;
+  });
 
-    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  // Função para pegar valores de uma categoria
+  const getValores = (categoria) => dadosPorCategoria[categoria] || Array(12).fill(0);
 
-    res.render('dre', {
-      user: res.locals.user,
-      ano,
-      estrutura: ESTRUTURA_DRE,
-      resultados,
-      meses
-    });
+  // Calcular valores para cada linha
+  const resultados = {};
+  
+  // Primeiro: calcular itens (valores diretos das categorias)
+  ESTRUTURA_DRE.forEach(linha => {
+    if (linha.tipo === 'item' && linha.categoria) {
+      const valores = getValores(linha.categoria);
+      resultados[linha.id] = valores.map(v => linha.negativo ? -Math.abs(v) : v);
+    } else if (linha.tipo === 'grupo') {
+      // Grupos não têm valores
+      resultados[linha.id] = null;
+    }
+  });
 
-  } catch (err) {
-    console.error('Erro ao gerar DRE:', err);
-    res.status(500).render('error', {
-      user: res.locals.user,
-      titulo: 'Erro',
-      mensagem: 'Erro ao gerar relatório DRE.',
-      voltarUrl: '/'
-    });
-  }
-});
+  // Segundo: calcular subtotais e totais
+  ESTRUTURA_DRE.forEach(linha => {
+    if (linha.tipo === 'subtotal' && linha.soma) {
+      // Subtotal = soma dos itens listados
+      resultados[linha.id] = Array(12).fill(0).map((_, mes) => {
+        return linha.soma.reduce((acc, itemId) => {
+          return acc + (resultados[itemId] ? resultados[itemId][mes] : 0);
+        }, 0);
+      });
+    }
+  });
+
+  // Terceiro: calcular totais acumulados (na ordem correta)
+  ESTRUTURA_DRE.forEach(linha => {
+    if ((linha.tipo === 'total' || linha.tipo === 'total-final') && linha.calculo) {
+      // Extrair IDs do cálculo
+      const ids = linha.calculo.split(/\s*\+\s*/);
+      resultados[linha.id] = Array(12).fill(0).map((_, mes) => {
+        return ids.reduce((acc, itemId) => {
+          const val = resultados[itemId] ? resultados[itemId][mes] : 0;
+          return acc + val;
+        }, 0);
+      });
+    }
+  });
+
+  const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+  res.render('dre', {
+    user: res.locals.user,
+    currentPage: 'dre',
+    ano,
+    estrutura: ESTRUTURA_DRE,
+    resultados,
+    meses
+  });
+}, '/dre'));
 
 module.exports = router;

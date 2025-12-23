@@ -11,63 +11,91 @@
   <link rel="stylesheet" href="/css/styles.css">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <style>
-    /* DRE specific styles */
     .dre-table {
       font-size: 13px;
+      border-collapse: collapse;
     }
     .dre-table th,
     .dre-table td {
-      padding: 10px 12px;
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
       white-space: nowrap;
+    }
+    .dre-table th {
+      background: #f8fafc;
+      font-weight: 600;
     }
     .dre-table th:first-child,
     .dre-table td:first-child {
-      min-width: 240px;
+      min-width: 280px;
       white-space: normal;
       position: sticky;
       left: 0;
-      background: inherit;
       z-index: 1;
     }
-    .dre-table thead th:first-child {
-      background: #f8fafc;
+    
+    /* GRUPO: Negrito sem fundo - tÃ­tulo de seÃ§ÃĢo */
+    .dre-grupo td {
+      font-weight: 700;
+      background-color: #fff !important;
+      color: #0f172a;
+      border-top: 2px solid #cbd5e1;
     }
-    .dre-sub-item {
-      padding-left: 24px;
-      color: #64748b;
+    .dre-grupo td:first-child {
+      background-color: #fff !important;
     }
-    .dre-header td {
-      font-weight: 600;
-      background-color: #f1f5f9 !important;
+    
+    /* ITEM: Normal, indentado */
+    .dre-item td {
+      background-color: #fff;
+      color: #475569;
+    }
+    .dre-item td:first-child {
+      padding-left: 28px;
+      background-color: #fff !important;
+    }
+    
+    /* SUBTOTAL: Negrito + fundo cinza claro */
+    .dre-subtotal td {
+      font-weight: 700;
+      background-color: #e2e8f0 !important;
       color: #0f172a;
     }
-    .dre-total-l1 td {
-      font-weight: 600;
+    .dre-subtotal td:first-child {
       background-color: #e2e8f0 !important;
     }
-    .dre-total-l2 td {
-      font-weight: 600;
-      background-color: #dbeafe !important;
-      color: #1e40af;
+    
+    /* TOTAL: Negrito + fundo cinza escuro */
+    .dre-total td {
+      font-weight: 700;
+      background-color: #cbd5e1 !important;
+      color: #0f172a;
     }
-    .dre-total-l3 td {
-      font-weight: 600;
-      background-color: #fef3c7 !important;
-      color: #92400e;
+    .dre-total td:first-child {
+      background-color: #cbd5e1 !important;
     }
+    
+    /* TOTAL FINAL: Negrito + fundo verde */
     .dre-total-final td {
       font-weight: 700;
-      font-size: 14px;
-      background-color: #dcfce7 !important;
+      background-color: #bbf7d0 !important;
       color: #166534;
       border-top: 2px solid #166534;
       border-bottom: 2px solid #166534;
     }
+    .dre-total-final td:first-child {
+      background-color: #bbf7d0 !important;
+    }
+    
+    /* Valores negativos em vermelho */
     .valor-negativo {
       color: #dc2626 !important;
     }
-    .valor-positivo {
-      color: #16a34a;
+    
+    /* Coluna Total Ano */
+    .col-total-ano {
+      background-color: #f1f5f9 !important;
+      font-weight: 600;
     }
   </style>
 </head>
@@ -85,7 +113,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-secondary-900">DRE - Demonstrativo de Resultado</h1>
-            <p class="mt-1 text-secondary-500">Visão gerencial do exercício <%= ano %></p>
+            <p class="mt-1 text-secondary-500">VisÃĢo gerencial do exercÃ­cio <%= ano %></p>
           </div>
           
           <!-- Filtro de Ano -->
@@ -115,53 +143,62 @@
         </div>
         
         <div class="overflow-x-auto">
-          <table class="table dre-table">
+          <table class="table dre-table w-full">
             <thead>
               <tr>
-                <th class="text-left">Descrição</th>
+                <th class="text-left">Categoria</th>
                 <% meses.forEach(function(mes) { %>
                   <th class="text-right"><%= mes %></th>
                 <% }); %>
-                <th class="text-right bg-secondary-100">Total Ano</th>
+                <th class="text-right col-total-ano">Total Ano</th>
               </tr>
             </thead>
             <tbody>
               <% estrutura.forEach(function(linha) { 
                 // Pega valores calculados para a linha atual
-                var valoresMensais = (resultados[linha.label] || Array(12).fill(0)).map(function(v) {
-                  var valor = parseFloat(v);
-                  return isNaN(valor) ? 0 : valor;
-                });
-                var totalAnual = valoresMensais.reduce(function(a, b) { return a + b; }, 0);
+                var valores = resultados[linha.id];
+                var temValores = valores !== null;
+                
+                // Calcular total anual
+                var totalAnual = 0;
+                if (temValores) {
+                  totalAnual = valores.reduce(function(a, b) { return a + b; }, 0);
+                }
+                
+                // Definir classe CSS baseada no tipo
+                var cssClass = '';
+                if (linha.tipo === 'grupo') cssClass = 'dre-grupo';
+                else if (linha.tipo === 'item') cssClass = 'dre-item';
+                else if (linha.tipo === 'subtotal') cssClass = 'dre-subtotal';
+                else if (linha.tipo === 'total') cssClass = 'dre-total';
+                else if (linha.tipo === 'total-final') cssClass = 'dre-total-final';
               %>
-                <tr class="<%= linha.css || '' %> <%= linha.tipo === 'header' ? 'dre-header' : '' %>">
-                  <td>
-                    <span class="<%= linha.tipo === 'item' ? 'dre-sub-item' : '' %>">
-                      <%= linha.label %>
-                    </span>
-                  </td>
+                <tr class="<%= cssClass %>">
+                  <td><%= linha.label %></td>
 
-                  <% valoresMensais.forEach(function(valor) { %>
-                    <td class="text-right <%= valor < 0 ? 'valor-negativo' : '' %>">
-                      <% if (Math.abs(valor) >= 0.01) { %>
-                        <% if (linha.tipo === 'header' || linha.tipo === 'total') { %>
-                          <strong><%= valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></strong>
-                        <% } else { %>
+                  <% if (temValores) { %>
+                    <% valores.forEach(function(valor) { %>
+                      <td class="text-right <%= valor < 0 ? 'valor-negativo' : '' %>">
+                        <% if (Math.abs(valor) >= 0.01) { %>
                           <%= valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                        <% } else { %>
+                          <span class="text-secondary-300">-</span>
                         <% } %>
+                      </td>
+                    <% }); %>
+                    <td class="text-right col-total-ano <%= totalAnual < 0 ? 'valor-negativo' : '' %>">
+                      <% if (Math.abs(totalAnual) >= 0.01) { %>
+                        <%= totalAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
                       <% } else { %>
                         <span class="text-secondary-300">-</span>
                       <% } %>
                     </td>
-                  <% }); %>
-
-                  <td class="text-right bg-secondary-50 <%= totalAnual < 0 ? 'valor-negativo' : '' %>">
-                    <% if (Math.abs(totalAnual) >= 0.01) { %>
-                      <strong><%= totalAnual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></strong>
-                    <% } else { %>
-                      <span class="text-secondary-300">-</span>
+                  <% } else { %>
+                    <!-- Grupo: cÃĐlulas vazias -->
+                    <% for (var i = 0; i < 13; i++) { %>
+                      <td></td>
                     <% } %>
-                  </td>
+                  <% } %>
                 </tr>
               <% }); %>
             </tbody>
@@ -172,23 +209,19 @@
       <!-- Legenda -->
       <div class="mt-6 flex flex-wrap gap-4 text-sm">
         <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded bg-[#f1f5f9] border border-secondary-300"></div>
-          <span class="text-secondary-600">Categoria</span>
+          <div class="w-4 h-4 rounded border-2 border-secondary-300 bg-white"></div>
+          <span class="text-secondary-600">Grupo (tÃ­tulo)</span>
         </div>
         <div class="flex items-center gap-2">
           <div class="w-4 h-4 rounded bg-[#e2e8f0] border border-secondary-300"></div>
-          <span class="text-secondary-600">Subtotal</span>
+          <span class="text-secondary-600">Subtotal do grupo</span>
         </div>
         <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded bg-[#dbeafe] border border-secondary-300"></div>
-          <span class="text-secondary-600">Total Operacional</span>
+          <div class="w-4 h-4 rounded bg-[#cbd5e1] border border-secondary-300"></div>
+          <span class="text-secondary-600">Total acumulado</span>
         </div>
         <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded bg-[#fef3c7] border border-secondary-300"></div>
-          <span class="text-secondary-600">EBITDA</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded bg-[#dcfce7] border border-secondary-300"></div>
+          <div class="w-4 h-4 rounded bg-[#bbf7d0] border border-green-400"></div>
           <span class="text-secondary-600">Resultado Final</span>
         </div>
         <div class="flex items-center gap-2">
@@ -203,29 +236,48 @@
   <!-- Print Styles -->
   <style>
     @media print {
-      .sidebar-container,
-      .topbar,
-      .btn,
-      form,
-      .main-content {
-        margin-left: 0 !important;
+      /* Esconder TUDO exceto a tabela */
+      body * {
+        visibility: hidden;
       }
       
-      .sidebar-container,
-      .topbar,
-      .btn,
-      form select {
+      /* Mostrar apenas o card da DRE e seus filhos */
+      .card, .card * {
+        visibility: visible;
+      }
+      
+      /* Esconder header do card (tÃ­tulo e botÃĩes) */
+      .card-header {
         display: none !important;
       }
       
-      .page-container {
+      /* Posicionar o card no topo da pÃĄgina */
+      .card {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      
+      /* Reset de margens e paddings */
+      body, html {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+      }
+      
+      .main-content, .page-container {
+        margin: 0 !important;
         padding: 0 !important;
         max-width: 100% !important;
       }
       
-      .card {
-        box-shadow: none !important;
-        border: 1px solid #e2e8f0 !important;
+      /* Tabela ocupa largura total */
+      .dre-table {
+        width: 100% !important;
+        font-size: 11px !important;
       }
       
       .dre-table th:first-child,
@@ -233,8 +285,22 @@
         position: static !important;
       }
       
-      body {
-        background: white !important;
+      /* Esconder legenda */
+      .mt-6.flex.flex-wrap {
+        display: none !important;
+      }
+      
+      /* TÃ­tulo para impressÃĢo */
+      .card::before {
+        content: "DRE - Demonstrativo de Resultado do ExercÃ­cio <%= ano %>";
+        display: block;
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        padding: 10px 0 15px 0;
+        border-bottom: 2px solid #333;
+        margin-bottom: 10px;
+        visibility: visible;
       }
     }
   </style>
