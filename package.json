@@ -1,19 +1,15 @@
 {
   "name": "sistema-estoque",
   "version": "2.0.0",
-  "description": "Sistema de Estoque OF Distribuidora - TypeScript + Tailwind",
-  "main": "dist/app.js",
+  "description": "Sistema de Estoque OF Distribuidora",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node dist/app.js",
-    "dev": "concurrently \"npm run dev:ts\" \"npm run dev:css\"",
-    "dev:ts": "tsx watch src/app.ts",
+    "start": "node src/app.js",
+    "dev": "concurrently \"npm run dev:js\" \"npm run dev:css\"",
     "dev:js": "nodemon src/app.js",
     "dev:css": "tailwindcss -i ./src/styles/input.css -o ./public/css/styles.css --watch",
-    "build": "npm run build:ts && npm run build:css",
-    "build:ts": "tsc",
-    "build:css": "tailwindcss -i ./src/styles/input.css -o ./public/css/styles.css --minify",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src/**/*.ts"
+    "build": "npm run build:css",
+    "build:css": "tailwindcss -i ./src/styles/input.css -o ./public/css/styles.css --minify"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
