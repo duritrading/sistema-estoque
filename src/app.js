@@ -92,16 +92,6 @@ const estornoLimiter = rateLimit({
   validate: { xForwardedForHeader: false }  // ← ADICIONAR
 });
 
-// ✅ NOVO: Rate limiter para backup
-const backupLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: 'Limite de backups atingido. Aguarde 1 hora.',
-  standardHeaders: true,
-  legacyHeaders: false,
-  validate: { xForwardedForHeader: false }  // ← ADICIONAR
-});
-
 // ========================================
 // VIEW ENGINE & MIDDLEWARE
 // ========================================
@@ -329,7 +319,6 @@ app.use('/fluxo-caixa/estornar', estornoLimiter);
 app.use('/fluxo-caixa/bulk-delete', estornoLimiter);
 app.use('/comissoes/gerar', financialLimiter);
 app.use('/comissoes/pagar', financialLimiter);
-app.use('/backup/gerar', backupLimiter);
 
 // ========================================
 // IMPORT ROUTES
@@ -337,7 +326,6 @@ app.use('/backup/gerar', backupLimiter);
 const movimentacoesRoutes = require('./routes/movimentacoes');
 const fornecedoresRoutes = require('./routes/fornecedores');
 const usuariosRoutes = require('./routes/usuarios'); 
-const backupRoutes = require('./routes/backup'); 
 const clientesRoutes = require('./routes/clientes');
 const rcaRoutes = require('./routes/rcas');
 const dashboardRoutes = require('./routes/dashboard'); 
@@ -362,7 +350,6 @@ try {
 // ========================================
 app.use('/movimentacoes', movimentacoesRoutes);
 app.use('/fornecedores', fornecedoresRoutes);
-app.use('/backup', backupRoutes); 
 app.use('/clientes', clientesRoutes);
 app.use('/rcas', rcaRoutes);
 app.use('/produtos', produtosRoutes);
