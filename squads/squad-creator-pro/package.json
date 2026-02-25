@@ -1,0 +1,26 @@
+{
+  "name": "@aios-pro/squad-creator-pro",
+  "version": "1.0.0",
+  "description": "Squad Creator Pro - Meta-squad for creating AI agent squads based on real elite minds",
+  "main": "index.js",
+  "scripts": {
+    "install:expansion": "echo 'Use the tasks in this pack to install other expansion packs'"
+  },
+  "keywords": [
+    "aios",
+    "aios-pro",
+    "squad",
+    "squad-creator-pro",
+    "tools"
+  ],
+  "author": "AIOS Team",
+  "license": "PROPRIETARY",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SynkraAI/aios-pro",
+    "directory": "squads/squad-creator-pro"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

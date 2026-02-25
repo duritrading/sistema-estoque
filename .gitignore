@@ -1,4 +1,37 @@
 node_modules/
 .env
+.env.local
+.env.*.local
 .DS_Store
-*.log.env
+*.log
+
+# AIOS Framework Core (L1/L2 - not project code)
+.aios-core/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Machine-specific
+.aios/environment-report.yaml
+
+# Local IDE settings
+.claude/settings.local.json
+
+# OS files
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Temp
+tmp/
+temp/
+*.tmp

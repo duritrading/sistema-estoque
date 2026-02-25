@@ -1,0 +1,21 @@
+# AIOS Project Configuration
+version: 2.1.0
+project:
+  name: sistema-estoque
+  type: brownfield
+  created: 2026-02-25
+
+environment:
+  bootstrapped: true
+  bootstrap_date: 2026-02-25
+
+workflow:
+  current: brownfield-assessment
+  phase: 0-bootstrap-complete
+
+permissions:
+  mode: ask
+
+settings:
+  auto_update_status: true
+  quality_gates_enabled: true
