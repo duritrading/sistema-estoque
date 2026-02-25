@@ -77,11 +77,12 @@ router.get('/', asyncHandler(async (req, res) => {
   const ano = parseInt(req.query.ano) || new Date().getFullYear();
 
   // Buscar dados do fluxo de caixa agrupados por categoria e mês
+  // CREDITO (Entrada) soma positivo, DEBITO (Saída) soma negativo
   const query = `
-    SELECT 
+    SELECT
       TO_CHAR(data_operacao, 'MM') as mes_index,
       cf.nome as categoria,
-      SUM(fc.valor) as total
+      SUM(CASE WHEN fc.tipo = 'CREDITO' THEN fc.valor ELSE -fc.valor END) as total
     FROM fluxo_caixa fc
     JOIN categorias_financeiras cf ON fc.categoria_id = cf.id
     WHERE EXTRACT(YEAR FROM data_operacao) = $1 AND fc.status = 'PAGO'
